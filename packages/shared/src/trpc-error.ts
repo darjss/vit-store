@@ -94,9 +94,16 @@ export function sanitizePublicTrpcError(
 	};
 }
 
+type TrpcResponseItemWire = v.InferOutput<typeof trpcResponseItemWireSchema>;
+
 export type SanitizedTrpcResponse = {
 	hasError: boolean;
 	payload: TrpcResponseWire;
+};
+
+type SanitizedTrpcResponseItem = {
+	hasError: boolean;
+	payload: TrpcResponseItemWire;
 };
 
 function sanitizeNestedTrpcError(
@@ -122,9 +129,9 @@ function sanitizeNestedTrpcError(
 }
 
 function sanitizeResponseItem(
-	item: v.InferOutput<typeof trpcResponseItemWireSchema>,
+	item: TrpcResponseItemWire,
 	fallbackHttpStatus: number,
-): SanitizedTrpcResponse {
+): SanitizedTrpcResponseItem {
 	if (item.error === undefined) {
 		return { hasError: false, payload: item };
 	}

@@ -6,14 +6,13 @@
 		"astro": "astro",
 		"build": "astro build",
 		"deploy": "alchemy deploy --app storev2 --stage prod --env-file ../../.env.prod",
-		"check-types": "astro check",
+		"check-types": "astro sync && npm exec --yes --package=@astrojs/check@0.9.10 --package=typescript@6 -- astro-check --root .",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"destroy": "alchemy destroy",
 		"dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 alchemy dev --app storev2 --stage dev",
 		"preview": "astro preview"
 	},
 	"dependencies": {
-		"@astrojs/check": "^0.9.9",
 		"@astrojs/sitemap": "^3.7.3",
 		"@astrojs/solid-js": "^7.0.2",
 		"@corvu/otp-field": "^0.1.4",

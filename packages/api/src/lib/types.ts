@@ -2,7 +2,6 @@ import type * as v from "valibot";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { RequestLogger } from "evlog";
 import type { Context } from "hono";
-import type { SummarizedLogObject } from "~/lib/logging";
 import type {
 	deliveryProvider,
 	orderStatus,
@@ -12,7 +11,7 @@ import type {
 
 export type HonoContextType = Context<{
 	Bindings: Env;
-	Variables: { log: RequestLogger<SummarizedLogObject> };
+	Variables: { log: RequestLogger };
 }>;
 
 export interface SessionConfig<TUser> {
@@ -21,7 +20,7 @@ export interface SessionConfig<TUser> {
 	kvUserSessionPrefix: string;
 	renewalThresholdMs: number;
 	sessionDurationMs: number;
-	userSchema: v.GenericSchema<TUser>;
+	userSchema: v.GenericSchema<unknown, TUser>;
 }
 
 export type OrderStatusType = (typeof orderStatus)[number];

@@ -121,7 +121,9 @@ async function handleConfirmCallback(
 		return;
 	}
 
-	const sessionId = input.channel.conversationKey(conversationFromMessage(query.message!));
+	// SAFETY: a private-chat callback whose message_id matched the bound id is an accessible Message.
+	const message = query.message as NonNullable<Update["message"]>;
+	const sessionId = input.channel.conversationKey(conversationFromMessage(message));
 	await clearInlineButtons(api, chatId, boundMessageId);
 	await withTelegramTyping(api, chatId, () =>
 		dispatch(adminAssistant, {

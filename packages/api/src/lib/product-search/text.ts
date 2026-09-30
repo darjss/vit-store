@@ -1,6 +1,7 @@
 import type { ProductSearchSourceDocument } from "~/lib/product-search/types";
 
-const CYRILLIC_TO_LATIN = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const CYRILLIC_TO_LATIN: Record<string, string> = {
 	а: "a",
 	б: "b",
 	в: "v",
@@ -36,9 +37,10 @@ const CYRILLIC_TO_LATIN = {
 	э: "e",
 	ю: "yu",
 	я: "ya",
-} satisfies Record<string, string>;
+};
 
-const LATIN_SEARCH_ALIASES = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const LATIN_SEARCH_ALIASES: Record<string, Array<string>> = {
 	ahcc: ["ахцц"],
 	ashwagandha: ["ashwaganda", "aswagandha", "ашваганда", "ашвагандха"],
 	berberine: ["берберин"],
@@ -87,9 +89,10 @@ const LATIN_SEARCH_ALIASES = {
 	turmeric: ["curcumin", "куркумин", "куркума"],
 	vitamin: ["vit", "витамин", "витамины"],
 	zinc: ["цинк", "zink"],
-} satisfies Record<string, Array<string>>;
+};
 
-const BRAND_ALIASES = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const BRAND_ALIASES: Record<string, string> = {
 	"black more": "blackmores",
 	blackmore: "blackmores",
 	"black mores": "blackmores",
@@ -97,9 +100,10 @@ const BRAND_ALIASES = {
 	naturbell: "naturebell",
 	"nature bell": "naturebell",
 	"natures bell": "naturebell",
-} satisfies Record<string, string>;
+};
 
-const VITAMIN_LETTER_ALIASES = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const VITAMIN_LETTER_ALIASES: Record<string, string> = {
 	b: "vitamin b",
 	c: "vitamin c",
 	d: "d3",
@@ -110,9 +114,10 @@ const VITAMIN_LETTER_ALIASES = {
 	е: "vitamin e",
 	к: "k2",
 	с: "vitamin c",
-} satisfies Record<string, string>;
+};
 
-const SYMPTOM_INGREDIENT_ALIASES = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const SYMPTOM_INGREDIENT_ALIASES: Record<string, Array<string>> = {
 	anxiety: ["ashwagandha", "l theanine", "magnesium"],
 	fatigue: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
 	hair: ["biotin", "collagen", "zinc"],
@@ -137,7 +142,7 @@ const SYMPTOM_INGREDIENT_ALIASES = {
 	"үе мөч": ["glucosamine", "collagen", "omega 3"],
 	үс: ["biotin", "collagen", "zinc"],
 	ядаргаа: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
-} satisfies Record<string, Array<string>>;
+};
 
 export const normalizeSearchText = (value: string | null | undefined) =>
 	(value ?? "")

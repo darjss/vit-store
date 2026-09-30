@@ -1,5 +1,6 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
+import type { SendAck } from "./products";
 import {
 	type Cart,
 	type CartCommand,
@@ -23,7 +24,7 @@ export interface CartToolDeps {
 	// Sends the rendered summary out on the bound channel (mirrors how the
 	// product-search tool sends cards itself), so the model does not have to
 	// re-type the cart contents into a separate reply.
-	sendCartSummary: (cart: Cart) => Promise<void>;
+	sendCartSummary: (cart: Cart) => Promise<SendAck>;
 }
 
 const cartFacts = (cart: Cart) => ({

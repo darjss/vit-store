@@ -11,6 +11,7 @@ import {
 	SalesTable,
 } from "~/db/schema";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 import { getDaysFromTimeRange } from "~/lib/utils";
 
 // Order statuses that should be excluded from revenue / order-count aggregations
@@ -399,7 +400,7 @@ export const analyticsQueries = {
 					.orderBy(ProductsTable.stock);
 				return result;
 			} catch (error) {
-				logger.error("getLowInventoryProducts", error);
+				logger.error("getLowInventoryProducts", parseCaught(error));
 				throw error;
 			}
 		},

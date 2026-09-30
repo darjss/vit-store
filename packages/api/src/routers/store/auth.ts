@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { customerQueries } from "@vit/api/queries";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
 import { smsGateway } from "~/lib/integrations";
@@ -226,7 +227,7 @@ export const addCustomerToDB = async (phone: string) => {
 		}
 		return user;
 	} catch (error) {
-		logger.error("customer.create_failed", error, { phone: Number(phone) });
+		logger.error("customer.create_failed", parseCaught(error), { phone: Number(phone) });
 		return undefined;
 	}
 };

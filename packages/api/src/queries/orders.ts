@@ -713,20 +713,18 @@ export const orderQueries = {
 				fromStatus?: OrderStatus;
 			},
 		) {
-			const patch = { status };
-			if (options?.deliveryProvider !== undefined) {
-				patch.deliveryProvider = options.deliveryProvider;
-			}
-			if (options?.addressZoneId !== undefined) {
-				patch.addressZoneId = options.addressZoneId;
-			}
 			const conditions = [eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)];
 			if (options?.fromStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, options.fromStatus));
 			}
 			const updated = await db()
 				.update(OrdersTable)
-				.set(patch)
+				// drizzle skips undefined fields; null addressZoneId still clears it
+				.set({
+					addressZoneId: options?.addressZoneId,
+					deliveryProvider: options?.deliveryProvider,
+					status,
+				})
 				.where(and(...conditions))
 				.returning({ id: OrdersTable.id });
 			return updated.length > 0;

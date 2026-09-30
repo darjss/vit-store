@@ -13,7 +13,7 @@ const checkoutScopeWireSchema = v.object({
 	paymentNumber: v.string(),
 });
 
-export const sessionCustomerWireSchema: v.GenericSchema<CustomerSessionClaims> = v.object({
+export const sessionCustomerWireSchema: v.GenericSchema<unknown, CustomerSessionClaims> = v.object({
 	address: v.nullable(v.string()),
 	addressZoneId: v.nullable(v.number()),
 	checkout: v.optional(checkoutScopeWireSchema),
@@ -27,7 +27,7 @@ export const sessionCustomerWireSchema: v.GenericSchema<CustomerSessionClaims> =
 	updatedAt: v.nullable(jsonDateSchema),
 });
 
-export const sessionUserWireSchema: v.GenericSchema<UserSelectType> = v.object({
+export const sessionUserWireSchema: v.GenericSchema<unknown, UserSelectType> = v.object({
 	createdAt: jsonDateSchema,
 	deletedAt: v.nullable(jsonDateSchema),
 	googleId: v.nullable(v.string()),

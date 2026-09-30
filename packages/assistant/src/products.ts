@@ -1,6 +1,9 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
 
+/** What a channel send helper resolves with. The tools ignore the value. */
+export type SendAck = { ok: true } | undefined;
+
 export const assistantStockStatusSchema = v.picklist(["in_stock", "low_stock", "out_of_stock"]);
 
 export type AssistantStockStatus = v.InferOutput<typeof assistantStockStatusSchema>;
@@ -118,9 +121,9 @@ export interface ProductSearchToolDeps {
 		signal?: AbortSignal,
 	) => Promise<Array<AssistantProduct>>;
 	// Sends the formatted cards out on the bound channel.
-	sendProductCards: (cards: Array<ProductCard>) => Promise<void>;
+	sendProductCards: (cards: Array<ProductCard>) => Promise<SendAck>;
 	// Sends a plain text reply (used for the no-match path).
-	sendText: (text: string) => Promise<void>;
+	sendText: (text: string) => Promise<SendAck>;
 }
 
 // Builds the conversation-bound product-search tool. The transport (catalog

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+/* oxlint-disable no-console -- CLI script, stdout is the output */
 /**
  * Count anti-slop lint errors grouped by rule and path prefix.
  * Usage: bun scripts/lint-anti-slop-bucket.ts [optional path prefix]

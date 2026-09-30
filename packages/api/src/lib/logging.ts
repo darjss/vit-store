@@ -37,6 +37,18 @@ export type SummarizedLogValue =
 	| SummarizedLogArray
 	| SummarizedLogObject;
 
+export type LogWire =
+	| undefined
+	| null
+	| string
+	| number
+	| boolean
+	| bigint
+	| Date
+	| Error
+	| Array<LogWire>
+	| { [key: string]: LogWire };
+
 const logWireSchema: v.GenericSchema<LogWire> = v.lazy(() =>
 	v.union([
 		v.undefined(),
@@ -54,9 +66,8 @@ const logWireSchema: v.GenericSchema<LogWire> = v.lazy(() =>
 	]),
 );
 
-export type LogWire = v.InferOutput<typeof logWireSchema>;
-
-export function parseLogWire(wire: LogWire): LogWire {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this is the parser; callers hand it raw values
+export function parseLogWire(wire: unknown): LogWire {
 	return v.parse(logWireSchema, wire);
 }
 
@@ -100,14 +111,13 @@ function isPlainLogObject(value: LogWire): value is Record<string, LogWire> {
 	);
 }
 
+const scalarSchema = v.union([v.string(), v.number(), v.boolean()]);
+
 export function isSummarizedLogObject(value: SummarizedLogValue): value is SummarizedLogObject {
-	if (value === null || Array.isArray(value)) {
+	if (value === null || Array.isArray(value) || v.is(scalarSchema, value)) {
 		return false;
 	}
 	const tag = objectTag(value);
-	if (tag === OBJECT_TAG.string || tag === OBJECT_TAG.number || tag === OBJECT_TAG.boolean) {
-		return false;
-	}
 	if ("type" in value && value.type === "array") {
 		return false;
 	}
@@ -157,7 +167,7 @@ function summarizeLogCollectionValue(value: LogWire, depth: number): SummarizedL
 		if (Array.isArray(value)) {
 			return { length: value.length, truncated: true, type: "array" };
 		}
-		return { truncated: true, type: value.constructor?.name ?? "object" };
+		return { truncated: true, type: value?.constructor?.name ?? "object" };
 	}
 	if (Array.isArray(value)) {
 		const sample = value
@@ -260,7 +270,16 @@ export function summarizeTrpcOutputForLog(path: string, output: LogWire): Summar
 	return summarizeTrpcPayload(output);
 }
 
-/** @deprecated Use parseThrownError after v.parse(thrownErrorWireSchema, …) at catch sites. */
 export function toError(error: ThrownErrorWire): Error {
 	return parseThrownError(error);
+}
+
+/**
+ * Catch clauses and settled-promise reasons are `unknown`. Parse them here so
+ * an odd thrown value (undefined, nested object) never throws inside a catch.
+ */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- catch-clause boundary, parsed immediately
+export function parseCaught(caught: unknown): Error {
+	const parsed = v.safeParse(thrownErrorWireSchema, caught);
+	return parsed.success ? parseThrownError(parsed.output) : new Error("Non-error value thrown");
 }

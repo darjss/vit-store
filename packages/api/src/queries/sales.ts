@@ -3,6 +3,7 @@ import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import { ProductImagesTable, ProductsTable, SalesTable } from "~/db/schema";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 import type { AddSalesType, TransactionType } from "~/lib/types";
 import { getDaysFromTimeRange } from "~/lib/utils";
 
@@ -42,7 +43,7 @@ export const salesQueries = {
 
 				return { profit, revenue, salesCount };
 			} catch (error) {
-				logger.error("getAnalyticsForHome", error);
+				logger.error("getAnalyticsForHome", parseCaught(error));
 				return { profit: 0, revenue: 0, salesCount: 0 };
 			}
 		},
@@ -78,7 +79,7 @@ export const salesQueries = {
 					.limit(productCount);
 				return result;
 			} catch (error) {
-				logger.error("getMostSoldProducts", error);
+				logger.error("getMostSoldProducts", parseCaught(error));
 				throw error;
 			}
 		},
@@ -94,7 +95,7 @@ export const salesQueries = {
 					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)));
 				return result[0]?.revenue ?? 0;
 			} catch (error) {
-				logger.error("getRevenue", error);
+				logger.error("getRevenue", parseCaught(error));
 				return 0;
 			}
 		},

@@ -59,8 +59,8 @@ export const queryClient = new QueryClient({
 			captureException(parse(thrownErrorWireSchema, error), {
 				...getErrorDetails(parse(thrownErrorWireSchema, error)),
 				...getBrowserContext(),
-				mutationKey: mutation.options.mutationKey,
-				mutationMeta: mutation.options.meta,
+				mutationKey: JSON.stringify(mutation.options.mutationKey),
+				mutationMeta: JSON.stringify(mutation.options.meta),
 				source: "tanstack-mutation",
 			});
 		},
@@ -71,8 +71,8 @@ export const queryClient = new QueryClient({
 				...getErrorDetails(parse(thrownErrorWireSchema, error)),
 				...getBrowserContext(),
 				queryHash: query.queryHash,
-				queryKey: query.queryKey,
-				queryMeta: query.meta,
+				queryKey: JSON.stringify(query.queryKey),
+				queryMeta: JSON.stringify(query.meta),
 				source: "tanstack-query",
 			});
 		},

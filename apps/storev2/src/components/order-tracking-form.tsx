@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation, useQuery, type UseMutationResult } from "@tanstack/solid-query";
 import { createSignal, For, Match, Show, Switch } from "solid-js";
 import { orderStatusLabels } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
@@ -22,23 +22,28 @@ import {
 	DangerCircleIcon as IconAlert,
 } from "@solar-icons/solid/bold";
 
-const statusBadgeVariant = {
+const statusBadgeVariant: Record<
+	string,
+	"outline" | "warning" | "info" | "success" | "error" | "secondary"
+	// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+> = {
 	cancelled: "error",
 	created: "outline",
 	delivered: "success",
 	pending: "warning",
 	refunded: "secondary",
 	shipped: "info",
-} satisfies Record<string, "outline" | "warning" | "info" | "success" | "error" | "secondary">;
+};
 
 const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 
-const paymentStatusLabels = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const paymentStatusLabels: Record<string, string> = {
 	customer_claimed_paid: "Төлсөн гэж мэдэгдсэн",
 	failed: "Амжилтгүй",
 	pending: "Хүлээгдэж буй",
 	success: "Амжилттай",
-} satisfies Record<string, string>;
+};
 
 const formatOrderDate = (timestamp: Date | string) =>
 	new Date(timestamp).toLocaleDateString("mn-MN", {
@@ -326,7 +331,11 @@ const OrderTrackingForm = () => {
 	);
 };
 
-type TrackMutation = ReturnType<typeof useMutation>;
+type TrackMutation = UseMutationResult<
+	Awaited<ReturnType<typeof api.order.getOrderByOrderNumber.query>>,
+	{ message?: string },
+	{ orderNumber: string; phone?: string }
+>;
 
 function OrderTrackingResult(props: {
 	currentStepIndex: () => number;
@@ -438,11 +447,7 @@ function OrderTrackingTimeline(props: { currentStepIndex: () => number }) {
 }
 
 function OrderTrackingProductList(props: {
-	orderDetails: TrackMutation["data"] extends infer D
-		? D extends { orderDetails?: infer O }
-			? O
-			: never
-		: never;
+	orderDetails?: NonNullable<TrackMutation["data"]>["orderDetails"];
 }) {
 	return (
 		<Card class="enter-rise stagger-1">

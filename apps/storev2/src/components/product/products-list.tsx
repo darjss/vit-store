@@ -100,9 +100,6 @@ const ProductsList = (props: ProductsListProps) => {
 	const searchQuery = useInfiniteQuery(
 		() => ({
 			enabled: filters.isSearchMode(),
-			getNextPageParam: (lastPage) =>
-				lastPage.pagination.hasNextPage ? lastPage.pagination.page + 1 : undefined,
-			initialPageParam: 1,
 			placeholderData: keepPreviousData,
 			queryFn: async ({ pageParam }) => {
 				const term = filters.effectiveSearchTerm();
@@ -123,6 +120,10 @@ const ProductsList = (props: ProductsListProps) => {
 					sortField: sort?.field,
 				});
 			},
+			// oxlint-disable-next-line perfectionist/sort-objects -- key order drives type inference
+			getNextPageParam: (lastPage) =>
+				lastPage.pagination.hasNextPage ? lastPage.pagination.page + 1 : undefined,
+			initialPageParam: 1,
 			queryKey: [
 				"search-products-page",
 				filters.effectiveSearchTerm(),
@@ -142,8 +143,6 @@ const ProductsList = (props: ProductsListProps) => {
 	const productsQuery = useInfiniteQuery(
 		() => ({
 			enabled: !filters.isSearchMode(),
-			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-			initialPageParam: undefined,
 			placeholderData: keepPreviousData,
 			queryFn: async ({ pageParam }) => {
 				const sort = filters.selectedSort();
@@ -160,6 +159,10 @@ const ProductsList = (props: ProductsListProps) => {
 					sortField: sort?.field,
 				});
 			},
+			// oxlint-disable-next-line perfectionist/sort-objects -- key order drives type inference
+			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+			// SAFETY: TS infers `undefined` here; cursor is a string once pages load.
+			initialPageParam: undefined as string | undefined,
 			queryKey: [
 				"products-browse",
 				filters.selectedSort()?.field,

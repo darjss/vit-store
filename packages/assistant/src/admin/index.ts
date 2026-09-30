@@ -1,3 +1,4 @@
+export { serializeCodemodeJson } from "./codemode-boundary";
 export { buildAdminQueryTool } from "./codemode-tool";
 export { adminAssistantInstructions } from "./instructions";
 export { buildReadFns } from "./read-fns";

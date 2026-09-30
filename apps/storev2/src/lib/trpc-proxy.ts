@@ -7,7 +7,7 @@ import {
 } from "@vit/shared";
 import { safeParse, parse } from "valibot";
 
-import { errorKind, isNativeError, thrownErrorWireSchema } from "@/lib/error-wire";
+import { errorKind, thrownErrorWireSchema } from "@/lib/error-wire";
 
 export type TrpcProxyJsonBody =
 	| TrpcResponseWire
@@ -54,7 +54,7 @@ export const sanitizeUpstreamTrpcResponse = async (response: Response): Promise<
 		payload = await response.clone().json();
 	} catch (error) {
 		console.warn({
-			errorType: isNativeError(error) ? error.name : errorKind(parse(thrownErrorWireSchema, error)),
+			errorType: errorKind(parse(thrownErrorWireSchema, error)),
 			event: "store_trpc_invalid_error_response",
 			upstreamStatus: response.status,
 		});

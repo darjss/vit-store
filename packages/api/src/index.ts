@@ -1,3 +1,6 @@
+// oxlint-disable-next-line typescript/triple-slash-reference -- gives every consumer the Alchemy-generated global `Env`
+/// <reference path="../env.d.ts" />
+
 export type { DB } from "~/db";
 export { createDb } from "~/db";
 export type {

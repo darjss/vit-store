@@ -25,14 +25,15 @@ const order = result.order;
 const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 const currentStepIndex = timelineSteps.indexOf(parseOrderStatus(order.status ?? "pending"));
 
-const statusBadgeClasses = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const statusBadgeClasses: Record<string, string> = {
     cancelled: "bg-error text-error-foreground",
     created: "bg-card border border-border text-foreground",
     delivered: "bg-success text-success-foreground",
     pending: "bg-warning text-warning-foreground",
     refunded: "bg-secondary text-secondary-foreground",
     shipped: "bg-info text-info-foreground",
-} satisfies Record<string, string>;
+};
 ---
 
 <Layout>

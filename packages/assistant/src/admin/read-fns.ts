@@ -3,7 +3,7 @@ import type { BotRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 import * as v from "valibot";
 import { addressTokens, rankZoneCandidates, type ZoneKnowledge } from "../delivery-zones";
-import { bindInput, bindVoid, type CodemodeFn } from "./codemode-boundary";
+import { bindInput, bindVoid, bindWireInput, type CodemodeFn } from "./codemode-boundary";
 import {
 	addBrandSchema,
 	addCategorySchema,
@@ -157,7 +157,7 @@ export function buildReadFns({
 		},
 		{
 			fns: {
-				addProduct: bindInput(addProductSchema, (input) =>
+				addProduct: bindWireInput(addProductSchema, (input) =>
 					botClient.product.addProduct.mutate(input),
 				),
 				deleteProduct: bindInput(idInputSchema, (input) =>
@@ -181,7 +181,7 @@ export function buildReadFns({
 				setProductStock: bindInput(setProductStockInputSchema, (input) =>
 					botClient.product.setProductStock.mutate(input),
 				),
-				updateProduct: bindInput(updateProductSchema, (input) =>
+				updateProduct: bindWireInput(updateProductSchema, (input) =>
 					botClient.product.updateProduct.mutate(input),
 				),
 				updateProductField: bindInput(updateProductFieldInputSchema, (input) =>
@@ -464,8 +464,8 @@ export function buildReadFns({
 }
 
 /** Wire may use `id` (current) or `Id` (older delivery clients). */
-const normalizeDeliveryZones = (raw: unknown) =>
-	v.parse(deliveryZonesWireSchema, raw).map((zone) => ({
+const normalizeDeliveryZones = (raw: v.InferInput<typeof deliveryZonesWireSchema>) =>
+	raw.map((zone) => ({
 		zoneId: "id" in zone ? zone.id : zone.Id,
 		zoneName: zone.zoneName,
 	}));

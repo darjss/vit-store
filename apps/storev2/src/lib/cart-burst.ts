@@ -29,9 +29,11 @@ export const playCartBurst = (target: HTMLElement) => {
 			"--burst-color",
 			BURST_COLORS[index % BURST_COLORS.length] ?? BURST_COLORS[0],
 		);
-		burst.append(particle);
+		// oxlint-disable-next-line unicorn/prefer-dom-node-append -- append() changes the inferred node type here
+		burst.appendChild(particle);
 	}
 
-	document.body.append(burst);
+	// oxlint-disable-next-line unicorn/prefer-dom-node-append -- append() changes the inferred node type here
+	document.body.appendChild(burst);
 	window.setTimeout(() => burst.remove(), 900);
 };

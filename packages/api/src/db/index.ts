@@ -1,15 +1,10 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import * as v from "valibot";
 import * as schema from "~/db/schema";
 
 export type DB = PostgresJsDatabase<typeof schema>;
-
-type HyperdriveConnection = Hyperdrive & { connectionString: string };
-
-function hyperdriveConnectionFromString(connectionString: string): HyperdriveConnection {
-	return { connectionString };
-}
 
 /**
  * Creates a database instance from a Hyperdrive binding.
@@ -21,12 +16,9 @@ function hyperdriveConnectionFromString(connectionString: string): HyperdriveCon
 export function createDb(binding: Hyperdrive): DB;
 export function createDb(connectionString: string): DB;
 export function createDb(bindingOrConnectionString: Hyperdrive | string): DB {
-	const binding: HyperdriveConnection =
-		Object.prototype.toString.call(bindingOrConnectionString) === "[object String]"
-			? hyperdriveConnectionFromString(bindingOrConnectionString)
-			: bindingOrConnectionString;
-
-	const connStr = binding.connectionString;
+	const connStr = v.is(v.string(), bindingOrConnectionString)
+		? bindingOrConnectionString
+		: bindingOrConnectionString.connectionString;
 	const isHyperdriveProxy = /^postgres(ql)?:\/\/[a-f0-9]{32}:/.test(connStr);
 
 	const client = postgres(connStr, {

@@ -1,11 +1,20 @@
 import { createTRPCClient, httpLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
-import { sanitizePublicTrpcResponse, trpcResponseWireSchema } from "@vit/shared";
-import { parse } from "valibot";
+import {
+	sanitizePublicTrpcResponse,
+	trpcPublicErrorWireSchema,
+	trpcResponseWireSchema,
+} from "@vit/shared";
+import { object, parse, safeParse, union } from "valibot";
 import { SuperJSON } from "superjson";
 
 import { isServer } from "@/lib/runtime";
 import { safeNavigate } from "@/lib/safe-navigate";
+
+const sanitizedErrorSchema = union([
+	object({ json: trpcPublicErrorWireSchema }),
+	trpcPublicErrorWireSchema,
+]);
 
 const checkUnauthorized = async (response: Response): Promise<boolean> => {
 	if (response.status === 401) {
@@ -22,10 +31,11 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 
 		const items = Array.isArray(payload) ? payload : [payload];
 		return items.some((item) => {
-			const error = item.error;
-			if (!error || "json" in error) {
-				return error?.json?.data?.code === "UNAUTHORIZED";
+			const parsed = safeParse(sanitizedErrorSchema, item.error);
+			if (!parsed.success) {
+				return false;
 			}
+			const error = "json" in parsed.output ? parsed.output.json : parsed.output;
 			return error.data?.code === "UNAUTHORIZED" || error.code === -32_001;
 		});
 	} catch {

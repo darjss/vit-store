@@ -5,16 +5,18 @@ export interface SearchToken {
 
 const DOSE_RE = /(\d[\d,]*)\s*(iu|mg|mcg|g)\b/i;
 
-const FORM_MAP = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const FORM_MAP: Record<string, string> = {
 	capsule: "Capsule",
 	gummy: "Gummy",
 	powder: "Powder",
 	softgel: "Softgel",
 	tablet: "Tablet",
 	шингэн: "Liquid",
-} satisfies Record<string, string>;
+};
 
-const TYPE_MAP = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const TYPE_MAP: Record<string, string> = {
 	collagen: "Collagen",
 	magnesium: "Magnesium",
 	omega: "Omega 3",
@@ -23,7 +25,7 @@ const TYPE_MAP = {
 	"vitamin d": "Vitamin D3",
 	zinc: "Zinc",
 	магни: "Magnesium",
-} satisfies Record<string, string>;
+};
 
 function formatDose(digits: string, unit: string): string {
 	const numeric = Number.parseInt(digits.replaceAll(",", ""), 10);

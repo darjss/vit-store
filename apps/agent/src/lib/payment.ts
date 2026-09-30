@@ -34,10 +34,7 @@ export const fetchPaymentSummary = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<PaymentSummary> => {
-	const queryInput = { paymentNumber };
-	if (checkoutToken) {
-		queryInput.checkoutToken = checkoutToken;
-	}
+	const queryInput = checkoutToken ? { checkoutToken, paymentNumber } : { paymentNumber };
 	const data = await storeClient().payment.getPaymentByNumber.query(queryInput, {
 		signal: withTimeout(outerSignal),
 	});
@@ -61,10 +58,7 @@ export const claimTransfer = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<TransferClaimResult> => {
-	const mutateInput = { paymentNumber };
-	if (checkoutToken) {
-		mutateInput.checkoutToken = checkoutToken;
-	}
+	const mutateInput = checkoutToken ? { checkoutToken, paymentNumber } : { paymentNumber };
 	const data = await storeClient().payment.claimTransferPaid.mutate(mutateInput, {
 		signal: withTimeout(outerSignal),
 	});

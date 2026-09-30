@@ -1,13 +1,10 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
 import type { InboundImage } from "../photo";
+import { parseCodemodeWireText, toCodemodeJson } from "./codemode-boundary";
 import { extractJsonObject } from "../photo";
 
 export const CHAT_ORDER_IMAGE_EXTRACT_TOOL_NAME = "extract_order_from_chat_image_keys";
-
-type Json = null | boolean | number | string | Array<Json> | { [key: string]: Json };
-
-const asJson = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 
 const chatOrderVisionPrompt = `You are reading a Facebook Messenger (or similar chat) screenshot of a customer placing an order with a vitamin shop admin.
 Reply with ONLY a JSON object (no markdown):
@@ -47,7 +44,7 @@ export const buildChatOrderImageExtractTool = (deps: ChatOrderImageExtractDeps) 
 			for (const imageKey of input.imageKeys) {
 				const image = await deps.loadImage(imageKey);
 				if (image === undefined) {
-					return asJson({
+					return toCodemodeJson({
 						error: `Image no longer available: ${imageKey}`,
 						ok: false,
 					});
@@ -58,7 +55,7 @@ export const buildChatOrderImageExtractTool = (deps: ChatOrderImageExtractDeps) 
 
 			const rawJson = extractJsonObject(visionParts.join("\n"));
 			if (rawJson === undefined) {
-				return asJson({
+				return toCodemodeJson({
 					error: "Vision model did not return parseable chat-order JSON.",
 					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
@@ -66,10 +63,10 @@ export const buildChatOrderImageExtractTool = (deps: ChatOrderImageExtractDeps) 
 			}
 
 			try {
-				const extraction = JSON.parse(rawJson) as Record<string, unknown>;
-				return asJson({ extraction, ok: true });
+				const extraction = parseCodemodeWireText(rawJson);
+				return toCodemodeJson({ extraction, ok: true });
 			} catch {
-				return asJson({
+				return toCodemodeJson({
 					error: "Vision JSON parse failed.",
 					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),

@@ -12,6 +12,7 @@ import {
 } from "~/lib/ai-product/pipeline";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { adminProcedure, type baseProcedure, botProcedure, router } from "~/lib/trpc";
 
@@ -93,7 +94,7 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 							status: isDuplicate ? "duplicate_flag" : "created",
 						});
 					} catch (error) {
-						logger.error("aiProduct.batchCreateProducts.item.failed", error, {
+						logger.error("aiProduct.batchCreateProducts.item.failed", parseCaught(error), {
 							amazonUrl: item.amazonUrl,
 						});
 						results.push({

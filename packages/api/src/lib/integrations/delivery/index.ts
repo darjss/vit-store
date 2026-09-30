@@ -43,7 +43,7 @@ interface OrderResponse {
 	orderId: number;
 }
 
-interface OrderStatusResponse {
+type OrderStatusResponse = {
 	deliveryDate: string;
 	documentNo: string;
 	driverComment: string;
@@ -52,7 +52,7 @@ interface OrderStatusResponse {
 	moneyAmount: number | null;
 	orderId: number;
 	orderStatus: string;
-}
+};
 
 interface OrderStatusNotFoundResponse {
 	message: string;

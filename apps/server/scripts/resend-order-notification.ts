@@ -4,7 +4,7 @@ import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { createDb } from "@vit/api/db";
 import { OrdersTable, PaymentsTable, ProductImagesTable } from "@vit/api/db/schema";
 import { sendDetailedOrderNotification } from "@vit/api/lib/integrations/admin-notifications/send";
-import { shapeOrderResult } from "@vit/api/lib/utils";
+import { projectOrderResult } from "@vit/api/lib/utils";
 
 // One-off: re-send today's latest order notification to a single admin chat.
 // Usage: bun scripts/resend-order-notification.ts [chatId]
@@ -57,7 +57,7 @@ if (!result) {
 	throw new Error(`no orders since ${todayStart.toISOString()}`);
 }
 
-const order = shapeOrderResult(result);
+const order = projectOrderResult(result);
 console.log(
 	`latest order today: ${order.orderNumber} (${order.createdAt.toISOString()}) -> chat ${chatId}`,
 );

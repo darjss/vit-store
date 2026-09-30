@@ -6,6 +6,7 @@ import {
 	buildAdminQueryTool,
 	buildChatOrderImageExtractTool,
 	buildPurchaseImageExtractTool,
+	serializeCodemodeJson,
 } from "@vit/assistant";
 import { createAdminBotClient } from "../lib/admin-bot-client";
 import { loadInboundImage } from "../lib/messenger-inbound";
@@ -34,6 +35,8 @@ type AgentEnv = {
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
+// ponytail: one-place agent wiring; complexity ceiling 20
+// oxlint-disable-next-line complexity
 export default defineAgent<AgentEnv>(({ env, id }) => {
 	const storeApiUrl = process.env.STORE_API_URL ?? "http://localhost:3000";
 	const queryTool =
@@ -53,9 +56,12 @@ export default defineAgent<AgentEnv>(({ env, id }) => {
 		loadImage && runVision && adminToken
 			? buildPurchaseImageExtractTool({
 					loadImage,
-					matchExtracted: (input) =>
-						createAdminBotClient(storeApiUrl, adminToken).aiPurchase.matchExtractedInvoice.mutate(
-							input,
+					matchExtracted: async (input) =>
+						serializeCodemodeJson(
+							await createAdminBotClient(
+								storeApiUrl,
+								adminToken,
+							).aiPurchase.matchExtractedInvoice.mutate(input),
 						),
 					runVision,
 				})

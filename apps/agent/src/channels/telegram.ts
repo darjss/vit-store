@@ -28,7 +28,10 @@ const telegramButtonSchema = v.object({
 
 export const channel = createTelegramChannel({
 	secretToken: requiredEnv("TELEGRAM_WEBHOOK_SECRET"),
+	// ponytail: split inbound dispatch from admin gating; complexity ceiling 28
+	// oxlint-disable-next-line complexity
 	async webhook({ c, update }) {
+		// SAFETY: c.env is the Workers env for this worker; TelegramWebhookEnv lists the bindings it reads.
 		const env = c.env as TelegramWebhookEnv;
 
 		if (update.callback_query) {
@@ -36,20 +39,17 @@ export const channel = createTelegramChannel({
 		}
 
 		const message = update.message;
-		if (!message) {return undefined;}
+		if (!message) {
+			return undefined;
+		}
 
 		const fromId = message.from?.id;
 		if (fromId === undefined || message.chat.type !== "private") {
 			return undefined;
 		}
 
-		// Anyone in a private chat can ask for their Telegram user id so we can
-		// add them to TELEGRAM_ADMIN_CHAT_ID (comma-separated allowlist).
-		const idCommand = (message.text?.trim() ?? "").toLowerCase();
-		if (idCommand === "/id" || idCommand === "/whoami") {
-			const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
-			if (!token) {return undefined;}
-			await telegramApi(token).sendMessage(message.chat.id, `Your Telegram user id: ${fromId}`);
+		if (isIdCommand(message.text)) {
+			await replyWithUserId(env, message.chat.id, fromId);
 			return undefined;
 		}
 
@@ -66,48 +66,32 @@ export const channel = createTelegramChannel({
 
 		const text = message.text?.trim() ?? message.caption?.trim() ?? "";
 		const photos = message.photo;
-		if (!text && (!photos || photos.length === 0)) {return undefined;}
+		if (!text && (!photos || photos.length === 0)) {
+			return undefined;
+		}
 
 		const conversation = conversationFromMessage(message);
 		const sessionId = channel.conversationKey(conversation);
 		const dedupeKey = `telegram:update:v1:${update.update_id}`;
-		if (!(await claimInboundOnce(dedupeKey, env))) {return undefined;}
+		if (!(await claimInboundOnce(dedupeKey, env))) {
+			return undefined;
+		}
 
 		const imageKeys: Array<string> = [];
 		if (photos && photos.length > 0) {
-			const bucket = env.MESSENGER_INBOUND_BUCKET;
-			const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
-			if (!bucket || !token) {
-				await releaseInboundClaim(dedupeKey, env);
-				throw new Error(
-					"MESSENGER_INBOUND_BUCKET and TELEGRAM_ADMIN_BOT_TOKEN are required for Telegram photos.",
-				);
-			}
-			const largest = photos.at(-1)!;
-			const file = await telegramApi(token).getFile(largest.file_id);
-			if (!file.file_path) {
-				await releaseInboundClaim(dedupeKey, env);
-				return undefined;
-			}
-			const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-			const response = await fetch(fileUrl);
-			if (!response.ok || response.body === null) {
-				await releaseInboundClaim(dedupeKey, env);
-				return undefined;
-			}
-			const bytes = new Uint8Array(await response.arrayBuffer());
-			const staged = await stageInboundBytes(
-				bucket,
-				{
-					index: 0,
-					messageId: String(message.message_id),
-					sessionId,
+			const key = await stageTelegramPhoto({ env, message, photos, sessionId }).catch(
+				async (error) => {
+					await releaseInboundClaim(dedupeKey, env);
+					throw error;
 				},
-				bytes,
-				"image/jpeg",
-				"telegram-inbound",
 			);
-			if (staged) {imageKeys.push(staged.key);}
+			if (key === "unavailable") {
+				await releaseInboundClaim(dedupeKey, env);
+				return undefined;
+			}
+			if (key !== "not-staged") {
+				imageKeys.push(key);
+			}
 		}
 
 		if (imageKeys.length === 0 && !text) {
@@ -120,12 +104,10 @@ export const channel = createTelegramChannel({
 			const dispatchTurn = () =>
 				dispatch(adminAssistant, {
 					id: sessionId,
-					input: {
-						text,
-						type: "telegram.message",
-						updateId: update.update_id,
-						...(imageKeys.length > 0 ? { imageKeys } : {}),
-					},
+					input:
+						imageKeys.length > 0
+							? { imageKeys, text, type: "telegram.message", updateId: update.update_id }
+							: { text, type: "telegram.message", updateId: update.update_id },
 				});
 
 			if (token) {
@@ -147,9 +129,69 @@ export const channel = createTelegramChannel({
 	},
 });
 
+type TelegramPhotos = NonNullable<NonNullable<Update["message"]>["photo"]>;
+
+// Anyone in a private chat can ask for their Telegram user id so we can
+// add them to TELEGRAM_ADMIN_CHAT_ID (comma-separated allowlist).
+function isIdCommand(text: string | undefined) {
+	const command = (text?.trim() ?? "").toLowerCase();
+	return command === "/id" || command === "/whoami";
+}
+
+async function replyWithUserId(env: TelegramWebhookEnv, chatId: number, fromId: number) {
+	const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
+	if (!token) {
+		return;
+	}
+	await telegramApi(token).sendMessage(chatId, `Your Telegram user id: ${fromId}`);
+}
+
+/** Stages the largest photo in R2. "unavailable" means Telegram did not return the file. */
+async function stageTelegramPhoto({
+	env,
+	message,
+	photos,
+	sessionId,
+}: {
+	env: TelegramWebhookEnv;
+	message: NonNullable<Update["message"]>;
+	photos: TelegramPhotos;
+	sessionId: string;
+}): Promise<string | "unavailable" | "not-staged"> {
+	const bucket = env.MESSENGER_INBOUND_BUCKET;
+	const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
+	if (!bucket || !token) {
+		throw new Error(
+			"MESSENGER_INBOUND_BUCKET and TELEGRAM_ADMIN_BOT_TOKEN are required for Telegram photos.",
+		);
+	}
+	const largest = photos.at(-1);
+	if (!largest) {
+		return "unavailable";
+	}
+	const file = await telegramApi(token).getFile(largest.file_id);
+	if (!file.file_path) {
+		return "unavailable";
+	}
+	const response = await fetch(`https://api.telegram.org/file/bot${token}/${file.file_path}`);
+	if (!response.ok || response.body === null) {
+		return "unavailable";
+	}
+	const staged = await stageInboundBytes(
+		bucket,
+		{ index: 0, messageId: String(message.message_id), sessionId },
+		new Uint8Array(await response.arrayBuffer()),
+		"image/jpeg",
+		"telegram-inbound",
+	);
+	return staged ? staged.key : "not-staged";
+}
+
 /** Comma/space-separated Telegram user ids allowed to use the admin bot. */
 export function parseAdminUserIds(raw: string | undefined): Array<number> {
-	if (!raw?.trim()) {return [];}
+	if (!raw?.trim()) {
+		return [];
+	}
 	return raw
 		.split(/[,\s]+/)
 		.map((part) => Number(part.trim()))
@@ -160,17 +202,18 @@ export function isAdminUser(userId: number, env: TelegramWebhookEnv) {
 	return parseAdminUserIds(env.TELEGRAM_ADMIN_CHAT_ID).includes(userId);
 }
 
+type TelegramTopic = { directMessagesTopicId?: number; messageThreadId?: number };
+
 export function conversationFromMessage(
 	message: NonNullable<Update["message"]>,
 ): TelegramConversationRef {
-	const topic = {
-		...(message.message_thread_id === undefined
-			? {}
-			: { messageThreadId: message.message_thread_id }),
-		...(message.direct_messages_topic?.topic_id === undefined
-			? {}
-			: { directMessagesTopicId: message.direct_messages_topic.topic_id }),
-	};
+	const topic: TelegramTopic = {};
+	if (message.message_thread_id !== undefined) {
+		topic.messageThreadId = message.message_thread_id;
+	}
+	if (message.direct_messages_topic?.topic_id !== undefined) {
+		topic.directMessagesTopicId = message.direct_messages_topic.topic_id;
+	}
 	return message.business_connection_id
 		? {
 				businessConnectionId: message.business_connection_id,
@@ -181,11 +224,25 @@ export function conversationFromMessage(
 		: { chatId: message.chat.id, type: "chat", ...topic };
 }
 
-const sendOptions = (ref: TelegramConversationRef) => ({
-	...(ref.type === "business-chat" ? { business_connection_id: ref.businessConnectionId } : {}),
-	...(ref.messageThreadId ? { message_thread_id: ref.messageThreadId } : {}),
-	...(ref.directMessagesTopicId ? { direct_messages_topic_id: ref.directMessagesTopicId } : {}),
-});
+type TelegramSendOptions = {
+	business_connection_id?: string;
+	direct_messages_topic_id?: number;
+	message_thread_id?: number;
+};
+
+const sendOptions = (ref: TelegramConversationRef) => {
+	const options: TelegramSendOptions = {};
+	if (ref.type === "business-chat") {
+		options.business_connection_id = ref.businessConnectionId;
+	}
+	if (ref.messageThreadId) {
+		options.message_thread_id = ref.messageThreadId;
+	}
+	if (ref.directMessagesTopicId) {
+		options.direct_messages_topic_id = ref.directMessagesTopicId;
+	}
+	return options;
+};
 
 export function postTelegramMessage(ref: TelegramConversationRef) {
 	const token = requiredEnv("TELEGRAM_ADMIN_BOT_TOKEN");
@@ -193,8 +250,8 @@ export function postTelegramMessage(ref: TelegramConversationRef) {
 		description:
 			"Post a text reply to the bound Telegram admin conversation. Optional inline buttons for confirmations.",
 		input: v.object({
-			text: v.pipe(v.string(), v.minLength(1)),
 			buttons: v.optional(v.array(telegramButtonSchema)),
+			text: v.pipe(v.string(), v.minLength(1)),
 		}),
 		name: "post_telegram_message",
 		async run({ input }) {
@@ -223,8 +280,8 @@ export function postTelegramProductPhoto(input: {
 	return defineTool({
 		description: "Send a product's image with an optional caption to the admin Telegram chat.",
 		input: v.object({
-			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			caption: v.optional(v.string()),
+			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 		}),
 		name: "post_telegram_product_photo",
 		async run({ input: toolInput }) {
@@ -247,10 +304,9 @@ export function postTelegramProductPhoto(input: {
 			const sent = await telegramApi(token).sendPhoto(
 				input.ref.chatId,
 				new InputFile(await response.bytes(), "product.jpg"),
-				{
-					...sendOptions(input.ref),
-					...(toolInput.caption ? { caption: toolInput.caption } : {}),
-				},
+				toolInput.caption
+					? { ...sendOptions(input.ref), caption: toolInput.caption }
+					: sendOptions(input.ref),
 			);
 			return { messageId: sent.message_id, ok: true };
 		},
@@ -259,6 +315,8 @@ export function postTelegramProductPhoto(input: {
 
 function requiredEnv(name: string) {
 	const value = process.env[name]?.trim();
-	if (!value) {throw new Error(`${name} is required.`);}
+	if (!value) {
+		throw new Error(`${name} is required.`);
+	}
 	return value;
 }

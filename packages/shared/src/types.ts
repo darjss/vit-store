@@ -179,8 +179,8 @@ export interface RestockSubscription {
 }
 
 export const oauthCookieDataSchema = v.object({
-	codeVerifier: v.optional(v.string()),
-	state: v.optional(v.string()),
+	codeVerifier: v.string(),
+	state: v.string(),
 });
 
 export type OAuthCookieData = v.InferOutput<typeof oauthCookieDataSchema>;

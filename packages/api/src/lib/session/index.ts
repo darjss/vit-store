@@ -33,7 +33,7 @@ function getUserIdentifier<TUser extends CustomerSelectType | UserSelectType>(us
 }
 
 export function createSessionManager<TUser extends CustomerSelectType | UserSelectType>(
-	config: SessionConfig,
+	config: SessionConfig<TUser>,
 ) {
 	const {
 		cookieName,
@@ -227,8 +227,8 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 	};
 }
 
-export const createCustomerSessionManager = (config: SessionConfig) =>
+export const createCustomerSessionManager = (config: SessionConfig<CustomerSelectType>) =>
 	createSessionManager<CustomerSelectType>(config);
 
-export const createUserSessionManager = (config: SessionConfig) =>
+export const createUserSessionManager = (config: SessionConfig<UserSelectType>) =>
 	createSessionManager<UserSelectType>(config);

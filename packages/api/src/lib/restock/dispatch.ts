@@ -1,6 +1,5 @@
 import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
-import type { SummarizedLogObject } from "~/lib/logging";
 import { createLogger } from "evlog";
 import { db } from "~/db/client";
 import { ProductsTable, RestockSubscriptionsTable } from "~/db/schema";
@@ -188,10 +187,7 @@ type DeliveryCandidate = {
 	productSlug: string;
 };
 
-async function deliverCandidate(
-	candidate: DeliveryCandidate,
-	log: RequestLogger<SummarizedLogObject>,
-) {
+async function deliverCandidate(candidate: DeliveryCandidate, log: RequestLogger) {
 	const claimed = await claimSubscription(candidate.id);
 	if (!claimed || !claimed.contact) {
 		return { claimed: 0, failed: 0, notified: 0 };
@@ -309,7 +305,7 @@ export async function dispatchRestockIfCrossedZero(input: {
 
 type WaitUntilContext = {
 	c: { executionCtx: ExecutionContext };
-	log: RequestLogger<SummarizedLogObject>;
+	log: RequestLogger;
 };
 
 export function scheduleRestockDispatch(

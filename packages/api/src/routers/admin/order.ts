@@ -332,7 +332,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 		patchOrderHeader: proc.input(patchOrderHeaderSchema).mutation(async ({ ctx, input }) => {
 			try {
 				const { customerPhone, id, ...rest } = input;
-				const headerPatch = { ...rest };
+				const headerPatch: typeof rest & { customerPhone?: number } = { ...rest };
 				if (customerPhone !== undefined) {
 					headerPatch.customerPhone = Number(customerPhone);
 				}

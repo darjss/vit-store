@@ -1,5 +1,6 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
+import type { SendAck } from "./products";
 import type { Cart } from "./cart";
 import {
 	applyAddress,
@@ -57,9 +58,9 @@ export interface CheckoutToolDeps {
 	// number, offer the QPay/transfer payment choices on the channel. Injected so
 	// the channel-neutral tools never build a Messenger button template. Omitted
 	// in unit/sim contexts that only exercise order creation.
-	sendPaymentChoices?: (order: CreatedOrder) => Promise<void>;
+	sendPaymentChoices?: (order: CreatedOrder) => Promise<SendAck>;
 	// Sends a plain text reply on the bound channel.
-	sendText: (text: string) => Promise<void>;
+	sendText: (text: string) => Promise<SendAck>;
 }
 
 const facts = (state: CheckoutState) => ({

@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { CheckCircle, Copy, Loader2, MapPin, Package, Phone, Truck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { instance, is } from "valibot";
 import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import RowActions from "@/components/row-actions";
 import { Button } from "@/components/ui/button";
@@ -78,12 +79,8 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 		order.paymentStatus === "customer_claimed_paid" && order.paymentProvider === "transfer";
 
 	const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-		const target = e.target;
-		if (target && typeof target === "object" && "closest" in target) {
-			const element = target as { closest: (selector: string) => Element | null };
-			if (element.closest("[data-no-nav]")) {
-				return;
-			}
+		if (is(instance(Element), e.target) && e.target.closest("[data-no-nav]")) {
+			return;
 		}
 		void navigate({
 			params: { id: order.id.toString() },

@@ -51,7 +51,7 @@ const logTool = (e: Extract<FlueEvent, { type: "tool" }>) => {
 	);
 	if (e.isError) {
 		console.error(
-			`[flue.err] tool ${e.toolName}: ${JSON.stringify(e.result ?? e.error).slice(0, 400)}${tag(e)}`,
+			`[flue.err] tool ${e.toolName}: ${JSON.stringify(e.result).slice(0, 400)}${tag(e)}`,
 		);
 	}
 };
@@ -68,36 +68,12 @@ const logCompaction = (e: Extract<FlueEvent, { type: "compaction" }>) => {
 	);
 };
 
-const logFailure = (
-	e: Extract<FlueEvent, { type: "operation_failed" | "model_not_configured" }>,
-) => {
-	console.error(
-		`[flue.err] ${e.type}: ${e.error?.message ?? JSON.stringify(e).slice(0, 240)}${tag(e)}`,
-	);
-};
-
 const logSubmissionSettled = (e: Extract<FlueEvent, { type: "submission_settled" }>) => {
 	if (e.outcome === "failed") {
 		console.error(
 			`[flue.err] submission failed: ${e.error?.message ?? e.error?.type ?? "?"}${tag(e)}`,
 		);
 	}
-};
-
-const logToolWarning = (
-	e: Extract<
-		FlueEvent,
-		{
-			type:
-				| "tool_input_validation"
-				| "tool_output_validation"
-				| "tool_output_serialization"
-				| "tool_name_conflict"
-				| "tool_legacy_definition";
-		}
-	>,
-) => {
-	console.warn(`[flue.warn] ${e.type} ${e.toolName ?? ""}${tag(e)}`);
 };
 
 const logFlueLog = (e: Extract<FlueEvent, { type: "log" }>) => {
@@ -123,19 +99,8 @@ observe((event) => {
 		case "compaction":
 			logCompaction(event);
 			break;
-		case "operation_failed":
-		case "model_not_configured":
-			logFailure(event);
-			break;
 		case "submission_settled":
 			logSubmissionSettled(event);
-			break;
-		case "tool_input_validation":
-		case "tool_output_validation":
-		case "tool_output_serialization":
-		case "tool_name_conflict":
-		case "tool_legacy_definition":
-			logToolWarning(event);
 			break;
 		case "log":
 			logFlueLog(event);

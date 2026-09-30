@@ -6,6 +6,7 @@ import type {
 import { translationSchema } from "~/lib/ai-product/schemas";
 import { type ProductAi, runProductAi } from "~/lib/ai-product/workers-ai";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 
 export async function translateAndStructureProduct(
 	ai: ProductAi,
@@ -68,7 +69,7 @@ INSTRUCTIONS:
 
 		return output;
 	} catch (error) {
-		logger.error("translateAndStructureProduct", error);
+		logger.error("translateAndStructureProduct", parseCaught(error));
 		return null;
 	}
 }

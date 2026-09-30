@@ -1,4 +1,5 @@
 import { purgeCatalogCacheGlobal } from "~/lib/cache/workers-cache";
+import { parseCaught } from "~/lib/logging";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import {
 	type DetailedOrderNotificationInput,
@@ -122,7 +123,7 @@ export async function confirmPaymentAndNotify({
 	} catch (notificationError) {
 		try {
 			await persistMessengerNotificationFailure({
-				error: notificationError,
+				error: parseCaught(notificationError),
 				payload: notificationPayload,
 				paymentNumber,
 			});

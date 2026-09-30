@@ -49,7 +49,6 @@ function safeStack(name: string, stack: string | undefined): string {
 }
 
 export type OperatorProjectedError = Error & {
-	cause?: SafeDiagnostic;
 	code?: string | number;
 };
 

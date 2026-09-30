@@ -43,21 +43,9 @@ export const userQueries = {
 				username?: string;
 			},
 		): Promise<UserSelectType | null> {
-			const valuesToSet = {
-				updatedAt: new Date(),
-			};
-
-			if (updates.username !== undefined) {
-				valuesToSet.username = updates.username;
-			}
-
-			if (updates.isApproved !== undefined) {
-				valuesToSet.isApproved = updates.isApproved;
-			}
-
 			const result = await db()
 				.update(UsersTable)
-				.set(valuesToSet)
+				.set({ isApproved: updates.isApproved, updatedAt: new Date(), username: updates.username })
 				.where(and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)))
 				.returning();
 

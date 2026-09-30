@@ -14,6 +14,7 @@ import {
 import type { Context as HonoContext } from "hono";
 import type { Context, ServerHonoVariables } from "~/lib/context";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 
 // `cloudflare:workers` is only resolvable inside the Cloudflare Workers
 // runtime. Importing it statically breaks any non-Workers consumer, so
@@ -107,7 +108,7 @@ export async function purgeTagsGlobal(tags: Array<string>): Promise<void> {
 	try {
 		await globalCache.purge({ tags });
 	} catch (error) {
-		logger.error("workers_cache.purge_failed", error, { cache_tags: tags });
+		logger.error("workers_cache.purge_failed", parseCaught(error), { cache_tags: tags });
 	}
 }
 
@@ -163,7 +164,7 @@ async function purgeStorefrontTagsGlobal(tags: Array<string>): Promise<void> {
 	try {
 		await mod?.env.STOREFRONT.purgeCache(tags);
 	} catch (error) {
-		logger.error("storefront_cache.purge_failed", error, { cache_tags: tags });
+		logger.error("storefront_cache.purge_failed", parseCaught(error), { cache_tags: tags });
 	}
 }
 

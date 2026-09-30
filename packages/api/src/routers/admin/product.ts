@@ -546,7 +546,8 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
 			)
 			.mutation(async ({ ctx, input }) => {
 				try {
-					let stockChange = null;
+					let stockChange: Awaited<ReturnType<typeof productQueries.admin.setProductStock>> | null =
+						null;
 					if (input.field === "stock") {
 						const stock = requireNonNegativeNumberField("stock", input.numberValue);
 						stockChange = await productQueries.admin.setProductStock(input.id, stock);

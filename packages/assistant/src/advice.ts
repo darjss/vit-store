@@ -1,5 +1,6 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
+import type { SendAck } from "./products";
 
 // Channel-neutral product-advice domain (#22, ADR 0002/0007). The customer
 // assistant answers real Messenger advice flows — "энэ юунд сайн бэ" (what is
@@ -56,7 +57,7 @@ export interface ProductAdviceToolDeps {
 		signal?: AbortSignal,
 	) => Promise<Array<AssistantAdviceProduct>>;
 	// Sends a plain text reply (used only for the transport-error path).
-	sendText: (text: string) => Promise<void>;
+	sendText: (text: string) => Promise<SendAck>;
 }
 
 // Builds the conversation-bound product-advice tool. The model first finds the

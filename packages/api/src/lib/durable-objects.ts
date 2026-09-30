@@ -14,6 +14,8 @@ export const getTransferReconciliationStub = (
 	env: Env,
 	paymentNumber: string,
 ): TransferReconciliationStub => {
-	const namespace: ReconciliationNamespace = env.KHAAN_TRANSFER_RECONCILER;
+	// SAFETY: the Alchemy-generated namespace type trips TS2589; ReconciliationNamespace is the only method used.
+	// oxlint-disable-next-line anti-slop/no-chained-type-assertions
+	const namespace = env.KHAAN_TRANSFER_RECONCILER as unknown as ReconciliationNamespace;
 	return namespace.getByName(paymentNumber);
 };

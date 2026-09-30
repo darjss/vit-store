@@ -14,10 +14,10 @@ const MAX_URL_IMAGES = 10;
 
 function readImageFile(formData: FormData): File | null {
 	const image = formData.get("image");
-	return image instanceof File ? image : null;
+	return v.is(v.instance(File), image) ? image : null;
 }
 
-function readOptionalString(entry: FormDataEntryValue | null): string | null {
+function readOptionalString(entry: File | string | null): string | null {
 	if (entry === null) {
 		return null;
 	}
@@ -25,7 +25,7 @@ function readOptionalString(entry: FormDataEntryValue | null): string | null {
 	return parsed.success ? parsed.output : null;
 }
 
-function readRequiredString(entry: FormDataEntryValue | null): string | null {
+function readRequiredString(entry: File | string | null): string | null {
 	const parsed = readOptionalString(entry);
 	return parsed && parsed.length > 0 ? parsed : null;
 }

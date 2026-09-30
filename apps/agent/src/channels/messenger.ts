@@ -28,6 +28,7 @@ import { minLength, object, optional, pipe, safeParse, string } from "valibot";
 import assistant from "../agents/customer-assistant";
 import adminAssistant from "../agents/admin-assistant";
 import { getAssistantProductsByIds } from "../lib/catalog";
+import type { ChannelSendResult } from "../lib/channel-send";
 import { stageInboundImage } from "../lib/messenger-inbound";
 import { claimTransfer, fetchPaymentSummary } from "../lib/payment";
 import { detectCartEvent, handleCartEvent } from "./cart-handler";
@@ -68,17 +69,12 @@ const PHOTO_FETCH_FAILED_MESSAGE =
 
 const graphVersion = "v25.0";
 
-const messengerOptions = {
+export const messenger = new Messenger({
 	accessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
+	baseUrl: process.env.MESSENGER_GRAPH_BASE_URL || undefined,
 	maxRetries: 0,
 	version: graphVersion,
-};
-const graphBaseUrl = process.env.MESSENGER_GRAPH_BASE_URL;
-if (graphBaseUrl) {
-	messengerOptions.baseUrl = graphBaseUrl;
-}
-
-export const messenger = new Messenger(messengerOptions);
+});
 
 // Outbound capture at the single SDK choke point: log every text the bot sends.
 // This is prod observability of what the bot actually says, and it lets a CLI
@@ -116,7 +112,8 @@ export const channel: MessengerChannel = createMessengerChannel({
 
 	// Mounted at GET/POST /channels/messenger/webhook.
 	async webhook({ c, payload }) {
-		const env = c.env;
+		// SAFETY: c.env is the Worker bindings object; WebhookEnv lists the optional ones read here.
+		const env = c.env as WebhookEnv;
 		for (const entry of payload.entry) {
 			for (const event of entry.messaging ?? []) {
 				// Admin PSID gate: an authorized admin's messages route to the
@@ -196,15 +193,18 @@ async function dispatchInboundText(
 	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
 	// re-deliver instead of being swallowed by dedupe.
 	try {
-		const dispatchInput = {
+		const baseInput = {
 			attachmentTypes: admission.attachmentTypes,
 			messageId: admission.messageId,
 			text: admission.text,
 			type: "messenger.message" as const,
 		};
-		if (admission.quickReplyPayload !== undefined) {
-			dispatchInput.quickReplyPayload = admission.quickReplyPayload;
-		}
+		// dispatch() input must be JSON-clean: omit the key entirely when there
+		// is no quick reply rather than passing undefined.
+		const dispatchInput =
+			admission.quickReplyPayload === undefined
+				? baseInput
+				: { ...baseInput, quickReplyPayload: admission.quickReplyPayload };
 		await dispatch(target, {
 			id: admission.sessionId + sessionIdSuffix,
 			input: dispatchInput,
@@ -376,7 +376,7 @@ const toMessengerButtons = (buttons: ReturnType<typeof buildPaymentChoice>["butt
 // conversation; injected into the checkout tools' `place_order` so the offer is
 // sent right after the order confirmation.
 export function sendPaymentChoices(ref: MessengerConversationRef) {
-	return async (order: CreatedOrder) => {
+	return async (order: CreatedOrder): Promise<ChannelSendResult | undefined> => {
 		if (!order.paymentNumber) {
 			return undefined;
 		}
@@ -397,7 +397,7 @@ export function sendPaymentChoices(ref: MessengerConversationRef) {
 // Bank-transfer details (#25): the account/amount/reference text plus a single
 // `Шилжүүлсэн` postback button the customer taps to lodge a transfer claim.
 export function sendBankTransferDetails(ref: MessengerConversationRef) {
-	return async (text: string, paymentRef: PaymentRef) => {
+	return async (text: string, paymentRef: PaymentRef): Promise<ChannelSendResult> => {
 		const result = await messenger.templates.button({
 			buttons: [
 				{
@@ -642,7 +642,7 @@ export function postMessage(ref: MessengerConversationRef) {
 // Plain text sender bound to a conversation. Used by the product-search tool's
 // no-match path; mirrors the send shape of post_messenger_message.
 export function sendTextReply(ref: MessengerConversationRef) {
-	return async (text: string) => {
+	return async (text: string): Promise<ChannelSendResult> => {
 		const result = await messenger.send.message({
 			message: { text },
 			messaging_type: "RESPONSE",
@@ -657,18 +657,14 @@ export function sendTextReply(ref: MessengerConversationRef) {
 // delivers its payload back on the webhook, where `detectCartEvent` routes it
 // straight to the cart reducer — no model turn. Bound to one conversation.
 export function sendCartSummary(ref: MessengerConversationRef) {
-	return async (cart: Cart) => {
+	return async (cart: Cart): Promise<ChannelSendResult> => {
 		const quickReplies = cartQuickReplies(cart).map((qr) => ({
 			content_type: "text" as const,
 			payload: qr.payload,
 			title: qr.title,
 		}));
-		const message = {
-			text: formatCartSummary(cart),
-		};
-		if (quickReplies.length > 0) {
-			message.quick_replies = quickReplies;
-		}
+		const text = formatCartSummary(cart);
+		const message = quickReplies.length > 0 ? { quick_replies: quickReplies, text } : { text };
 		const result = await messenger.send.message({
 			message,
 			messaging_type: "RESPONSE",
@@ -689,7 +685,7 @@ export async function resolveProductById(id: number): Promise<AssistantProduct |
 // element carries the product's Захиалах postback button whose payload holds
 // the product id. Generic templates allow at most 10 elements.
 export function sendProductCards(ref: MessengerConversationRef) {
-	return async (cards: Array<ProductCard>) => {
+	return async (cards: Array<ProductCard>): Promise<ChannelSendResult & { cardCount: number }> => {
 		const elements = cards.slice(0, 10).map((card) => {
 			const element = {
 				buttons: [
@@ -702,10 +698,7 @@ export function sendProductCards(ref: MessengerConversationRef) {
 				subtitle: card.subtitle,
 				title: card.title,
 			};
-			if (card.imageUrl) {
-				element.image_url = card.imageUrl;
-			}
-			return element;
+			return card.imageUrl ? { ...element, image_url: card.imageUrl } : element;
 		});
 
 		console.log(

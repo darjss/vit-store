@@ -43,6 +43,21 @@ export const bindInput = <TSchema extends v.GenericSchema, TResult>(
 	return async (raw) => serializeCodemodeJson(await call(v.parse(schema, raw)));
 };
 
+/**
+ * For procedures whose tRPC input schema transforms values (e.g. "12" -> 12):
+ * validate against the schema but forward the raw wire input, so the server
+ * runs the transform exactly once.
+ */
+export const bindWireInput = <TSchema extends v.GenericSchema, TResult>(
+	schema: TSchema,
+	call: (input: v.InferInput<TSchema>) => Promise<TResult>,
+): CodemodeFn => {
+	return async (raw) => {
+		v.assert(schema, raw);
+		return serializeCodemodeJson(await call(raw));
+	};
+};
+
 export const bindVoid = <TResult>(call: () => Promise<TResult>): CodemodeFn => {
 	return async () => serializeCodemodeJson(await call());
 };

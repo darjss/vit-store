@@ -1,9 +1,10 @@
 import { Bot } from "gramio";
 import { logger } from "~/lib/logger";
+import { parseCaught } from "~/lib/logging";
 import { bindTelegramButtonCallbacks } from "./telegram-callback-data";
 
 type TelegramAdminConfig = {
-	chatIds: string[];
+	chatIds: Array<string>;
 	token: string;
 };
 
@@ -24,7 +25,9 @@ export const getTelegramAdminConfig = (): TelegramAdminConfig | null => {
 		.split(/[,\s]+/)
 		.map((part) => part.trim())
 		.filter((part) => part.length > 0);
-	if (!token || chatIds.length === 0) {return null;}
+	if (!token || chatIds.length === 0) {
+		return null;
+	}
 	return { chatIds, token };
 };
 
@@ -73,11 +76,13 @@ const forEachChat = async <T>(
 		}
 	}
 	for (const failure of failed) {
-		logger.error("telegram.admin_send_failed", failure.reason, {
+		logger.error("telegram.admin_send_failed", parseCaught(failure.reason), {
 			chatId: failure.chatId,
 		});
 	}
-	if (delivered.length === 0 && failed.length > 0) {throw failed[0].reason;}
+	if (delivered.length === 0 && failed.length > 0) {
+		throw failed[0].reason;
+	}
 	return delivered;
 };
 
@@ -159,21 +164,17 @@ export const sendTelegramTextWithButtons = async (
 export const sendTelegramPhoto = async (photoUrl: string, caption?: string) => {
 	const photo = await fetchImageBlob(photoUrl);
 	await forEachChat((api, chatId) =>
-		api.sendPhoto({
-			chat_id: chatId,
-			photo,
-			...(caption ? { caption } : {}),
-		}),
+		caption
+			? api.sendPhoto({ caption, chat_id: chatId, photo })
+			: api.sendPhoto({ chat_id: chatId, photo }),
 	);
 };
 
 const sendSinglePhoto = async (blob: Blob, caption: string | undefined) => {
 	await forEachChat((api, chatId) =>
-		api.sendPhoto({
-			chat_id: chatId,
-			photo: blob,
-			...(caption ? { caption } : {}),
-		}),
+		caption
+			? api.sendPhoto({ caption, chat_id: chatId, photo: blob })
+			: api.sendPhoto({ chat_id: chatId, photo: blob }),
 	);
 };
 
@@ -197,7 +198,7 @@ const safeSendSinglePhoto = async (blob: Blob, caption: string | undefined) => {
 	}
 };
 
-const safeSendPhotoChunk = async (chunk: Array<{ blob: Blob; product: ProductImageInput; }>) => {
+const safeSendPhotoChunk = async (chunk: Array<{ blob: Blob; product: ProductImageInput }>) => {
 	if (chunk.length === 1) {
 		const { blob, product } = chunk[0];
 		await safeSendSinglePhoto(blob, `${product.name} x${product.quantity}`);
@@ -216,7 +217,9 @@ export const sendTelegramProductImages = async (products: Array<ProductImageInpu
 	const loaded = (
 		await Promise.all(
 			products.map(async (product) => {
-				if (!product.imageUrl) {return null;}
+				if (!product.imageUrl) {
+					return null;
+				}
 				try {
 					const blob = await fetchImageBlob(product.imageUrl);
 					return { blob, product };
@@ -227,7 +230,9 @@ export const sendTelegramProductImages = async (products: Array<ProductImageInpu
 		)
 	).filter((item) => item !== null);
 
-	if (loaded.length === 0) {return;}
+	if (loaded.length === 0) {
+		return;
+	}
 
 	for (let index = 0; index < loaded.length; index += 10) {
 		await safeSendPhotoChunk(loaded.slice(index, index + 10));

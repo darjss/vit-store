@@ -25,7 +25,9 @@ const chunkTextBlocks = (header: string, blocks: Array<string>) => {
 	const chunks: Array<string> = [];
 	let current = header;
 	const flush = () => {
-		if (current.trim()) {chunks.push(current);}
+		if (current.trim()) {
+			chunks.push(current);
+		}
 		current = "";
 	};
 	for (const block of blocks) {
@@ -34,7 +36,9 @@ const chunkTextBlocks = (header: string, blocks: Array<string>) => {
 			current = candidate;
 			continue;
 		}
-		if (current) {flush();}
+		if (current) {
+			flush();
+		}
 		if (block.length <= TELEGRAM_TEXT_LIMIT) {
 			current = block;
 			continue;
@@ -47,7 +51,10 @@ const chunkTextBlocks = (header: string, blocks: Array<string>) => {
 	return chunks;
 };
 
-export const deliverMorningOrderBrief = async (orders: Array<MorningBriefOrder>, dashUrl: string) => {
+export const deliverMorningOrderBrief = async (
+	orders: Array<MorningBriefOrder>,
+	dashUrl: string,
+) => {
 	const base = dashUrl.replace(/\/$/, "");
 
 	if (orders.length === 0) {

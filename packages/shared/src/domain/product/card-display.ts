@@ -49,12 +49,13 @@ const FORM_DEFINITIONS: Array<{ label: string; pattern: RegExp }> = [
 	{ label: "Ширхэг", pattern: /(?:pieces?|count|ct|ширхэг)/iu },
 ];
 
-const BRAND_ALIASES = {
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
+const BRAND_ALIASES: Record<string, Array<string>> = {
 	drtobias: ["Dr. Tobias", "DR TOBIAS"],
 	maryruths: ["MaryRuth Organics", "Mary Ruth Organics", "Mary Ruth's"],
 	microingredients: ["Micro Ingredients", "Microingredients"],
 	now: ["NOW Foods Supplements", "NOW Foods", "NOW"],
-} satisfies Record<string, Array<string>>;
+};
 
 const compactKey = (value: string) => value.toLocaleLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
 

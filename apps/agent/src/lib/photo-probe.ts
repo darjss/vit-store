@@ -27,8 +27,21 @@ export interface PhotoProbeInput {
 	sessionId?: string;
 }
 
+const productCardSchema = v.object({
+	button: v.object({ label: v.string(), payload: v.string() }),
+	imageUrl: v.optional(v.string()),
+	productId: v.number(),
+	subtitle: v.string(),
+	title: v.string(),
+});
+
+const identifiedSchema = v.object({
+	facts: v.string(),
+	queries: v.array(v.string()),
+});
+
 export const photoProbeResultSchema = v.object({
-	cards: v.array(v.looseObject({})),
+	cards: v.array(productCardSchema),
 	contentType: v.string(),
 	facts: v.string(),
 	key: v.string(),
@@ -68,9 +81,12 @@ export async function runPhotoProbe(
 		loadImage: (key) => loadInboundImage(bucket, key),
 		runVision: buildKimiVision(env.AI),
 	});
-	const identified = await tool.run({
-		input: { imageKey: staged.key },
-	});
+	const identified = v.parse(
+		identifiedSchema,
+		await tool.run({
+			input: { imageKey: staged.key },
+		}),
+	);
 
 	// Feed the top suggested query into the SAME #19 search + card formatter.
 	const usedQuery = identified.queries[0];

@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import type { JSONSchema7 } from "json-schema";
 import { z } from "zod";
 import { parseLlmOutput } from "~/lib/ai/llm-output";
 import { logger } from "~/lib/logger";
@@ -24,7 +23,7 @@ type ProductAiInput = {
 	response_format: {
 		json_schema: {
 			name: string;
-			schema: JSONSchema7;
+			schema: z.core.JSONSchema.BaseSchema;
 			strict: true;
 		};
 		type: "json_schema";

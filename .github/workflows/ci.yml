@@ -10,6 +10,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
+      # vp check = oxfmt + oxlint (anti-slop, nkzw, type-aware rules)
+      - run: bun run check
+
   vite-8-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +56,9 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
-      - run: bun x astro check
+      # `astro check` needs TypeScript 6 (language server has no TS 7 support); the script
+      # runs it from an isolated install, see apps/storev2/package.json.
+      - run: bun run check-types
         working-directory: apps/storev2
 
   # NOTE: there is intentionally no unit-test job in this workflow per owner

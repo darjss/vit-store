@@ -613,8 +613,8 @@ export const storeQueries = {
 
 		// Build next cursor from the last item
 		let nextCursor: string | null = null;
-		if (items.length === limit && items.length > 0) {
-			const lastItem = items.at(-1);
+		const lastItem = items.at(-1);
+		if (items.length === limit && lastItem) {
 			const sortValue =
 				sort.field === "price"
 					? lastItem.price

@@ -52,12 +52,12 @@ const smsGatewayJsonSchema: v.GenericSchema<SmsGatewayJson> = v.lazy(() =>
 );
 
 // Define JWT types locally (matching android-sms-gateway v3.0 API)
-export interface TokenRequest {
+export type TokenRequest = {
 	/** The scopes to include in the token */
 	scopes: Array<string>;
 	/** The time-to-live (TTL) of the token in seconds */
 	ttl?: number;
-}
+};
 
 export const tokenResponseSchema = v.object({
 	access_token: v.string(),

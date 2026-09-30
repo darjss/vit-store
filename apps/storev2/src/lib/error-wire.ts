@@ -7,23 +7,33 @@ import {
 	record,
 	string,
 	union,
-	type InferOutput,
+	type GenericSchema,
 } from "valibot";
 
+export type ThrownErrorWire =
+	| Error
+	| string
+	| number
+	| boolean
+	| null
+	| Record<string, string | number | boolean | null>;
+
+const nativeErrorSchema = custom<Error>(
+	(input) => Object.prototype.toString.call(input) === "[object Error]",
+);
+
 export function isNativeError(wire: ThrownErrorWire): wire is Error {
-	return Object.prototype.toString.call(wire) === "[object Error]";
+	return is(nativeErrorSchema, wire);
 }
 
-export const thrownErrorWireSchema = union([
-	custom<Error>(isNativeError),
+export const thrownErrorWireSchema: GenericSchema<ThrownErrorWire> = union([
+	nativeErrorSchema,
 	string(),
 	number(),
 	boolean(),
 	nullSchema(),
 	record(string(), union([string(), number(), boolean(), nullSchema()])),
 ]);
-
-export type ThrownErrorWire = InferOutput<typeof thrownErrorWireSchema>;
 
 export function errorKind(wire: ThrownErrorWire): string {
 	if (isNativeError(wire)) {

@@ -234,7 +234,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	);
 
 	const amountLabel = () => {
-		if (!Number.isFinite(props.amount)) {
+		if (props.amount === undefined || !Number.isFinite(props.amount)) {
 			return null;
 		}
 		return `${props.amount.toLocaleString()}₮`;
