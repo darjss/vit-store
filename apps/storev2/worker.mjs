@@ -5,14 +5,11 @@ const CACHE_TAG = /^[!-~]{1,128}$/;
 
 /**
  * Worker entrypoint is uploaded unbundled — no bare npm imports.
- * Accept only JSON string values that match Cloudflare cache-tag grammar.
+ * Accept only primitive strings that match Cloudflare cache-tag grammar.
  */
 function isCacheTag(tag) {
-	const encoded = JSON.stringify(tag);
-	if (encoded === undefined || encoded[0] !== '"' || encoded.at(-1) !== '"') {
-		return false;
-	}
-	return CACHE_TAG.test(JSON.parse(encoded));
+	// Strict equality rejects boxed strings and other values that only coerce to one.
+	return tag === String(tag) && CACHE_TAG.test(tag);
 }
 
 export default class Storefront extends WorkerEntrypoint {

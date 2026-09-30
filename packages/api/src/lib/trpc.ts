@@ -9,8 +9,7 @@ import {
 	parseLogWire,
 	summarizeTrpcInputForLog,
 	summarizeTrpcOutputForLog,
-	thrownErrorWireSchema,
-	toError,
+	parseCaught,
 } from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
@@ -100,34 +99,6 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	return next({ ctx: { ...ctx, session } });
 });
 
-function ensureTRPCError(
-	error: v.InferOutput<typeof thrownErrorWireSchema> | TRPCError,
-	fallbackMessage = "An unexpected error occurred",
-): TRPCError {
-	if (error instanceof TRPCError) {
-		return error;
-	}
-	const parsed = v.parse(thrownErrorWireSchema, error);
-	if (parsed instanceof Error) {
-		return new TRPCError({
-			cause: parsed,
-			code: "INTERNAL_SERVER_ERROR",
-			message: parsed.message || fallbackMessage,
-		});
-	}
-	if (v.is(v.string(), parsed)) {
-		return new TRPCError({
-			code: "INTERNAL_SERVER_ERROR",
-			message: parsed || fallbackMessage,
-		});
-	}
-	return new TRPCError({
-		cause: parsed,
-		code: "INTERNAL_SERVER_ERROR",
-		message: fallbackMessage,
-	});
-}
-
 const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	try {
 		return await next();
@@ -135,7 +106,12 @@ const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 		if (error instanceof TRPCError) {
 			throw error;
 		}
-		throw ensureTRPCError(v.parse(thrownErrorWireSchema, error));
+		const cause = parseCaught(error);
+		throw new TRPCError({
+			cause,
+			code: "INTERNAL_SERVER_ERROR",
+			message: cause.message || "An unexpected error occurred",
+		});
 	}
 });
 
@@ -183,7 +159,7 @@ const loggingMiddleware = t.middleware(async ({ ctx, input, next, path, type }) 
 	} catch (error) {
 		const durationMs = Date.now() - startTime;
 
-		ctx.log.error(toError(v.parse(thrownErrorWireSchema, error)), {
+		ctx.log.error(parseCaught(error), {
 			event: "trpc.procedure_error",
 			trpc: {
 				duration_ms: durationMs,

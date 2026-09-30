@@ -38,7 +38,7 @@ Facebook Messenger AI shopping agent — plus shared packages, all deployed to C
 - **Storage**: Cloudflare R2 (product + inbound images), KV (sessions/cache)
 - **State**: Upstash Redis Search (product discovery); Durable Objects (Flue agent sessions, Messenger dedup/cart/checkout)
 - **IaC/deploy**: Alchemy → Cloudflare Workers (server, agent) and Pages (storev2, admin)
-- **Lint/format**: Biome, oxlint; type checks via `tsc`
+- **Lint/format**: Vite+ (`vp check`: oxfmt + oxlint); type checks via `tsc`
 
 ## Getting started
 
@@ -108,8 +108,9 @@ bun deploy          # turbo deploy (server first, then frontends)
 | `bun db:studio` / `bun db:studio:local`   | Open Drizzle Studio                                  |
 | `bun db:seed`                             | Seed the database                                    |
 | `bun db:docker:up` / `bun db:docker:down` | Start/stop the Postgres container                    |
-| `bun lint` / `bun lint:fix`               | Biome lint / autofix                                 |
-| `bun format`                              | Biome format                                         |
+| `bun lint` / `bun lint:fix`               | oxlint / autofix                                     |
+| `bun fmt` / `bun fmt:fix`                 | oxfmt check / write                                  |
+| `bun check`                               | fmt + lint (what CI runs)                            |
 | `bun check`                               | oxlint                                               |
 | `bun knip`                                | Dead-code/dependency analysis                        |
 | `bun quality`                             | `check-types` + `fallow dead-code` + `fallow health` |

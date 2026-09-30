@@ -25,7 +25,7 @@ export const trpcPublicErrorWireSchema = v.object({
 export type TrpcPublicErrorWire = v.InferOutput<typeof trpcPublicErrorWireSchema>;
 
 const trpcSerializedErrorWireSchema = v.object({
-	json: v.optional(v.unknown()),
+	json: v.unknown(),
 });
 
 const trpcResponseItemWireSchema = v.looseObject({

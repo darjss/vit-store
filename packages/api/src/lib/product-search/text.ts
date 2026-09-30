@@ -241,7 +241,9 @@ export const expandBrandAliases = (value: string | null | undefined) => {
 	}
 
 	let changed = false;
-	for (const [phrase, canonical] of Object.entries(BRAND_ALIASES)) {
+	// Longest phrase first so "black mores" is not clobbered by its prefix "black more".
+	const aliases = Object.entries(BRAND_ALIASES).toSorted(([a], [b]) => b.length - a.length);
+	for (const [phrase, canonical] of aliases) {
 		if (normalized.includes(phrase)) {
 			normalized = normalized.replaceAll(phrase, canonical);
 			changed = true;
