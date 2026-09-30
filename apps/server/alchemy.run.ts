@@ -14,12 +14,21 @@ import {
 	WorkerRef,
 } from "alchemy/cloudflare";
 import { createServerAlchemyEnv } from "../../env";
+import type { TransferReconciliationState } from "../../packages/api/src/lib/payments/transfer-reconciliation-status";
 
 // Exported (not private) so the `server` Worker export can name the type of
 // its STOREFRONT WorkerRef binding; a private interface here trips declaration
 // emit in check-types.
 export interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
 	purgeCache(tags: Array<string>): Promise<void>;
+}
+
+// Exported for the same declaration-emit reason as StorefrontCacheRpc. Naming the RPC surface
+// here types `env.KHAAN_TRANSFER_RECONCILER.getByName()` without deep instantiation.
+export interface TransferReconciliationRpc extends Rpc.DurableObjectBranded {
+	collectMatchingKhaanFingerprints(paymentNumber: string): Promise<Array<string> | null>;
+	getStatus(): Promise<TransferReconciliationState | null>;
+	start(input: { paymentNumber: string }): Promise<TransferReconciliationState | null>;
 }
 
 const app = await alchemy("server");
@@ -56,10 +65,13 @@ const images = Images({
 	},
 });
 
-const transferReconciliation = DurableObjectNamespace("transfer-reconciliation", {
-	className: "TransferReconciliationObject",
-	sqlite: true,
-});
+const transferReconciliation = DurableObjectNamespace<TransferReconciliationRpc>(
+	"transfer-reconciliation",
+	{
+		className: "TransferReconciliationObject",
+		sqlite: true,
+	},
+);
 
 const hyperdriveDB = await Hyperdrive("pscale-db", {
 	adopt: true,

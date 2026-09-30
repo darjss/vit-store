@@ -35,55 +35,50 @@ type AgentEnv = {
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
-// ponytail: one-place agent wiring; complexity ceiling 20
-// oxlint-disable-next-line complexity
-export default defineAgent<AgentEnv>(({ env, id }) => {
-	const storeApiUrl = process.env.STORE_API_URL ?? "http://localhost:3000";
-	const queryTool =
-		env.LOADER && env.ADMIN_BOT_TOKEN
-			? buildAdminQueryTool({
-					botToken: env.ADMIN_BOT_TOKEN,
-					loader: env.LOADER,
-					storeApiUrl,
-				})
-			: undefined;
+const buildQueryTools = (env: AgentEnv, storeApiUrl: string) =>
+	env.LOADER && env.ADMIN_BOT_TOKEN
+		? [buildAdminQueryTool({ botToken: env.ADMIN_BOT_TOKEN, loader: env.LOADER, storeApiUrl })]
+		: [];
 
+// Both image tools read staged chat images from R2 and run Workers AI vision.
+const buildImageTools = (env: AgentEnv, storeApiUrl: string) => {
 	const bucket = env.MESSENGER_INBOUND_BUCKET;
 	const adminToken = env.ADMIN_BOT_TOKEN;
-	const runVision = env.AI ? buildKimiVision(env.AI, 4096) : undefined;
-	const loadImage = bucket ? (key: string) => loadInboundImage(bucket, key) : undefined;
-	const purchaseExtractTool =
-		loadImage && runVision && adminToken
-			? buildPurchaseImageExtractTool({
-					loadImage,
-					matchExtracted: async (input) =>
-						serializeCodemodeJson(
-							await createAdminBotClient(
-								storeApiUrl,
-								adminToken,
-							).aiPurchase.matchExtractedInvoice.mutate(input),
-						),
-					runVision,
-				})
-			: undefined;
+	if (!bucket || !env.AI) {
+		return [];
+	}
+	const loadImage = (key: string) => loadInboundImage(bucket, key);
+	const runVision = buildKimiVision(env.AI, 4096);
+	const chatOrderTool = buildChatOrderImageExtractTool({ loadImage, runVision });
+	if (!adminToken) {
+		return [chatOrderTool];
+	}
+	const purchaseTool = buildPurchaseImageExtractTool({
+		loadImage,
+		matchExtracted: async (input) =>
+			serializeCodemodeJson(
+				await createAdminBotClient(storeApiUrl, adminToken).aiPurchase.matchExtractedInvoice.mutate(
+					input,
+				),
+			),
+		runVision,
+	});
+	return [purchaseTool, chatOrderTool];
+};
 
-	const chatOrderExtractTool =
-		loadImage && runVision ? buildChatOrderImageExtractTool({ loadImage, runVision }) : undefined;
+const buildReplyTools = (env: AgentEnv, id: string, storeApiUrl: string) => {
+	if (!id.startsWith("telegram:")) {
+		return [postMessengerMessage(messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")))];
+	}
+	const ref = telegramChannel.parseConversationKey(id);
+	const replyTool = postTelegramMessage(ref);
+	return env.ADMIN_BOT_TOKEN
+		? [replyTool, postTelegramProductPhoto({ botToken: env.ADMIN_BOT_TOKEN, ref, storeApiUrl })]
+		: [replyTool];
+};
 
-	const isTelegram = id.startsWith("telegram:");
-	const telegramRef = isTelegram ? telegramChannel.parseConversationKey(id) : undefined;
-	const replyTool = isTelegram
-		? postTelegramMessage(telegramRef!)
-		: postMessengerMessage(messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")));
-	const productPhotoTool =
-		isTelegram && telegramRef && env.ADMIN_BOT_TOKEN
-			? postTelegramProductPhoto({
-					botToken: env.ADMIN_BOT_TOKEN,
-					ref: telegramRef,
-					storeApiUrl,
-				})
-			: undefined;
-
+export default defineAgent<AgentEnv>(({ env, id }) => {
+	const storeApiUrl = process.env.STORE_API_URL ?? "http://localhost:3000";
 	return {
 		compaction: {
 			keepRecentTokens: 8000,
@@ -102,11 +97,9 @@ export default defineAgent<AgentEnv>(({ env, id }) => {
 		],
 		thinkingLevel: "medium" as const,
 		tools: [
-			...(queryTool ? [queryTool] : []),
-			...(purchaseExtractTool ? [purchaseExtractTool] : []),
-			...(chatOrderExtractTool ? [chatOrderExtractTool] : []),
-			replyTool,
-			...(productPhotoTool ? [productPhotoTool] : []),
+			...buildQueryTools(env, storeApiUrl),
+			...buildImageTools(env, storeApiUrl),
+			...buildReplyTools(env, id, storeApiUrl),
 		],
 	};
 });

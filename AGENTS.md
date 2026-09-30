@@ -31,7 +31,7 @@ Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes l
 
 ## Lint & check
 
-All lint and typecheck cleanup (anti-slop, nkzw, CI gates) follows the same bar. See `scripts/anti-slop-worker-brief.md` for anti-slop specifics; the rules below apply to **every** lint phase.
+All lint and typecheck cleanup (anti-slop, nkzw, CI gates) follows the same bar. The rules below apply to **every** lint phase.
 
 **Hard rejects**
 
@@ -50,7 +50,6 @@ All lint and typecheck cleanup (anti-slop, nkzw, CI gates) follows the same bar.
 **Verify before PASS**
 
 ```bash
-bun scripts/lint-anti-slop-bucket.ts <path>   # when anti-slop is in scope
 bunx vp lint <path>
 bunx vp fmt --check
 ```

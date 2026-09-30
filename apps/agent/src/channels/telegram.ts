@@ -28,108 +28,137 @@ const telegramButtonSchema = v.object({
 
 export const channel = createTelegramChannel({
 	secretToken: requiredEnv("TELEGRAM_WEBHOOK_SECRET"),
-	// ponytail: split inbound dispatch from admin gating; complexity ceiling 28
-	// oxlint-disable-next-line complexity
 	async webhook({ c, update }) {
-		// SAFETY: c.env is the Workers env for this worker; TelegramWebhookEnv lists the bindings it reads.
+		// SAFETY: Workers passes the wrangler bindings object as c.env; TelegramWebhookEnv is the
+		// all-optional subset of those bindings that this handler reads.
 		const env = c.env as TelegramWebhookEnv;
 
 		if (update.callback_query) {
 			return handleTelegramCallback({ channel, env, update });
 		}
-
-		const message = update.message;
-		if (!message) {
-			return undefined;
-		}
-
-		const fromId = message.from?.id;
-		if (fromId === undefined || message.chat.type !== "private") {
-			return undefined;
-		}
-
-		if (isIdCommand(message.text)) {
-			await replyWithUserId(env, message.chat.id, fromId);
-			return undefined;
-		}
-
-		if (!isAdminUser(fromId, env)) {
-			console.info(
-				JSON.stringify({
-					event: "telegram.admin_reject",
-					fromId,
-					username: message.from?.username ?? null,
-				}),
-			);
-			return undefined;
-		}
-
-		const text = message.text?.trim() ?? message.caption?.trim() ?? "";
-		const photos = message.photo;
-		if (!text && (!photos || photos.length === 0)) {
-			return undefined;
-		}
-
-		const conversation = conversationFromMessage(message);
-		const sessionId = channel.conversationKey(conversation);
-		const dedupeKey = `telegram:update:v1:${update.update_id}`;
-		if (!(await claimInboundOnce(dedupeKey, env))) {
-			return undefined;
-		}
-
-		const imageKeys: Array<string> = [];
-		if (photos && photos.length > 0) {
-			const key = await stageTelegramPhoto({ env, message, photos, sessionId }).catch(
-				async (error) => {
-					await releaseInboundClaim(dedupeKey, env);
-					throw error;
-				},
-			);
-			if (key === "unavailable") {
-				await releaseInboundClaim(dedupeKey, env);
-				return undefined;
-			}
-			if (key !== "not-staged") {
-				imageKeys.push(key);
-			}
-		}
-
-		if (imageKeys.length === 0 && !text) {
-			await releaseInboundClaim(dedupeKey, env);
-			return undefined;
-		}
-
-		try {
-			const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
-			const dispatchTurn = () =>
-				dispatch(adminAssistant, {
-					id: sessionId,
-					input:
-						imageKeys.length > 0
-							? { imageKeys, text, type: "telegram.message", updateId: update.update_id }
-							: { text, type: "telegram.message", updateId: update.update_id },
-				});
-
-			if (token) {
-				const api = telegramApi(token);
-				await withTelegramTyping(
-					api,
-					message.chat.id,
-					dispatchTurn,
-					imageKeys.length > 0 ? "upload_photo" : "typing",
-				);
-			} else {
-				await dispatchTurn();
-			}
-		} catch (error) {
-			await releaseInboundClaim(dedupeKey, env);
-			throw error;
+		if (update.message) {
+			await handlePrivateMessage({ env, message: update.message, updateId: update.update_id });
 		}
 		return undefined;
 	},
 });
 
-type TelegramPhotos = NonNullable<NonNullable<Update["message"]>["photo"]>;
+type TelegramMessage = NonNullable<Update["message"]>;
+
+async function handlePrivateMessage({
+	env,
+	message,
+	updateId,
+}: {
+	env: TelegramWebhookEnv;
+	message: TelegramMessage;
+	updateId: number;
+}) {
+	if (!(await admitSender(env, message))) {
+		return;
+	}
+
+	const text = message.text?.trim() ?? message.caption?.trim() ?? "";
+	const photos = message.photo ?? [];
+	if (!text && photos.length === 0) {
+		return;
+	}
+
+	const dedupeKey = `telegram:update:v1:${updateId}`;
+	if (!(await claimInboundOnce(dedupeKey, env))) {
+		return;
+	}
+	try {
+		const dispatched = await dispatchAdminTurn({ env, message, photos, text, updateId });
+		if (!dispatched) {
+			await releaseInboundClaim(dedupeKey, env);
+		}
+	} catch (error) {
+		await releaseInboundClaim(dedupeKey, env);
+		throw error;
+	}
+}
+
+/** Private-chat admins only. Anyone can ask for their user id to get added to the allowlist. */
+async function admitSender(env: TelegramWebhookEnv, message: TelegramMessage) {
+	const fromId = message.from?.id;
+	if (fromId === undefined || message.chat.type !== "private") {
+		return false;
+	}
+	if (isIdCommand(message.text)) {
+		await replyWithUserId(env, message.chat.id, fromId);
+		return false;
+	}
+	if (!isAdminUser(fromId, env)) {
+		console.info(
+			JSON.stringify({
+				event: "telegram.admin_reject",
+				fromId,
+				username: message.from?.username ?? null,
+			}),
+		);
+		return false;
+	}
+	return true;
+}
+
+/** Returns false when there was nothing to dispatch, so the caller releases the dedupe claim. */
+async function dispatchAdminTurn({
+	env,
+	message,
+	photos,
+	text,
+	updateId,
+}: {
+	env: TelegramWebhookEnv;
+	message: TelegramMessage;
+	photos: TelegramPhotos;
+	text: string;
+	updateId: number;
+}) {
+	const sessionId = channel.conversationKey(conversationFromMessage(message));
+	const imageKeys: Array<string> = [];
+	if (photos.length > 0) {
+		const staged = await stageTelegramPhoto({ env, message, photos, sessionId });
+		if (staged.status === "unavailable") {
+			return false;
+		}
+		if (staged.status === "staged") {
+			imageKeys.push(staged.key);
+		}
+	}
+	if (imageKeys.length === 0 && !text) {
+		return false;
+	}
+
+	const dispatchTurn = () =>
+		dispatch(adminAssistant, {
+			id: sessionId,
+			input:
+				imageKeys.length > 0
+					? { imageKeys, text, type: "telegram.message", updateId }
+					: { text, type: "telegram.message", updateId },
+		});
+	const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
+	if (token) {
+		await withTelegramTyping(
+			telegramApi(token),
+			message.chat.id,
+			dispatchTurn,
+			imageKeys.length > 0 ? "upload_photo" : "typing",
+		);
+	} else {
+		await dispatchTurn();
+	}
+	return true;
+}
+
+type TelegramPhotos = NonNullable<TelegramMessage["photo"]>;
+
+type StagedPhoto =
+	| { key: string; status: "staged" }
+	| { status: "not-staged" }
+	| { status: "unavailable" };
 
 // Anyone in a private chat can ask for their Telegram user id so we can
 // add them to TELEGRAM_ADMIN_CHAT_ID (comma-separated allowlist).
@@ -154,10 +183,10 @@ async function stageTelegramPhoto({
 	sessionId,
 }: {
 	env: TelegramWebhookEnv;
-	message: NonNullable<Update["message"]>;
+	message: TelegramMessage;
 	photos: TelegramPhotos;
 	sessionId: string;
-}): Promise<string | "unavailable" | "not-staged"> {
+}): Promise<StagedPhoto> {
 	const bucket = env.MESSENGER_INBOUND_BUCKET;
 	const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
 	if (!bucket || !token) {
@@ -167,15 +196,15 @@ async function stageTelegramPhoto({
 	}
 	const largest = photos.at(-1);
 	if (!largest) {
-		return "unavailable";
+		return { status: "unavailable" };
 	}
 	const file = await telegramApi(token).getFile(largest.file_id);
 	if (!file.file_path) {
-		return "unavailable";
+		return { status: "unavailable" };
 	}
 	const response = await fetch(`https://api.telegram.org/file/bot${token}/${file.file_path}`);
 	if (!response.ok || response.body === null) {
-		return "unavailable";
+		return { status: "unavailable" };
 	}
 	const staged = await stageInboundBytes(
 		bucket,
@@ -184,7 +213,7 @@ async function stageTelegramPhoto({
 		"image/jpeg",
 		"telegram-inbound",
 	);
-	return staged ? staged.key : "not-staged";
+	return staged ? { key: staged.key, status: "staged" } : { status: "not-staged" };
 }
 
 /** Comma/space-separated Telegram user ids allowed to use the admin bot. */

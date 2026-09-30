@@ -66,10 +66,7 @@ const logWireSchema: v.GenericSchema<LogWire> = v.lazy(() =>
 	]),
 );
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this is the parser; callers hand it raw values
-export function parseLogWire(wire: unknown): LogWire {
-	return v.parse(logWireSchema, wire);
-}
+export const parseLogWire = v.parser(logWireSchema);
 
 export const thrownErrorWireSchema = v.union([
 	v.custom<Error>((input): input is Error => input instanceof Error),
@@ -275,11 +272,12 @@ export function toError(error: ThrownErrorWire): Error {
 }
 
 /**
- * Catch clauses and settled-promise reasons are `unknown`. Parse them here so
- * an odd thrown value (undefined, nested object) never throws inside a catch.
+ * Catch clauses and settled-promise reasons are `unknown`. This parser never throws, so an odd
+ * thrown value (undefined, nested object) cannot escape a catch block.
  */
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- catch-clause boundary, parsed immediately
-export function parseCaught(caught: unknown): Error {
-	const parsed = v.safeParse(thrownErrorWireSchema, caught);
-	return parsed.success ? parseThrownError(parsed.output) : new Error("Non-error value thrown");
-}
+export const parseCaught = v.parser(
+	v.fallback(
+		v.pipe(thrownErrorWireSchema, v.transform(parseThrownError)),
+		() => new Error("Non-error value thrown"),
+	),
+);

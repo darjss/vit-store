@@ -1,5 +1,5 @@
-// oxlint-disable-next-line typescript/triple-slash-reference -- gives every consumer the Alchemy-generated global `Env`
-/// <reference path="../env.d.ts" />
+// Importing env.d.ts gives every consumer of @vit/api the Alchemy-generated global `Env`.
+export type { CloudflareEnv } from "../env";
 
 export type { DB } from "~/db";
 export { createDb } from "~/db";

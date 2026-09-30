@@ -10,7 +10,6 @@ import {
 } from "@vit/shared/schema";
 import { generateText, Output } from "ai";
 import { and, eq, isNull } from "drizzle-orm";
-import * as v from "valibot";
 import { z } from "zod";
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
@@ -456,19 +455,23 @@ export const aiPurchaseBot = router({
 	...commonPurchaseProcedures(botProcedure),
 	matchExtractedInvoice: botProcedure
 		.input(
-			v.object({
-				extraction: v.record(v.string(), v.unknown()),
-				provider: v.picklist(purchaseProvider),
+			z.object({
+				extraction: invoiceExtractionSchema,
+				provider: z.enum(purchaseProvider),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const parsed = parseLlmOutput(invoiceExtractionSchema, input.extraction);
 				const [brands, categories] = await Promise.all([
 					brandQueries.admin.getAllBrands(),
 					categoryQueries.admin.getAllCategories(),
 				]);
-				return await matchExtractedInvoiceData(input.provider, parsed, brands, categories);
+				return await matchExtractedInvoiceData(
+					input.provider,
+					input.extraction,
+					brands,
+					categories,
+				);
 			} catch (error) {
 				if (error instanceof TRPCError) {
 					throw error;

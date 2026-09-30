@@ -3,8 +3,7 @@ import type { z } from "zod";
 
 export function parseLlmOutput<T extends z.ZodType>(
 	schema: T,
-	// oxlint-disable-next-line anti-slop/no-unknown-parameters
-	raw: unknown,
+	raw: z.input<T>,
 	errorMessage = "LLM output validation failed",
 ): z.infer<T> {
 	const parsed = schema.safeParse(raw);

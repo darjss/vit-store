@@ -12,6 +12,10 @@
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx"
 	},
-	"include": ["**/*.ts", "../../env.ts"],
+	"include": [
+		"**/*.ts",
+		"../../env.ts",
+		"../../packages/api/src/lib/payments/transfer-reconciliation-status.ts"
+	],
 	"exclude": ["**/*.test.ts", "**/*.spec.ts", "scripts/**"]
 }

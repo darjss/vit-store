@@ -117,19 +117,21 @@ export const getDeliveryAddressZones = async (): Promise<Array<DeliveryZone>> =>
 	return result;
 };
 
+const LEGACY_FINGERPRINT_KEYS = [
+	"orderId",
+	"orderNumber",
+	"recipientPhone",
+	"recipientAddressZoneId",
+	"recipientAddress",
+	"orderDesc",
+	"senderId",
+	"getMoney",
+] as const;
+
 // Fingerprints are persisted in DeliveryDispatchesTable. The hash input keeps the key order
 // used when the table was introduced, so claims made before a deploy still match on retry.
 const fingerprintDelivery = async (order: Omit<Order, "deliveryDate">) => {
-	const legacyOrder = {
-		orderId: order.orderId,
-		orderNumber: order.orderNumber,
-		recipientPhone: order.recipientPhone,
-		recipientAddressZoneId: order.recipientAddressZoneId,
-		recipientAddress: order.recipientAddress,
-		orderDesc: order.orderDesc,
-		senderId: order.senderId,
-		getMoney: order.getMoney,
-	};
+	const legacyOrder = Object.fromEntries(LEGACY_FINGERPRINT_KEYS.map((key) => [key, order[key]]));
 	const bytes = new TextEncoder().encode(JSON.stringify(legacyOrder));
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
