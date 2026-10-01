@@ -13,36 +13,36 @@ A customer Messenger bot that answers in 4 to 7 seconds with correct products, p
 
 Source: the page's Facebook export (`vit-playground/facebook-100057596651892-2026-05-13-*`, 1,697 conversations, 34,494 messages, April to mid-May 2026). Analysis scripts live in `~/dev/scratchpad/vit-store/convo-analysis/`.
 
-| Finding | Number | Design consequence |
-| --- | --- | --- |
-| Customer messages per day | ~330 | One Ingress Durable Object is enough |
-| Customer text in Latin-script Mongolian | 70% (26% Cyrillic) | The prompt carries a Latin-script glossary |
-| Admin text in Latin script | 91%, median 15 chars | The bot answers in Cyrillic anyway: models write it better |
-| Turns split into several messages | 50% | Burst merging plus queueing in Chat SDK |
-| Gap between parts of a split turn | median 12 s, 6% under 2 s | A 2 s burst window catches few. The rest queue into the next turn |
-| Turns with a photo | 22% (1,718 product photos, 570 payment screenshots) | Images go straight to the model |
-| Human admin reply time | median 2.6 min, p90 55 min | 4 to 7 s is a large improvement even with imperfect merging |
-| Most asked products | magnesium 351, vitamin D 256, omega 202, kids 181, zinc 150, K2 142 | Search must handle dose, pack size, pouch vs bottle |
-| Conversations started from an ad | 34% (22% from a post) | Log `ad_id` per turn |
-| Messages with a phone number | 822, 98% plain 8 digits, 50% phone-only, 36% with address | Phone and address often arrive in separate turns |
-| Expiry questions | 134 messages in 113 conversations | Expose `expirationDate` to the bot |
-| Long admin replies (>=200 chars) | 75, confirmed ChatGPT pastes | Excluded from voice examples |
+| Finding                                 | Number                                                              | Design consequence                                                |
+| --------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Customer messages per day               | ~330                                                                | One Ingress Durable Object is enough                              |
+| Customer text in Latin-script Mongolian | 70% (26% Cyrillic)                                                  | The prompt carries a Latin-script glossary                        |
+| Admin text in Latin script              | 91%, median 15 chars                                                | The bot answers in Cyrillic anyway: models write it better        |
+| Turns split into several messages       | 50%                                                                 | Burst merging plus queueing in Chat SDK                           |
+| Gap between parts of a split turn       | median 12 s, 6% under 2 s                                           | A 2 s burst window catches few. The rest queue into the next turn |
+| Turns with a photo                      | 22% (1,718 product photos, 570 payment screenshots)                 | Images go straight to the model                                   |
+| Human admin reply time                  | median 2.6 min, p90 55 min                                          | 4 to 7 s is a large improvement even with imperfect merging       |
+| Most asked products                     | magnesium 351, vitamin D 256, omega 202, kids 181, zinc 150, K2 142 | Search must handle dose, pack size, pouch vs bottle               |
+| Conversations started from an ad        | 34% (22% from a post)                                               | Log `ad_id` per turn                                              |
+| Messages with a phone number            | 822, 98% plain 8 digits, 50% phone-only, 36% with address           | Phone and address often arrive in separate turns                  |
+| Expiry questions                        | 134 messages in 113 conversations                                   | Expose `expirationDate` to the bot                                |
+| Long admin replies (>=200 chars)        | 75, confirmed ChatGPT pastes                                        | Excluded from voice examples                                      |
 
 ## Decisions
 
-| Area | Decision |
-| --- | --- |
-| Stack | Plain `Agent` (agents SDK) + Chat SDK (`chat`) + `@zernio/chat-sdk-adapter` + AI SDK. No Think, no Flue. |
-| Why not Think | Taps must stay in code. In our own Chat SDK handler they arrive inside the SDK's dedupe and lock. Think's messenger path turns them into model turns, streams text Zernio cannot edit, and converts photos to a text line. |
-| Model | GPT-6 Luna, reasoning off, through `@ai-sdk/openai` with `baseURL` from env. Local tests use CLIProxyAPI. Production uses AI Gateway credits or an OpenAI key. Never the personal subscription in production. |
-| Voice | Warm but short, Cyrillic. 1 to 2 lines for logistics, 2 to 3 lines for advice, 300 characters max, at most one emoji, no markdown, no warnings. |
-| Prompt shape | One longer system prompt, cached. No skills: on-demand loading adds a model round trip per use. |
-| Payment | Upfront. QPay or bank transfer. Khaan reconciler confirms transfers. |
-| Delivery zone | Not asked. Admin sets it in the dashboard. `addressZoneId` is optional in `newOrderSchema`. |
-| Order placement | A ✅ postback button. Code calls `order.addOrder`. |
-| Phone and address | Model extracts them in the same turn via `set_delivery`, code validates, the ✅ summary is the final check. |
-| Photos | Image bytes in the user message. No R2, no separate vision call. |
-| Telegram admin bot | Phase 5, same worker, Chat SDK Telegram adapter. `apps/agent` stays for Telegram until then. |
+| Area               | Decision                                                                                                                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack              | Plain `Agent` (agents SDK) + Chat SDK (`chat`) + `@zernio/chat-sdk-adapter` + AI SDK. No Think, no Flue.                                                                                                                   |
+| Why not Think      | Taps must stay in code. In our own Chat SDK handler they arrive inside the SDK's dedupe and lock. Think's messenger path turns them into model turns, streams text Zernio cannot edit, and converts photos to a text line. |
+| Model              | GPT-6 Luna, reasoning off, through `@ai-sdk/openai` with `baseURL` from env. Local tests use CLIProxyAPI. Production uses AI Gateway credits or an OpenAI key. Never the personal subscription in production.              |
+| Voice              | Warm but short, Cyrillic. 1 to 2 lines for logistics, 2 to 3 lines for advice, 300 characters max, at most one emoji, no markdown, no warnings.                                                                            |
+| Prompt shape       | One longer system prompt, cached. No skills: on-demand loading adds a model round trip per use.                                                                                                                            |
+| Payment            | Upfront. QPay or bank transfer. Khaan reconciler confirms transfers.                                                                                                                                                       |
+| Delivery zone      | Not asked. Admin sets it in the dashboard. `addressZoneId` is optional in `newOrderSchema`.                                                                                                                                |
+| Order placement    | A ✅ postback button. Code calls `order.addOrder`.                                                                                                                                                                         |
+| Phone and address  | Model extracts them in the same turn via `set_delivery`, code validates, the ✅ summary is the final check.                                                                                                                |
+| Photos             | Image bytes in the user message. No R2, no separate vision call.                                                                                                                                                           |
+| Telegram admin bot | Phase 5, same worker, Chat SDK Telegram adapter. `apps/agent` stays for Telegram until then.                                                                                                                               |
 
 ## Architecture
 
@@ -157,29 +157,29 @@ Target shapes. API names checked against `chat@4.41.1`, `@zernio/chat-sdk-adapte
 export { ChatSdkStateAgent } from "agents/chat-sdk";
 
 export class Ingress extends Agent<Env> {
-  bot!: Chat;
-  zernio!: ZernioAdapter;
+	bot!: Chat;
+	zernio!: ZernioAdapter;
 
-  onStart() {
-    this.zernio = createZernioAdapter({
-      apiKey: this.env.ZERNIO_API_KEY,
-      webhookSecret: this.env.ZERNIO_WEBHOOK_SECRET,
-      botName: "Америк Витамин",
-    });
-    this.bot = new Chat({
-      userName: "amerik-vitamin",
-      adapters: { zernio: this.zernio },
-      state: createChatSdkState(),
-      concurrency: { strategy: "burst", debounceMs: 2000 },
-    });
-    this.bot.onDirectMessage((thread, message, _channel, ctx) =>
-      this.onBurst(thread, [...(ctx?.skipped ?? []), message]),
-    );
-  }
+	onStart() {
+		this.zernio = createZernioAdapter({
+			apiKey: this.env.ZERNIO_API_KEY,
+			webhookSecret: this.env.ZERNIO_WEBHOOK_SECRET,
+			botName: "Америк Витамин",
+		});
+		this.bot = new Chat({
+			userName: "amerik-vitamin",
+			adapters: { zernio: this.zernio },
+			state: createChatSdkState(),
+			concurrency: { strategy: "burst", debounceMs: 2000 },
+		});
+		this.bot.onDirectMessage((thread, message, _channel, ctx) =>
+			this.onBurst(thread, [...(ctx?.skipped ?? []), message]),
+		);
+	}
 
-  onRequest(request: Request) {
-    return this.bot.webhooks.zernio(request, { waitUntil: (p) => this.ctx.waitUntil(p) });
-  }
+	onRequest(request: Request) {
+		return this.bot.webhooks.zernio(request, { waitUntil: (p) => this.ctx.waitUntil(p) });
+	}
 }
 ```
 
@@ -213,18 +213,18 @@ reply: tool({
 
 ## Who handles what
 
-| Situation | Owner | Detail |
-| --- | --- | --- |
-| Product question, photo, advice, comparison | model | `search_products` (with label summary), `product_details` only for dose, ingredients, comparisons, then `reply` |
-| "2 ширхэг авъя", "uuttai" | model | `cart_set`, then `reply` with `action: "show_cart"` |
-| Address and phone in free text | model + code | `set_delivery`, validated in code, then `reply` with `action: "confirm_order"` |
-| "Where is my order" | model | `order_status` reads this conversation's last order |
-| Didn't arrive, wrong or damaged item, change or cancel, customs, complaints, "are you a person" | model | `handoff`: bot pauses for the thread, Telegram alert to admins |
-| Захиалах on a card, cart quick replies | code | cart reducer, summary |
-| ✅ Захиалах | code | `order.addOrder`, fixed confirmation, payment buttons |
-| Дансаар шилжүүлэх | code | `payment.selectTransfer`, bank details, payment watcher |
-| "хийсэн" or a screenshot after bank details | code | `payment.claimTransferPaid` |
-| Payment confirmed | code | watcher sends the confirmation |
+| Situation                                                                                       | Owner        | Detail                                                                                                          |
+| ----------------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| Product question, photo, advice, comparison                                                     | model        | `search_products` (with label summary), `product_details` only for dose, ingredients, comparisons, then `reply` |
+| "2 ширхэг авъя", "uuttai"                                                                       | model        | `cart_set`, then `reply` with `action: "show_cart"`                                                             |
+| Address and phone in free text                                                                  | model + code | `set_delivery`, validated in code, then `reply` with `action: "confirm_order"`                                  |
+| "Where is my order"                                                                             | model        | `order_status` reads this conversation's last order                                                             |
+| Didn't arrive, wrong or damaged item, change or cancel, customs, complaints, "are you a person" | model        | `handoff`: bot pauses for the thread, Telegram alert to admins                                                  |
+| Захиалах on a card, cart quick replies                                                          | code         | cart reducer, summary                                                                                           |
+| ✅ Захиалах                                                                                     | code         | `order.addOrder`, fixed confirmation, payment buttons                                                           |
+| Дансаар шилжүүлэх                                                                               | code         | `payment.selectTransfer`, bank details, payment watcher                                                         |
+| "хийсэн" or a screenshot after bank details                                                     | code         | `payment.claimTransferPaid`                                                                                     |
+| Payment confirmed                                                                               | code         | watcher sends the confirmation                                                                                  |
 
 ## Prompt
 
@@ -294,22 +294,36 @@ Add `expirationDate` to the projections of `product.searchProductsForAssistant` 
 One wide event per turn to Workers Logs, forwarded to Axiom through the `axiom-logs` destination the server already uses:
 
 ```json
-{ "event": "turn", "conversation": "zernio:…", "inputs": 2, "photos": 1, "model": "gpt-6-luna",
-  "steps": 2, "tools": ["search_products"], "step_ms": [1450, 1620], "total_ms": 3890,
-  "tokens_in": 7210, "tokens_cached": 6100, "tokens_out": 96, "product_ids": [7473],
-  "action": null, "ad_id": "120214…", "outcome": "replied" }
+{
+	"event": "turn",
+	"conversation": "zernio:…",
+	"inputs": 2,
+	"photos": 1,
+	"model": "gpt-6-luna",
+	"steps": 2,
+	"tools": ["search_products"],
+	"step_ms": [1450, 1620],
+	"total_ms": 3890,
+	"tokens_in": 7210,
+	"tokens_cached": 6100,
+	"tokens_out": 96,
+	"product_ids": [7473],
+	"action": null,
+	"ad_id": "120214…",
+	"outcome": "replied"
+}
 ```
 
 ## Speed budget
 
-| Step | Time |
-| --- | --- |
-| Burst wait | 2.0 s |
-| Model step 1, tool call | 1.5 to 2.5 s |
-| Store search | 0.3 to 0.8 s |
-| Model step 2, reply | 1.5 to 2.5 s (FAQ answers skip step 1) |
-| Zernio sends | 0.3 to 0.6 s |
-| Total after the customer's last message | 4 to 7 s, typing visible within 1 s |
+| Step                                    | Time                                   |
+| --------------------------------------- | -------------------------------------- |
+| Burst wait                              | 2.0 s                                  |
+| Model step 1, tool call                 | 1.5 to 2.5 s                           |
+| Store search                            | 0.3 to 0.8 s                           |
+| Model step 2, reply                     | 1.5 to 2.5 s (FAQ answers skip step 1) |
+| Zernio sends                            | 0.3 to 0.6 s                           |
+| Total after the customer's last message | 4 to 7 s, typing visible within 1 s    |
 
 ## Rollout
 
@@ -323,16 +337,16 @@ Not in v1: back-in-stock alerts, pausing the bot when staff reply in the Zernio 
 
 ## Open checks for the test deploy
 
-| Check | Why open | Fallback |
-| --- | --- | --- |
-| Zernio adapter runs on Workers | imports Node `crypto` | `nodejs_compat`, else verify HMAC in the Worker |
-| Taps carry `raw.metadata.postbackPayload` and a stable id | adapter dedupes on `platformMessageId \|\| id` | dedupe taps on the Zernio event id in `seen` |
-| Burst merges a two-message split | untested inside a Durable Object | tune `debounceMs` or use `queue` |
-| Photos reach Luna | Meta CDN URLs are signed and expire | fetch bytes in the Worker, send a data URL |
-| Production model route | `workers-ai-provider` with `openai/gpt-6-luna`, tools and images unverified | `@ai-sdk/openai` with an AI Gateway or OpenAI `baseURL` |
-| Late Zernio retries | Chat SDK dedupe lasts 10 min, Zernio retries up to 51 h | 3-minute stale filter in `onBurst` |
-| One Ingress machine for all threads | facets share the parent's machine | fine at ~330 messages a day, shard by thread if logs show queueing |
-| `set_delivery` substring check | addresses get retyped with small spelling fixes | relax to "every digit group and most words appear in the customer's text" |
+| Check                                                     | Why open                                                                    | Fallback                                                                  |
+| --------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Zernio adapter runs on Workers                            | imports Node `crypto`                                                       | `nodejs_compat`, else verify HMAC in the Worker                           |
+| Taps carry `raw.metadata.postbackPayload` and a stable id | adapter dedupes on `platformMessageId \|\| id`                              | dedupe taps on the Zernio event id in `seen`                              |
+| Burst merges a two-message split                          | untested inside a Durable Object                                            | tune `debounceMs` or use `queue`                                          |
+| Photos reach Luna                                         | Meta CDN URLs are signed and expire                                         | fetch bytes in the Worker, send a data URL                                |
+| Production model route                                    | `workers-ai-provider` with `openai/gpt-6-luna`, tools and images unverified | `@ai-sdk/openai` with an AI Gateway or OpenAI `baseURL`                   |
+| Late Zernio retries                                       | Chat SDK dedupe lasts 10 min, Zernio retries up to 51 h                     | 3-minute stale filter in `onBurst`                                        |
+| One Ingress machine for all threads                       | facets share the parent's machine                                           | fine at ~330 messages a day, shard by thread if logs show queueing        |
+| `set_delivery` substring check                            | addresses get retyped with small spelling fixes                             | relax to "every digit group and most words appear in the customer's text" |
 
 ## Open questions
 
