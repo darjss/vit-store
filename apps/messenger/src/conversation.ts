@@ -667,8 +667,10 @@ export class Conversation extends Agent<Env> {
 			}
 		} finally {
 			this.processing = false;
-			// Drain whatever arrived while this run was in flight.
-			const leftover = this.pendingRows();
+			// Drain whatever arrived while this run was in flight. Rows that
+			// already failed an attempt wait for recoverInbox, so a short outage
+			// doesn't burn every attempt in a tight loop.
+			const leftover = this.pendingRows().filter((r) => r.attempts === 0);
 			if (leftover.length > 0) {
 				void this.processItems(leftover);
 			}

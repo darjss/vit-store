@@ -27,17 +27,17 @@ export const sendTelegramAlert = async (
 			.map((t) => `> ${t}`),
 		`Resume: POST /admin/conversations/${encodeURIComponent(input.threadId)}/resume`,
 	];
-	let lastStatus: number | undefined;
-	for (const chatId of chatIds) {
-		const response = await fetch(`${base}/bot${encodeURIComponent(token)}/sendMessage`, {
-			body: JSON.stringify({ chat_id: chatId, text: lines.join("\n") }),
-			headers: { "content-type": "application/json" },
-			method: "POST",
-		});
-		lastStatus = response.status;
-		if (!response.ok) {
-			return { ok: false, status: response.status };
-		}
-	}
-	return { ok: true, status: lastStatus };
+	// Every admin gets the alert even if one chat fails.
+	const statuses = await Promise.all(
+		chatIds.map(async (chatId) => {
+			const response = await fetch(`${base}/bot${encodeURIComponent(token)}/sendMessage`, {
+				body: JSON.stringify({ chat_id: chatId, text: lines.join("\n") }),
+				headers: { "content-type": "application/json" },
+				method: "POST",
+			});
+			return response.status;
+		}),
+	);
+	const failed = statuses.find((s) => s < 200 || s >= 300);
+	return { ok: failed === undefined, status: failed ?? statuses[0] };
 };
