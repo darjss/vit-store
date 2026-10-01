@@ -237,6 +237,15 @@ export class Conversation extends Agent<Env> {
 		if (pending.length > 0) {
 			this.ctx.waitUntil(this.processItems(pending));
 		}
+		// A watcher job consumed mid-crash would never re-arm on its own.
+		// After a restart every still-watched payment gets exactly one tick.
+		const watched = this.sql<{ payment_number: string }>`
+			SELECT payment_number FROM payments
+			WHERE notified = 0 AND status IN ('pending', 'claimed')
+				AND created_at > ${Date.now() - PAYMENT_WATCH_END_MS}`;
+		for (const p of watched) {
+			this.ctx.waitUntil(this.armWatcher(p.payment_number));
+		}
 	}
 
 	// Admission -> durable commit point, before Chat SDK sees the event.
