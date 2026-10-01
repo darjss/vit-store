@@ -141,8 +141,8 @@ const finalTurn = (conversation: string): Turn | undefined => {
 
 const captureSchema = v.looseObject({
 	at: v.string(),
-	idempotencyKey: v.nullish(v.string()),
 	body: v.looseObject({ message: v.optional(v.string()) }),
+	idempotencyKey: v.nullish(v.string()),
 	path: v.string(),
 });
 const sentMessages = (conversation: string) =>
