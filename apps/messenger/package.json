@@ -5,16 +5,20 @@
 	"scripts": {
 		"dev": "wrangler dev",
 		"check-types": "tsc --noEmit",
-		"send-event": "bun scripts/send-event.ts"
+		"send-event": "bun scripts/send-event.ts",
+		"deploy": "wrangler deploy"
 	},
 	"dependencies": {
 		"@ai-sdk/openai": "3.0.117",
 		"@ai-sdk/valibot": "2.0.55",
+		"@cloudflare/codemode": "^0.5.2",
 		"@trpc/client": "catalog:",
+		"@vit/shared": "workspace:*",
 		"@zernio/chat-sdk-adapter": "0.5.1",
 		"agents": "0.24.0",
 		"ai": "6.0.290",
 		"chat": "4.41.0",
+		"grammy": "^1.46.0",
 		"superjson": "^2.2.6",
 		"valibot": "catalog:"
 	},

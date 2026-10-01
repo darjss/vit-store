@@ -108,6 +108,21 @@ Bun.serve({
 			return Response.json({ ok: true, paymentNumber: payMatch[1] });
 		}
 
+		// Admin bot surface: GETs forward to production (reads are safe), POSTs
+		// are mutations and must never reach production.
+		if (url.pathname.startsWith("/trpc/bot/")) {
+			const procedure = url.pathname.slice("/trpc/bot/".length);
+			if (request.method === "POST") {
+				const body = await request.text();
+				appendFileSync(
+					LOG,
+					`${JSON.stringify({ at: new Date().toISOString(), body, procedure: `bot.${procedure}` })}\n`,
+				);
+				return trpcError("blocked by local stub", "FORBIDDEN", 403);
+			}
+			return forward(request, url);
+		}
+
 		if (!url.pathname.startsWith("/trpc/store/")) {
 			return new Response("not found", { status: 404 });
 		}
@@ -135,22 +150,26 @@ Bun.serve({
 			return handler(body);
 		}
 
-		// Everything else is a read: forward verbatim to the real store API.
-		// The original `host` (127.0.0.1:8798) must not leak upstream — CDN
-		// routing keys off it.
-		const forwardHeaders = new Headers(request.headers);
-		forwardHeaders.delete("host");
-		forwardHeaders.delete("content-length");
-		const upstream = await fetch(`${UPSTREAM}${url.pathname}${url.search}`, {
-			headers: forwardHeaders,
-			method: request.method,
-		});
-		return new Response(upstream.body, {
-			headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
-			status: upstream.status,
-		});
+		return forward(request, url);
 	},
 	port: PORT,
 });
+
+// Forward a read verbatim to the real store API, keeping the caller's auth
+// headers (X-Admin-Bot-Token for /trpc/bot). The original `host`
+// (127.0.0.1:8798) must not leak upstream — CDN routing keys off it.
+const forward = async (request: Request, url: URL): Promise<Response> => {
+	const forwardHeaders = new Headers(request.headers);
+	forwardHeaders.delete("host");
+	forwardHeaders.delete("content-length");
+	const upstream = await fetch(`${UPSTREAM}${url.pathname}${url.search}`, {
+		headers: forwardHeaders,
+		method: request.method,
+	});
+	return new Response(upstream.body, {
+		headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
+		status: upstream.status,
+	});
+};
 
 console.log(`store stub on :${PORT} -> ${UPSTREAM} (reads), mutations local, log ${LOG}`);

@@ -27,7 +27,7 @@ Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes l
 | `scratch/`             | Temp notes and one-off drafts                                                  |
 | `vit-stock-review/`    | Catalogue audits, stock sheets, generated creatives                            |
 
-`apps/agent/scripts/` stays in vit-store (wired into agent dev/deploy). Do not move those back into vit-store root `scripts/`. Run playground scripts from `vit-playground` or via `bun ../vit-playground/scripts/...` from vit-store; see vit-playground `README.md`.
+`apps/messenger/scripts/` stays in vit-store (wired into worker dev/deploy). Do not move those back into vit-store root `scripts/`. Run playground scripts from `vit-playground` or via `bun ../vit-playground/scripts/...` from vit-store; see vit-playground `README.md`.
 
 ## Lint & check
 
@@ -66,7 +66,8 @@ Do not merge a lint PR whose only diff is config overrides or comment spam.
 
 ## Messenger agent implementation notes
 
-- Customer Messenger runs through Zernio, not the Meta Graph API (ADR 0011). `apps/agent/src/channels/messenger.ts` owns the whole Zernio boundary: signature check, event parsing, session key, and sends.
-- Check Zernio request and webhook shapes against its OpenAPI spec or the Zernio MCP `docs_search` tool before changing them.
-- Keep the Zernio client a thin fetch over the inbox send and typing endpoints. Add endpoints only when a feature needs them.
-- Dedupe inbound events by Zernio event id before dispatching assistant turns, and drop events older than three minutes.
+- Both bots are `apps/messenger` (ADR 0012, plan 029): Agents SDK Durable Objects, Chat SDK with `@zernio/chat-sdk-adapter` for customer Messenger, a plain `POST /telegram/webhook` handler plus the `Admin` DO for the Telegram admin bot. `apps/agent` and `packages/assistant` are gone.
+- `src/admit.ts` owns the Zernio boundary before Chat SDK sees anything: signature check, incoming Facebook DMs for configured accounts, three-minute stale filter. Check Zernio shapes against its OpenAPI spec or the Zernio MCP `docs_search` tool before changing them.
+- Taps, orders and payments are code paths in `src/conversation.ts`. The model never creates orders or writes totals. Customer-facing fixed text lives in `src/copy.ts` and is owner-approved; do not reword it without asking.
+- Every send goes through `send()` with a deterministic `<turnId>:<part>` idempotency key and the `outbox` table.
+- Local runs: `scripts/capture.ts` stands in for Zernio, `scripts/store-stub.ts` stands in for order and payment writes (never point local runs at production mutations), `scripts/send-event.ts` sends signed events. `scripts/eval/` replays the export-based eval set; its cases and results stay in the gitignored `messenger-chat-history/eval/`.
