@@ -13,24 +13,52 @@
 	},
 	// Non-secret settings. Local wrangler dev overrides all of them from .dev.vars.
 	// Secrets (wrangler secret put): ZERNIO_API_KEY, ZERNIO_WEBHOOK_SECRET,
-	// OPENAI_API_KEY, ADMIN_TOKEN, TELEGRAM_ADMIN_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID.
+	// OPENAI_API_KEY, ADMIN_TOKEN, ADMIN_BOT_TOKEN, TELEGRAM_ADMIN_BOT_TOKEN,
+	// TELEGRAM_ADMIN_CHAT_ID, TELEGRAM_WEBHOOK_SECRET.
 	"vars": {
 		"MODEL": "gpt-6-luna",
+		// The VPC binding pins host and port; this URL's host only sets the
+		// Host header, but the /v1 path suffix must match the proxy.
+		"OPENAI_BASE_URL": "http://127.0.0.1:8317/v1",
 		"STORE_API_URL": "https://api.amerikvitamin.mn",
 		"STORE_PUBLIC_URL": "https://amerikvitamin.mn",
 		"ZERNIO_ACCOUNT_IDS": "6abd496a8fa7e621847d9954",
 		"ZERNIO_BASE_URL": "https://zernio.com/api",
 	},
+	// Skill SKILL.md files import as text for the admin system prompt.
+	"rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
+	// The admin query tool runs model-written TypeScript in isolated Workers.
+	"worker_loaders": [{ "binding": "LOADER" }],
+	// The extract tools run Workers AI vision on staged invoice/chat images.
+	"ai": { "binding": "AI" },
+	// CLIProxyAPI on the dev box serves the trial model; remove when a funded
+	// key or AI Gateway replaces it.
+	"vpc_services": [
+		{ "binding": "LLM", "service_id": "01a0f88a-af9f-7f52-a85c-84592b8b24d9", "remote": true },
+	],
+	// Admin Telegram photos stage under messenger-inbound/ here.
+	"r2_buckets": [
+		{
+			"binding": "MESSENGER_INBOUND_BUCKET",
+			"bucket_name": "vit-store-bucket-prod",
+			"preview_bucket_name": "vit-store-bucket-prod",
+		},
+	],
 	"durable_objects": {
 		"bindings": [
 			{ "name": "Ingress", "class_name": "Ingress" },
 			{ "name": "Conversation", "class_name": "Conversation" },
+			{ "name": "Admin", "class_name": "Admin" },
 		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
 			"new_sqlite_classes": ["Ingress", "Conversation"],
+		},
+		{
+			"tag": "v2",
+			"new_sqlite_classes": ["Admin"],
 		},
 	],
 }

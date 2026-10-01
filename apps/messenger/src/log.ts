@@ -10,6 +10,7 @@ export const turnLog = (fields: {
 	outcome: string;
 	photos: number;
 	product_ids: Array<number>;
+	replayed?: boolean;
 	step_ms: Array<number>;
 	steps: number;
 	tokens_cached: number;
