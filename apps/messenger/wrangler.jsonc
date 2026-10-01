@@ -1,0 +1,21 @@
+{
+	"name": "vit-store-messenger",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+	},
+	"durable_objects": {
+		"bindings": [
+			{ "name": "Ingress", "class_name": "Ingress" },
+			{ "name": "Conversation", "class_name": "Conversation" },
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["Ingress", "Conversation"],
+		},
+	],
+}

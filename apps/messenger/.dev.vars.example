@@ -1,0 +1,12 @@
+# Copy to .dev.vars for local `wrangler dev`. Never commit real secrets.
+ZERNIO_API_KEY=
+ZERNIO_WEBHOOK_SECRET=
+# Comma-separated Zernio account ids this worker answers.
+ZERNIO_ACCOUNT_IDS=
+# Defaults to https://zernio.com/api. Point at http://127.0.0.1:8799/api with
+# scripts/capture.ts to see outbound sends locally.
+ZERNIO_BASE_URL=https://zernio.com/api
+STORE_API_URL=https://api.amerikvitamin.mn
+OPENAI_API_KEY=
+OPENAI_BASE_URL=
+MODEL=gpt-6-luna
