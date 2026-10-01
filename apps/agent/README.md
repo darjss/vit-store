@@ -14,28 +14,33 @@ bun run --filter agent dev
 
 Local Cloudflare development is handled by `flue dev --target cloudflare`. The direct HTTP tracer route is exposed at `POST /agents/customer-assistant/:id`; Flue event streaming is available at `GET /agents/customer-assistant/:id`.
 
-## Messenger test Page webhook
+## Messenger webhook (Zernio)
 
-Configure the Meta test Page webhook URL to:
+Messenger ingress is fronted by Zernio, a third-party inbox API. Configure the
+Zernio webhook for the `message.received` event to:
 
 ```txt
-https://<agent-worker-host>/channels/messenger/webhook
+https://agent.amerikvitamin.mn/channels/messenger/webhook
 ```
 
 Required secrets/vars:
 
-- `MESSENGER_APP_SECRET` — verifies `X-Hub-Signature-256` on POST bodies.
-- `MESSENGER_VERIFY_TOKEN` — Meta GET webhook handshake token.
-- `MESSENGER_PAGE_ID` — fixed test Page id accepted by the channel.
-- `MESSENGER_PAGE_ACCESS_TOKEN` — Page token used for typing indicators and text replies.
-- `MESSENGER_ADMISSION_STORE` — Durable Object binding used to dedupe inbound Messenger message ids before dispatch.
+- `ZERNIO_WEBHOOK_SECRET` — verifies `X-Zernio-Signature` (hex HMAC-SHA256) on POST bodies.
+- `ZERNIO_API_KEY` — Bearer key for the inbox API (sends, typing indicators).
+- `ZERNIO_ACCOUNT_ID` — the connected Facebook account id; events for other accounts are skipped.
+- `ZERNIO_BASE_URL` — optional API base override (default `https://zernio.com/api`); used by local dev capture.
+- `MESSENGER_ADMISSION_STORE` — Durable Object binding used to dedupe inbound Zernio event ids before dispatch.
 
-The channel ignores echoes/non-text events in this slice, dedupes admission by Page + conversation + `message.mid`, keys the customer assistant session with `messenger:v1:page:<PAGE_ID>:page-scoped-id:<PSID>`, sends `typing_on` before dispatch, and only clears typing in the reply tool after the assistant sends one simple text message via Graph `messages`.
+The webhook skips non-`message.received` events, outgoing echoes, non-Facebook
+platforms, other accounts, and events older than 3 minutes. It dedupes admission
+by account + conversation + the Zernio event `id` (identical on every retry),
+keys the customer assistant session with `zernio:v1:<accountId>:<conversationId>`,
+and sends a best-effort typing indicator before each reply.
 
 ## Tracer-bullet scope
 
 - Uses GLM 5.3 Flash through the Flue Cloudflare Workers AI provider: `cloudflare/@cf/zai-org/glm-5.3-flash`.
-- Mounts verified Messenger ingress at `GET/POST /channels/messenger/webhook`.
+- Mounts verified Messenger ingress at `POST /channels/messenger/webhook`.
 - Imports prompts/tools from `@vit/assistant` to prove the app/package boundary.
 - Declares Flue Durable Object migrations with `new_sqlite_classes` for `FlueRegistry` and `FlueCustomerAssistantAgent`.
 - Declares the existing R2 bucket binding as `MESSENGER_INBOUND_BUCKET`; inbound photos are staged under `messenger-inbound/` and only R2 keys reach the agent (#20, below).
@@ -44,10 +49,10 @@ Order creation, payment, and delivery-zone resolver logic are intentionally TODO
 
 ## Inbound photo identification (#20)
 
-When a customer sends a photo, trusted channel code fetches the Meta CDN
-attachment **server-side in the webhook**, stages it under the short-lived
+When a customer sends a photo, trusted channel code fetches the attachment
+**server-side in the webhook**, stages it under the short-lived
 `messenger-inbound/` R2 prefix, and dispatches an agent turn carrying **only the
-R2 key** — never a Meta CDN url and never a base64 payload (ADR 0003). The
+R2 key** — never a remote url and never a base64 payload (ADR 0003). The
 dispatch input gains an `imageKeys` field the model reads.
 
 The assistant then calls the `identify_product_photo` tool, which reads the R2
@@ -137,50 +142,36 @@ subtotal reuses the #19 catalog projection (`getProductsByIdsForAssistant`) for
 the price snapshot — no catalog logic is duplicated. Checkout does not begin
 here: this slice ends at a confirmed cart (order creation is #23).
 
-Real end-to-end proof against a running worker (stub store API + Send API
-capture, signed webhooks):
-
-```bash
-bun run dev                       # worker on :3583
-bun scripts/cart-demo.ts          # add → merge → add → inc → dec → remove → confirm
-bun scripts/cart-dedupe-probe.ts  # same mid twice → add applied once
-```
-
-For a no-secret local proof of the text path/payload shape:
-
-```bash
-cd apps/agent
-bun run mock:messenger-text -- "sain baina uu"
-```
+Real end-to-end proof against a running worker (stub store API + Zernio send
+capture, signed webhooks) is driven by the dev console and export replay below.
 
 ## Interactive Messenger dev console
 
 `cli/messenger-dev.ts` is an interactive REPL for testing the customer
 assistant during development. It drives the **real** local HTTP webhook path:
-it builds Meta-shaped events, signs them with `MESSENGER_APP_SECRET`
-(`X-Hub-Signature-256`, exactly as Meta does), and POSTs them to the running
-worker at `POST /channels/messenger/webhook`. It never forks the webhook or
-admission logic — the worker verifies the signature and shapes admission the
-same way it does in production.
+it builds Zernio-shaped `message.received` events, signs them with
+`ZERNIO_WEBHOOK_SECRET` (`X-Zernio-Signature`, exactly as Zernio does), and
+POSTs them to the running worker at `POST /channels/messenger/webhook`. It
+never forks the webhook or admission logic — the worker verifies the signature
+and shapes admission the same way it does in production.
 
-Outbound Graph **Send API** calls are redirected to a small in-CLI capture
-server via `MESSENGER_GRAPH_BASE_URL`, so the assistant's real reply path runs
-without touching Meta. Every outgoing Send API JSON payload is saved to the
+Outbound Zernio inbox API calls are redirected to a small in-CLI capture
+server via `ZERNIO_BASE_URL`, so the assistant's real reply path runs
+without touching Zernio. Every outgoing send JSON payload is saved to the
 gitignored `apps/agent/.dev/sent/` directory for inspection; the bot's output
 is also rendered as a terminal chat transcript.
 
 ### Setup
 
 1. Create `apps/agent/.dev.vars` (gitignored). Values can be any non-empty dev
-   strings — they are **not** real Meta credentials:
+   strings — they are **not** real Zernio credentials:
 
    ```dotenv
-   MESSENGER_APP_SECRET=dev-app-secret
-   MESSENGER_VERIFY_TOKEN=dev-verify-token
-   MESSENGER_PAGE_ID=DEV_PAGE_ID
-   MESSENGER_PAGE_ACCESS_TOKEN=dev-page-token
-   # Redirect outbound Graph Send API to the CLI capture server:
-   MESSENGER_GRAPH_BASE_URL=http://127.0.0.1:8788
+   ZERNIO_API_KEY=dev_key
+   ZERNIO_WEBHOOK_SECRET=dev_local_secret
+   ZERNIO_ACCOUNT_ID=DEV_ACCOUNT_ID
+   # Redirect outbound Zernio sends to the CLI capture server:
+   ZERNIO_BASE_URL=http://127.0.0.1:8788
    ```
 
    The `.dev.vars` is created for you on first run if it's missing.
@@ -210,8 +201,8 @@ bun run smoke:local   # fast: --local, no Workers AI — asserts dispatch only (
 ```
 
 `smoke:local` needs no Cloudflare auth and catches dispatch-time regressions
-(e.g. a 500 before the model). `smoke` additionally proves a real Kimi reply
-comes back through the Send API.
+(e.g. a 500 before the model). `smoke` additionally proves a real model reply
+comes back through the send path.
 
 ### Commands
 
@@ -220,10 +211,10 @@ comes back through the Send API.
 - `/reset` — reset the current session (new PSID → fresh bot memory)
 - `/psid` — show the current session id + persistent PSID
 - `/buttons` — list the buttons from the last bot message
-- `/fire <n>` — fire button _n_'s payload (postback event, or quick-reply message)
-- `/payloads` — list saved outgoing Send API JSON files
+- `/fire <n>` — fire button _n_'s payload (postback or quick-reply event)
+- `/payloads` — list saved outgoing send JSON files
 - `/seed [list|<file>]` — replay a private `messenger-chat-history/` example
-- `/image` — placeholder until #20 (photo identification) lands
+- `/image <path>` — attach a photo → R2 key → vision → product cards (#20)
 - `/quit`
 
 The fake PSID/session persists across runs in `apps/agent/.dev/state.json`
@@ -233,7 +224,7 @@ The private `messenger-chat-history/` export (gitignored) is optional and
 read-only: `/seed` replays selected customer texts from it but never writes,
 commits, or derives payloads from that data.
 
-> Note: `apps/agent/.dev/` and `.dev.vars*` are gitignored. Captured Send API
+> Note: `apps/agent/.dev/` and `.dev.vars*` are gitignored. Captured send
 > payloads and the private export must never be committed.
 
 ## Production deploy
@@ -279,10 +270,9 @@ Durable Objects) and secrets must be set on the deployed Worker. Set them once w
 `wrangler secret put <NAME> --config dist/vit_store_agent/wrangler.json` (never commit
 real values):
 
-- `MESSENGER_APP_SECRET` — verifies `X-Hub-Signature-256` on inbound webhook POSTs.
-- `MESSENGER_VERIFY_TOKEN` — Meta GET webhook handshake token.
-- `MESSENGER_PAGE_ID` — fixed test Page id accepted by the channel.
-- `MESSENGER_PAGE_ACCESS_TOKEN` — Page token for typing indicators and replies.
+- `ZERNIO_WEBHOOK_SECRET` — verifies `X-Zernio-Signature` on inbound webhook POSTs.
+- `ZERNIO_API_KEY` — Bearer key for the Zernio inbox API (typing + replies).
+- `ZERNIO_ACCOUNT_ID` — the connected Facebook account id the webhook accepts.
 - `STORE_API_URL` — storefront/server API base URL (defaults to `http://localhost:3000`
   in dev; set to the deployed server origin in prod).
 - `TELEGRAM_ADMIN_BOT_TOKEN` — same `@darjsorderbot` token used for outbound order alerts.
@@ -303,8 +293,8 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
   -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
 ```
 
-Inbound text from the allowlisted user dispatches to `admin-assistant` (same Codemode
-`query` tool as Messenger admin). Inbound photos are staged to the same
+Inbound text from the allowlisted user dispatches to `admin-assistant` (Codemode
+`query` tool). Inbound photos are staged to the same
 `messenger-inbound/` R2 prefix with `imageKeys` on the dispatch (invoice extraction via
 `aiPurchase.extractPurchaseFromImageKeys`). Customer shopping stays on Messenger only.
 

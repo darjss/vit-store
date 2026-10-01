@@ -19,15 +19,15 @@
  * REAL HMAC-signed webhook on the running worker (same route + signature check +
  * admission shaping + dispatch as production); the payment slice drives the REAL
  * payment builders/handlers from `@vit/assistant` + `src/channels`. The only
- * stand-ins are the upstream store catalog/order API (a fixture server, exactly
- * as cli/advice.ts and scripts/cart-demo.ts do) and Meta's Graph Send API (a
- * capture server). The MODEL is NOT stubbed on the text slices — it is the real
+ * stand-ins are the upstream store catalog/order API (a fixture server) and
+ * the Zernio inbox API (a capture server). The MODEL is NOT stubbed on the text
+ * slices — it is the real
  * Kimi assistant via env.AI, so boot the worker with real Workers AI.
  *
  *   real export message (selected)
  *     ─▶ HMAC-signed webhook → real route + dispatch → real tools
  *        ─▶ catalog fixture (stands in for the store API)
- *        ─▶ Graph Send API capture (stands in for Meta)
+ *        ─▶ Zernio inbox API capture (stands in for Zernio)
  *     ─▶ readable transcript printed here
  *
  * PRIVATE DATA: the export is read-only and never committed. This harness only
@@ -42,7 +42,7 @@
  * Override the export location (it lives outside this gitignored worktree):
  *   MESSENGER_EXPORT_DIR=/abs/path/to/messenger-chat-history bun run export:replay
  */
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -60,7 +60,13 @@ import { bankTransfer } from "@vit/shared/constants";
 import { array, InferOutput, number, object, optional, parse, string } from "valibot";
 import { SuperJSON } from "superjson";
 import { loadDotVars } from "./dot-vars";
-import { captureGraphSend, graphSendBodySchema, type GraphCapture } from "./graph-send";
+import {
+	buildZernioInboundEvent,
+	captureZernioSend,
+	type ZernioCapture,
+	type ZernioInboundEvent,
+	zernioSendBodySchema,
+} from "./zernio-send";
 import { exportThreadSchema } from "./messenger-export";
 import { trpcResponseBody } from "./trpc-stub";
 import {
@@ -73,7 +79,7 @@ import { claimTransfer, fetchPaymentSummary } from "../src/lib/payment";
 const AGENT_ROOT = join(import.meta.dirname, "..");
 const REPO_ROOT = join(AGENT_ROOT, "..", "..");
 const FIXTURE_PORT = 8799; // must match STORE_API_URL in scripts/with-worker.ts
-const CAPTURE_PORT = 8788; // must match MESSENGER_GRAPH_BASE_URL (Graph Send API)
+const CAPTURE_PORT = 8788; // must match ZERNIO_BASE_URL (Zernio inbox API)
 const FIXTURE_BASE = `http://127.0.0.1:${FIXTURE_PORT}`;
 const WORKER_URL = (process.env.MESSENGER_DEV_WORKER_URL ?? "http://127.0.0.1:3583").replace(
 	/\/$/,
@@ -100,8 +106,8 @@ const C = {
 // ─── .dev.vars (signature + ids, same as the dev console) ────────────────────
 
 const vars = { ...loadDotVars(join(AGENT_ROOT, ".dev.vars")), ...process.env };
-const APP_SECRET = vars.MESSENGER_APP_SECRET ?? "dev_local_secret";
-const PAGE_ID = vars.MESSENGER_PAGE_ID ?? "DEV_PAGE_ID";
+const WEBHOOK_SECRET = vars.ZERNIO_WEBHOOK_SECRET ?? "dev_local_secret";
+const ACCOUNT_ID = vars.ZERNIO_ACCOUNT_ID ?? "DEV_ACCOUNT_ID";
 
 // ─── Export loader (Facebook/Meta inbox export shape) ────────────────────────
 //
@@ -475,9 +481,9 @@ function startFixtureServer() {
 	});
 }
 
-// ─── Capture server (stands in for Graph Send API) ───────────────────────────
+// ─── Capture server (stands in for the Zernio inbox API) ─────────────────────
 
-type Captured = GraphCapture;
+type Captured = ZernioCapture;
 // Append-only capture log tagged with the recipient PSID. The worker dispatches
 // model turns asynchronously (waitUntil), so a slow reply from an earlier turn
 // can land while a later turn is running; tagging by recipient lets each turn
@@ -487,25 +493,32 @@ const captures: Array<{ cap: Captured; recipient: string }> = [];
 function startCaptureServer() {
 	return Bun.serve({
 		async fetch(req) {
+			const url = new URL(req.url);
 			if (req.method !== "POST") {
-				return Response.json({ id: PAGE_ID });
+				return Response.json({ id: ACCOUNT_ID });
 			}
-			let parsedBody: InferOutput<typeof graphSendBodySchema>;
+			// Zernio typing calls land on their own path; ignore them.
+			if (url.pathname.endsWith("/typing")) {
+				return Response.json({ success: true });
+			}
+			let parsedBody: InferOutput<typeof zernioSendBodySchema>;
 			try {
-				parsedBody = parse(graphSendBodySchema, await req.json());
+				parsedBody = parse(zernioSendBodySchema, await req.json());
 			} catch {
 				parsedBody = {};
 			}
-			const captured = captureGraphSend(parsedBody);
+			const captured = captureZernioSend(parsedBody);
 			if (captured) {
+				// /v1/inbox/conversations/{id}/messages → the conversation id is the
+				// Zernio addressing equivalent of the old recipient PSID.
 				captures.push({
 					cap: captured,
-					recipient: String(parsedBody.recipient?.id ?? ""),
+					recipient: decodeURIComponent(url.pathname.split("/")[4] ?? ""),
 				});
 			}
 			return Response.json({
-				message_id: `cap-${captures.length}`,
-				recipient_id: String(parsedBody.recipient?.id ?? PAGE_ID),
+				data: { messageId: `cap-${captures.length}` },
+				success: true,
 			});
 		},
 		hostname: "127.0.0.1",
@@ -515,52 +528,50 @@ function startCaptureServer() {
 
 // ─── Signed webhook senders (the real HTTP path) ─────────────────────────────
 
-let mid = 0;
 function sign(bodyText: string): string {
-	return createHmac("sha256", APP_SECRET).update(bodyText).digest("hex");
+	return createHmac("sha256", WEBHOOK_SECRET).update(bodyText).digest("hex");
 }
-async function postWebhook(event: {
-	message?: { mid: string; quick_reply?: { payload: string }; text?: string };
-	postback?: { mid: string; payload: string; title: string };
-	recipient: { id: string };
-	sender: { id: string };
-	timestamp: number;
-}): Promise<number> {
-	const bodyText = JSON.stringify({
-		entry: [{ id: PAGE_ID, messaging: [event], time: Date.now() }],
-		object: "page",
-	});
+async function postWebhook(event: ZernioInboundEvent): Promise<number> {
+	const bodyText = JSON.stringify(event);
 	const res = await fetch(WEBHOOK_URL, {
 		body: bodyText,
 		headers: {
 			"content-type": "application/json",
-			"x-hub-signature-256": `sha256=${sign(bodyText)}`,
+			"x-zernio-signature": sign(bodyText),
 		},
 		method: "POST",
 	});
 	return res.status;
 }
+// The Zernio event id is the dedupe key, so each fired event needs a fresh one.
 const sendText = (psid: string, text: string) =>
-	postWebhook({
-		message: { mid: `m-${(mid += 1)}`, text },
-		recipient: { id: PAGE_ID },
-		sender: { id: psid },
-		timestamp: Date.now(),
-	});
+	postWebhook(
+		buildZernioInboundEvent({
+			accountId: ACCOUNT_ID,
+			conversationId: psid,
+			eventId: `m-${randomUUID()}`,
+			text,
+		}),
+	);
 const firePostback = (psid: string, payload: string) =>
-	postWebhook({
-		postback: { mid: `m-${(mid += 1)}`, payload, title: payload },
-		recipient: { id: PAGE_ID },
-		sender: { id: psid },
-		timestamp: Date.now(),
-	});
+	postWebhook(
+		buildZernioInboundEvent({
+			accountId: ACCOUNT_ID,
+			conversationId: psid,
+			eventId: `m-${randomUUID()}`,
+			metadata: { postbackPayload: payload },
+		}),
+	);
 const fireQuickReply = (psid: string, payload: string) =>
-	postWebhook({
-		message: { mid: `m-${(mid += 1)}`, quick_reply: { payload }, text: payload },
-		recipient: { id: PAGE_ID },
-		sender: { id: psid },
-		timestamp: Date.now(),
-	});
+	postWebhook(
+		buildZernioInboundEvent({
+			accountId: ACCOUNT_ID,
+			conversationId: psid,
+			eventId: `m-${randomUUID()}`,
+			metadata: { quickReplyPayload: payload },
+			text: payload,
+		}),
+	);
 
 // Collect every send addressed to `psid` that lands after `sinceLen` (a cursor
 // snapshotted BEFORE firing the event), settling once at least one has arrived
@@ -638,7 +649,7 @@ async function runTextSlice(label: string, examples: Array<string>): Promise<voi
 		return;
 	}
 	for (const ex of examples) {
-		const psid = `DEV_PSID_replay_${mid}_${Math.floor(performance.now())}`;
+		const psid = `DEV_PSID_replay_${Math.floor(performance.now())}`;
 		console.log(`  ${C.cyan("you ›")} ${redact(ex)}`);
 		const since = captures.length;
 		const status = await sendText(psid, ex);
@@ -811,7 +822,7 @@ async function main(): Promise<void> {
 	console.log(C.dim(`  export   ${EXPORT_DIR}`));
 	console.log(C.dim(`  worker   ${WEBHOOK_URL}`));
 	console.log(C.dim(`  catalog  fixture on :${FIXTURE_PORT}`));
-	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Graph Send API)`));
+	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Zernio inbox API)`));
 	console.log(
 		C.dim(
 			`  model    ${NO_MODEL ? "OFF (--no-model: text slice is the documented split)" : "real Workers AI (Kimi)"}`,

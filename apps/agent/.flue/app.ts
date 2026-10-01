@@ -1,8 +1,7 @@
-import type { ChannelRoute } from "@flue/messenger";
 import { flue } from "@flue/runtime/routing";
 import { FLUE_ASSISTANT_MODEL } from "@vit/assistant";
 import { Hono } from "hono";
-import { channel as messengerChannel } from "../src/channels/messenger";
+import { messengerWebhook } from "../src/channels/messenger";
 import { channel as telegramChannel } from "../src/channels/telegram";
 import { type PhotoProbeEnv, type PhotoProbeInput, runPhotoProbe } from "../src/lib/photo-probe";
 
@@ -11,38 +10,28 @@ import { type PhotoProbeEnv, type PhotoProbeInput, runPhotoProbe } from "../src/
 // base type to keep the default export portable.
 const app: Hono = new Hono();
 
-function mountChannel(
-	hono: Hono,
-	prefix: string,
-	channel: { routes: ReadonlyArray<ChannelRoute> },
-): void {
-	for (const route of channel.routes) {
-		hono.on(route.method, `${prefix}${route.path}`, route.handler as never);
-	}
-}
-
 function mountTelegramChannel(hono: Hono, prefix: string): void {
 	for (const route of telegramChannel.routes) {
 		hono.on(route.method, `${prefix}${route.path}`, route.handler as never);
 	}
 }
 
-mountChannel(app, "/channels/messenger", messengerChannel);
+app.post("/channels/messenger/webhook", messengerWebhook);
 mountTelegramChannel(app, "/channels/telegram");
 
 app.get("/health", (c) =>
 	c.json({
+		ok: true,
 		app: "vit-store-agent",
 		model: FLUE_ASSISTANT_MODEL,
-		ok: true,
 	}),
 );
 
 app.get("/messenger/inbound-r2-shape", (c) =>
 	c.json({
 		bucketBinding: "MESSENGER_INBOUND_BUCKET",
-		note: "Inbound Messenger photos are fetched server-side, stored under this R2 prefix, and only the key is dispatched to the agent (#20, ADR 0003).",
 		prefix: "messenger-inbound/",
+		note: "Inbound Messenger photos are fetched server-side, stored under this R2 prefix, and only the key is dispatched to the agent (#20, ADR 0003).",
 	}),
 );
 

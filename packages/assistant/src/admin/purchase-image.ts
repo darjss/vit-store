@@ -58,7 +58,7 @@ export type PurchaseImageExtractDeps = {
 export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 	defineTool({
 		description:
-			"Extract a supplier invoice from admin-sent screenshot(s) using Workers AI vision on the agent, then match line items to the catalog. Call when dispatch input includes imageKeys (Telegram/Messenger photos). Pass provider (amazon/iherb/naturebell/unknown) and the imageKeys array from the dispatch payload.",
+			"Extract a supplier invoice from admin-sent screenshot(s) using Workers AI vision on the agent, then match line items to the catalog. Call when dispatch input includes imageKeys (Telegram photos). Pass provider (amazon/iherb/naturebell/unknown) and the imageKeys array from the dispatch payload.",
 		input: v.object({
 			imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
 			provider: purchaseProviderSchema,

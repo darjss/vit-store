@@ -4,24 +4,23 @@
  * A small Messenger console for testing the customer assistant during
  * development. It drives the REAL local HTTP webhook path:
  *
- *   REPL text ─▶ Meta-shaped, HMAC-signed webhook POST
- *            ─▶ POST /channels/messenger/webhook  (real Flue route + signature
- *               check + admission shaping in apps/agent/src/channels/*)
+ *   REPL text ─▶ Zernio-shaped, HMAC-signed webhook POST
+ *            ─▶ POST /channels/messenger/webhook  (signature check + admission
+ *               shaping in apps/agent/src/channels/*)
  *            ─▶ assistant dispatch ─▶ post_messenger_message tool
- *            ─▶ Graph Send API (redirected by MESSENGER_GRAPH_BASE_URL)
+ *            ─▶ Zernio inbox API (redirected by ZERNIO_BASE_URL)
  *            ─▶ this CLI's capture server ─▶ transcript + saved JSON
  *
- * Nothing here forks the webhook logic: the payload shape mirrors what Meta
+ * Nothing here forks the webhook logic: the payload shape mirrors what Zernio
  * sends and what apps/agent/src/channels/messenger-admission.ts already
  * consumes, and the worker verifies the signature exactly as in production.
  *
  * Run the worker first (`bun run dev`), then this CLI (`bun run dev:messenger`).
  */
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
-import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
 import { InferOutput, parse } from "valibot";
 import {
 	devStateSchema,
@@ -31,7 +30,12 @@ import {
 	type DevState,
 } from "./dev-state";
 import { loadDotVars } from "./dot-vars";
-import { extractGraphButtons, graphSendBodySchema } from "./graph-send";
+import {
+	buildZernioInboundEvent,
+	extractZernioButtons,
+	type ZernioInboundEvent,
+	zernioSendBodySchema,
+} from "./zernio-send";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
 const DEV_DIR = join(AGENT_ROOT, ".dev");
@@ -53,12 +57,12 @@ function reqVar(name: string): string {
 	return value;
 }
 
-const APP_SECRET = reqVar("MESSENGER_APP_SECRET");
-const PAGE_ID = reqVar("MESSENGER_PAGE_ID");
+const WEBHOOK_SECRET = reqVar("ZERNIO_WEBHOOK_SECRET");
+const ACCOUNT_ID = reqVar("ZERNIO_ACCOUNT_ID");
 const WORKER_URL = (vars.MESSENGER_DEV_WORKER_URL ?? "http://127.0.0.1:3583").replace(/\/$/, "");
 const WEBHOOK_URL = `${WORKER_URL}/channels/messenger/webhook`;
 const CAPTURE_PORT = Number(
-	new URL(vars.MESSENGER_GRAPH_BASE_URL ?? "http://127.0.0.1:8788").port || "8788",
+	new URL(vars.ZERNIO_BASE_URL ?? "http://127.0.0.1:8788").port || "8788",
 );
 
 // ─── Persistent state ────────────────────────────────────────────────────────
@@ -103,7 +107,7 @@ function psid(): string {
 	return created.psid;
 }
 function sessionId(): string {
-	return `messenger:v1:page:${encodeURIComponent(PAGE_ID)}:page-scoped-id:${encodeURIComponent(psid())}`;
+	return `zernio:v1:${ACCOUNT_ID}:${psid()}`;
 }
 
 // ─── Terminal helpers ────────────────────────────────────────────────────────
@@ -125,32 +129,21 @@ function printAbovePrompt(line: string): void {
 	rl?.prompt(true);
 }
 
-// ─── Capture server (stands in for Graph Send API) ───────────────────────────
+// ─── Capture server (stands in for the Zernio inbox API) ─────────────────────
 
 let outboundSeq = 0;
 let lastWebhookStatus = 0;
 let lastBotReply: string | null = null;
 
-function renderOutbound(body: InferOutput<typeof graphSendBodySchema>, savedPath: string): void {
-	const message = body.message;
-	if (body.sender_action) {
-		printAbovePrompt(C.dim(`  · bot ${String(body.sender_action)}`));
-		return;
+function renderOutbound(body: InferOutput<typeof zernioSendBodySchema>, savedPath: string): void {
+	if (body.message) {
+		lastBotReply = body.message;
+		printAbovePrompt(`${C.green("bot ›")} ${body.message}`);
 	}
-	if (!message) {
-		return;
-	}
-	const buttons = extractGraphButtons(message);
-	if (message.text) {
-		lastBotReply = message.text;
-		printAbovePrompt(`${C.green("bot ›")} ${message.text}`);
-	}
-	const attachment = message.attachment;
-	if (attachment) {
-		const payload = attachment.payload;
-		printAbovePrompt(
-			C.dim(`  [attachment ${String(attachment.type)} ${String(payload?.template_type ?? "")}]`),
-		);
+	const buttons = extractZernioButtons(body);
+	const template = body.template;
+	if (template) {
+		printAbovePrompt(C.dim(`  [template ${String(template.type ?? "")}]`));
 	}
 	if (buttons.length > 0) {
 		state.lastButtons = buttons;
@@ -180,30 +173,30 @@ function startCaptureServer(): void {
 						headers: { "content-type": pendingImage.contentType },
 					});
 				}
-				// e.g. profile GET — return an empty-ish profile so the SDK is happy.
 				return Response.json({ id: psid() });
 			}
-			let parsedBody: InferOutput<typeof graphSendBodySchema>;
+			// Zernio's typing endpoint is a separate path, not a sender_action
+			// field; acknowledge it without persisting.
+			if (url.pathname.endsWith("/typing")) {
+				printAbovePrompt(C.dim("  · bot typing"));
+				return Response.json({ success: true });
+			}
+			let parsedBody: InferOutput<typeof zernioSendBodySchema>;
 			try {
-				parsedBody = parse(graphSendBodySchema, await req.json());
+				parsedBody = parse(zernioSendBodySchema, await req.json());
 			} catch {
 				parsedBody = {};
 			}
-			const recipientId = String(parsedBody.recipient?.id ?? psid());
-			if (!parsedBody.sender_action) {
-				outboundSeq += 1;
-				const file = join(
-					SENT_DIR,
-					`${String(outboundSeq).padStart(4, "0")}-${url.pathname.replaceAll(/\W+/g, "_")}.json`,
-				);
-				writeFileSync(file, JSON.stringify(parsedBody, null, 2));
-				renderOutbound(parsedBody, file);
-			} else {
-				renderOutbound(parsedBody, "");
-			}
+			outboundSeq += 1;
+			const file = join(
+				SENT_DIR,
+				`${String(outboundSeq).padStart(4, "0")}-${url.pathname.replaceAll(/\W+/g, "_")}.json`,
+			);
+			writeFileSync(file, JSON.stringify(parsedBody, null, 2));
+			renderOutbound(parsedBody, file);
 			return Response.json({
-				message_id: `dev-out-${Date.now().toString(36)}-${outboundSeq}`,
-				recipient_id: recipientId,
+				data: { messageId: `dev-out-${Date.now().toString(36)}-${outboundSeq}` },
+				success: true,
 			});
 		},
 		hostname: "127.0.0.1",
@@ -213,29 +206,16 @@ function startCaptureServer(): void {
 
 // ─── Webhook sender (real signed HTTP path) ──────────────────────────────────
 
-function buildPayload(event: MessengerMessagingEvent): MessengerWebhookPayload {
-	return {
-		entry: [
-			{
-				id: PAGE_ID,
-				messaging: [event],
-				time: Date.now(),
-			},
-		],
-		object: "page",
-	};
-}
-
-async function postWebhook(event: MessengerMessagingEvent): Promise<void> {
-	const bodyText = JSON.stringify(buildPayload(event));
-	const signature = createHmac("sha256", APP_SECRET).update(bodyText).digest("hex");
+async function postWebhook(event: ZernioInboundEvent): Promise<void> {
+	const bodyText = JSON.stringify(event);
+	const signature = createHmac("sha256", WEBHOOK_SECRET).update(bodyText).digest("hex");
 	let res: Response;
 	try {
 		res = await fetch(WEBHOOK_URL, {
 			body: bodyText,
 			headers: {
 				"content-type": "application/json",
-				"x-hub-signature-256": `sha256=${signature}`,
+				"x-zernio-signature": signature,
 			},
 			method: "POST",
 		});
@@ -255,20 +235,31 @@ async function postWebhook(event: MessengerMessagingEvent): Promise<void> {
 	printAbovePrompt(C.dim(`  · webhook ${res.status} ${await res.text()}`));
 }
 
-function nextMid(): string {
+// The Zernio event id is the dedupe key, so each dev turn needs a fresh one.
+function nextEventId(): string {
 	state.inboundSeq += 1;
 	saveState(state);
-	return `dev-mid-${state.inboundSeq}-${Date.now().toString(36)}`;
+	return `dev-evt-${state.inboundSeq}-${randomUUID()}`;
+}
+
+function buildEvent(input: {
+	attachments?: Array<{ type: string; url: string }>;
+	metadata?: { postbackPayload?: string; quickReplyPayload?: string };
+	text?: string;
+}): ZernioInboundEvent {
+	return buildZernioInboundEvent({
+		accountId: ACCOUNT_ID,
+		attachments: input.attachments,
+		conversationId: psid(),
+		eventId: nextEventId(),
+		metadata: input.metadata,
+		text: input.text,
+	});
 }
 
 async function sendText(text: string): Promise<void> {
 	printAbovePrompt(`${C.cyan("you ›")} ${text}`);
-	await postWebhook({
-		message: { mid: nextMid(), text },
-		recipient: { id: PAGE_ID },
-		sender: { id: psid() },
-		timestamp: Date.now(),
-	});
+	await postWebhook(buildEvent({ text }));
 }
 
 // Attaches a local image to a real signed webhook image event (#20). The worker
@@ -289,15 +280,7 @@ async function sendImage(path: string): Promise<void> {
 	printAbovePrompt(
 		`${C.cyan("you ›")} ${C.dim(`[image ${path} (${contentType}, ${pendingImage.bytes.byteLength} bytes)]`)}`,
 	);
-	await postWebhook({
-		message: {
-			attachments: [{ payload: { url: imageUrl }, type: "image" }],
-			mid: nextMid(),
-		},
-		recipient: { id: PAGE_ID },
-		sender: { id: psid() },
-		timestamp: Date.now(),
-	});
+	await postWebhook(buildEvent({ attachments: [{ type: "image", url: imageUrl }] }));
 }
 
 async function fireButton(index: number): Promise<void> {
@@ -314,27 +297,18 @@ async function fireButton(index: number): Promise<void> {
 		`${C.cyan("you ›")} ${C.dim(`[tap "${button.title}" → ${button.kind} ${button.value}]`)}`,
 	);
 	if (button.kind === "quick_reply") {
-		// Quick replies arrive as a normal message event carrying the payload —
-		// exactly what admission reads via message.quick_reply.payload.
-		await postWebhook({
-			message: {
-				mid: nextMid(),
-				quick_reply: { payload: button.value },
+		// Quick replies arrive as a normal message.received event carrying the
+		// payload in top-level metadata, exactly what admission reads.
+		await postWebhook(
+			buildEvent({
+				metadata: { quickReplyPayload: button.value },
 				text: button.title,
-			},
-			recipient: { id: PAGE_ID },
-			sender: { id: psid() },
-			timestamp: Date.now(),
-		});
+			}),
+		);
 		return;
 	}
-	// Postback button → native postback event on the same real webhook route.
-	await postWebhook({
-		postback: { mid: nextMid(), payload: button.value, title: button.title },
-		recipient: { id: PAGE_ID },
-		sender: { id: psid() },
-		timestamp: Date.now(),
-	});
+	// Postback button → metadata.postbackPayload on the same webhook route.
+	await postWebhook(buildEvent({ metadata: { postbackPayload: button.value } }));
 }
 
 // ─── Seed replay from private export ─────────────────────────────────────────
@@ -391,7 +365,7 @@ async function seed(arg: string | undefined): Promise<void> {
 function banner(): void {
 	console.log(C.bold("\n  Messenger dev console"));
 	console.log(C.dim(`  worker   ${WEBHOOK_URL}`));
-	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Graph Send API)`));
+	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Zernio inbox API)`));
 	console.log(C.dim(`  session  ${state.current}  psid=${psid()}`));
 	console.log(C.dim(`  payloads ${SENT_DIR.replace(`${AGENT_ROOT}/`, "")}`));
 	console.log(C.dim("  type a message, or /help for commands\n"));

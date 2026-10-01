@@ -10,7 +10,7 @@
  * replies, while Durable Objects stay local), waits for health, then execs the
  * given command and forwards its exit code.
  *
- *   bun scripts/with-worker.ts -- <command...>
+ *   bun scripts/with-worker.ts [--local] -- <command...>
  *   --local        boot with `wrangler dev --local` (no Workers AI; no real
  *                  reply — sets SMOKE_EXPECT_REPLY=0 for the child)
  *   WITH_WORKER_SKIP_BUILD=1   reuse the existing dist build
@@ -36,16 +36,18 @@ if (command.length === 0) {
 
 // A local dev .dev.vars so signature verify + capture redirect line up. Created
 // only if absent (never clobbers a real one). Outbound is redirected to the
-// CLI's capture port so no real Meta token is needed.
+// CLI's capture port so no real Zernio key is needed.
 if (!existsSync(DEV_VARS)) {
 	writeFileSync(
 		DEV_VARS,
 		[
-			"MESSENGER_APP_SECRET=dev_local_secret",
-			"MESSENGER_VERIFY_TOKEN=dev_verify_token",
-			"MESSENGER_PAGE_ID=DEV_PAGE_ID",
-			"MESSENGER_PAGE_ACCESS_TOKEN=DEV_PAGE_TOKEN",
-			`MESSENGER_GRAPH_BASE_URL=http://127.0.0.1:${CAPTURE_PORT}`,
+			"ZERNIO_API_KEY=dev_key",
+			"ZERNIO_WEBHOOK_SECRET=dev_local_secret",
+			"ZERNIO_ACCOUNT_ID=DEV_ACCOUNT_ID",
+			`ZERNIO_BASE_URL=http://127.0.0.1:${CAPTURE_PORT}`,
+			// The Telegram channel is mounted unconditionally and reads this at
+			// module scope.
+			"TELEGRAM_WEBHOOK_SECRET=dev_telegram_secret",
 			// Catalog boundary for the photo-identify proof CLI: points the worker's
 			// product search at the fixture server in cli/photo-identify.ts. Harmless
 			// for the text smoke (which never searches the catalog).
@@ -76,18 +78,22 @@ if (!existsSync(DIST_WRANGLER)) {
 
 // wrangler resolves `.dev.vars` relative to the --config file's directory, not
 // the cwd, so the apps/agent/.dev.vars above is invisible to the dist worker
-// and it boots without MESSENGER_* secrets ("… is required"). Mirror it next to
+// and it boots without ZERNIO_* secrets ("… is required"). Mirror it next to
 // the built config so the local secrets actually load.
 if (existsSync(DEV_VARS)) {
 	writeFileSync(join(dirname(DIST_WRANGLER), ".dev.vars"), readFileSync(DEV_VARS));
 }
 
+// Flue still emits `legacy_env`, which this wrangler version rejects outright;
+// strip it from the generated config (dist is rebuilt on every run, so this
+// stays a local patch, never a source edit).
+const cfg = JSON.parse(readFileSync(DIST_WRANGLER, "utf8"));
+delete cfg.legacy_env;
 // Real Workers AI (Kimi) while DOs stay local: experimental remote AI binding.
 if (!local) {
-	const cfg = JSON.parse(readFileSync(DIST_WRANGLER, "utf8"));
 	cfg.ai = { binding: "AI", experimental_remote: true };
-	writeFileSync(DIST_WRANGLER, JSON.stringify(cfg, null, 2));
 }
+writeFileSync(DIST_WRANGLER, JSON.stringify(cfg, null, 2));
 
 console.log(
 	`• booting worker on :${PORT}${local ? " (--local, no Workers AI)" : " (real Workers AI)"}…`,
