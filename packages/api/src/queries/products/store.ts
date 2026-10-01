@@ -640,6 +640,7 @@ export const storeQueries = {
 				amount: true,
 				dailyIntake: true,
 				description: true,
+				expirationDate: true,
 				id: true,
 				ingredients: true,
 				name: true,

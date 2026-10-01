@@ -266,6 +266,7 @@ export const product = router({
 					category: product.category?.name ?? "",
 					dailyIntake: product.dailyIntake ?? 0,
 					description: product.description ?? "",
+					expirationDate: product.expirationDate ?? "",
 					id: product.id,
 					ingredients: product.ingredients ?? [],
 					name: product.name,

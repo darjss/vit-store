@@ -1,0 +1,80 @@
+import { valibotSchema } from "@ai-sdk/valibot";
+import { DynamicWorkerExecutor } from "@cloudflare/codemode";
+import { tool } from "ai";
+import * as v from "valibot";
+import { type CodemodeJson, toCodemodeJson } from "./codemode-boundary";
+import { buildReadFns } from "./read-fns";
+
+// Max chars of tool result to keep in conversation history. Larger results are
+// truncated so the model's context doesn't bloat (e.g. getAllOrders can return
+// 130k+ chars). The model should write targeted queries, not fetch everything.
+const MAX_RESULT_CHARS = 8000;
+
+const truncateResult = (cleanedResult: CodemodeJson): CodemodeJson => {
+	const serialized = JSON.stringify(cleanedResult);
+	if (serialized.length <= MAX_RESULT_CHARS) {
+		return cleanedResult;
+	}
+	return {
+		hint: "Result was too large and was truncated. Write a more targeted query: filter by date/id, select only needed fields, or use a paginated/count endpoint.",
+		preview: serialized.slice(0, MAX_RESULT_CHARS),
+		totalChars: serialized.length,
+		truncated: true,
+	};
+};
+
+// Lets the admin agent write TypeScript which calls the read-fns registry
+// through Codemode's isolated Dynamic Worker sandbox. The LLM writes
+// `async () => { const orders = await order.getPendingOrders(); return orders; }`
+// and the executor runs it with the fns exposed as namespaced providers
+// (order.*, product.*, customer.*, etc.).
+//
+// `loader` is the Worker Loader binding (env.LOADER) — required by
+// DynamicWorkerExecutor to spin up the sandbox Worker. Network access is fully
+// isolated (globalOutbound: null): the sandbox can only reach the host through
+// the fns, never the internet.
+export function buildAdminQueryTool({
+	botToken,
+	loader,
+	storeApiUrl,
+}: {
+	botToken: string;
+	loader: WorkerLoader;
+	storeApiUrl: string;
+}) {
+	return tool({
+		description:
+			"Run TypeScript code that queries and mutates store data via namespaced functions. Write an async arrow function that calls order.getPendingOrders(), product.getProductById({ id: 42 }), product.updateStock({ productId: 42, numberToUpdate: 10, type: 'add' }), etc. and returns the result. The return value is shown to you as the tool result. IMPORTANT: Results larger than 8k chars are truncated — write targeted queries that return only what you need (filter by date/id, use count endpoints, select specific fields) instead of fetching entire tables.",
+		execute: async ({ code }) => {
+			const executor = new DynamicWorkerExecutor({
+				globalOutbound: null,
+				loader,
+				timeout: 120_000,
+			});
+			const fns = buildReadFns({ botToken, storeApiUrl });
+			console.log(`[bot.code] ${code.slice(0, 500)}`);
+			const result = await executor.execute(code, fns);
+			const cleanedResult = toCodemodeJson(result.result ?? null);
+			const truncated = truncateResult(cleanedResult);
+			const response: CodemodeJson = {
+				logs: result.logs ?? [],
+				result: truncated,
+			};
+			if (result.error) {
+				response.error = result.error;
+			}
+			return response;
+		},
+		inputSchema: valibotSchema(
+			v.object({
+				code: v.pipe(
+					v.string(),
+					v.minLength(1),
+					v.description(
+						"TypeScript code: an async arrow function, e.g. `async () => { const orders = await order.getPendingOrders(); return orders; }`",
+					),
+				),
+			}),
+		),
+	});
+}
