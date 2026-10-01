@@ -1,4 +1,5 @@
-import type { MessengerMessagingEvent } from "@flue/messenger";
+import type { ChannelSendResult, ChannelTextSend } from "../lib/channel-send";
+import type { ZernioMessageEvent } from "./messenger";
 import {
 	type AssistantProduct,
 	type Cart,
@@ -7,7 +8,6 @@ import {
 	parseOrderPayload,
 } from "@vit/assistant";
 import type { CartSession } from "./cart-session";
-import type { ChannelSendResult, ChannelTextSend } from "../lib/channel-send";
 
 // Bridges Messenger button/quick-reply events to the cart WITHOUT the model.
 // `Захиалах` (postback `order_product:<id>`) and the cart-control payloads
@@ -21,38 +21,22 @@ export type CartEvent =
 	| { command: CartCommand; kind: "command"; mid: string };
 
 const payloadFromEvent = (
-	event: MessengerMessagingEvent,
+	event: ZernioMessageEvent,
 ): { mid: string; payload: string } | undefined => {
-	// Postbacks (the Захиалах card button) carry NO message id, so a mid-only
-	// dedup key is empty and Meta's webhook retries bypass dedup → the cart
-	// summary double-sends. Meta re-delivers the SAME payload + timestamp on a
-	// retry, so synthesize a stable id from them when there's no mid; two
-	// intentional taps have different timestamps and stay distinct.
-	const stableMid = (payload: string, mid?: string): string =>
-		mid && mid.length > 0 ? mid : `syn:${event.timestamp ?? 0}:${payload}`;
-	if (event.postback?.payload) {
-		return {
-			mid: stableMid(event.postback.payload, event.postback.mid),
-			payload: event.postback.payload,
-		};
+	// Button taps (the Захиалах card button, cart controls) arrive as
+	// message.received carrying the payload in metadata. The Zernio event id is
+	// identical on every webhook retry, so it's the dedupe key directly.
+	const payload = event.metadata?.postbackPayload ?? event.metadata?.quickReplyPayload;
+	if (!payload) {
+		return undefined;
 	}
-	const quickReply = event.message?.quick_reply?.payload;
-	if (quickReply) {
-		return {
-			mid: stableMid(quickReply, event.message?.mid),
-			payload: quickReply,
-		};
-	}
-	return undefined;
+	return { mid: event.id, payload };
 };
 
 // Classifies an incoming event as a cart event, or `undefined` when it is not
-// one (a plain text turn, an echo, a non-cart postback) so the caller can fall
+// one (a plain text turn, a non-cart postback) so the caller can fall
 // through to the normal text-dispatch path.
-export const detectCartEvent = (event: MessengerMessagingEvent): CartEvent | undefined => {
-	if (event.message?.is_echo) {
-		return undefined;
-	}
+export const detectCartEvent = (event: ZernioMessageEvent): CartEvent | undefined => {
 	const found = payloadFromEvent(event);
 	if (!found) {
 		return undefined;

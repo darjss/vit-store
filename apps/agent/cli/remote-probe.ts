@@ -1,31 +1,33 @@
 /**
  * Remote probe: drive the DEPLOYED Messenger agent as if a real customer.
  *
- * Sends a real Meta-shaped, HMAC-signed webhook event to the deployed worker
+ * Sends a real Zernio-shaped, HMAC-signed webhook event to the deployed worker
  * (so it goes through production's exact signature check + admission + dispatch),
- * then reads the bot's reply back from the Graph conversations API. Lets an
+ * then reads the bot's reply back from the Zernio inbox API. Lets an
  * agent/operator test the live bot end-to-end from the terminal without typing
  * in Messenger.
  *
- *   bun run probe -- "sain uu"                    # text turn
- *   bun run probe -- --postback "order_product:6993"   # button tap
- *   bun run probe -- --psid 123... "vitamin"      # override the sender PSID
+ *   bun run probe -- "sain uu"                          # text turn
+ *   bun run probe -- --postback "order_product:6993"    # button tap
+ *   bun run probe -- --conversation <id> "vitamin"      # override the conversation
  *
  * Env (apps/agent/.dev.vars or process env):
- *   MESSENGER_APP_SECRET     sign the webhook exactly as Meta does
- *   MESSENGER_ACCESS_TOKEN   page token to READ the conversation back
- *   MESSENGER_PAGE_ID        page id
- *   MESSENGER_TEST_PSID      sender PSID (a real, messageable PSID — the bot
- *                            replies to it, so use your own or a tester's)
- *   MESSENGER_PROBE_URL      deployed webhook (default agent.amerikvitamin.mn)
+ *   ZERNIO_WEBHOOK_SECRET        sign the webhook exactly as Zernio does
+ *   ZERNIO_API_KEY               inbox API key to READ the conversation back
+ *   ZERNIO_ACCOUNT_ID            connected account id
+ *   ZERNIO_CONVERSATION_ID       conversation to write into (a real thread —
+ *                                the bot replies to it, so use a tester's)
+ *   MESSENGER_PROBE_URL          deployed webhook (default agent.amerikvitamin.mn)
+ *   ZERNIO_BASE_URL              API base for the read-back (default prod)
  *
- * NOTE: replies land in that PSID's real Messenger thread, and a full checkout
- * would create a REAL order. Use for conversation testing.
+ * NOTE: replies land in that conversation's real Messenger thread, and a full
+ * checkout would create a REAL order. Use for conversation testing.
  */
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { array, object, optional, parse, string } from "valibot";
 import { loadDotVars } from "./dot-vars";
+import { buildZernioInboundEvent } from "./zernio-send";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
 
@@ -44,53 +46,36 @@ const req = (n: string): string => {
 	return v;
 };
 
-const APP_SECRET = req("MESSENGER_APP_SECRET");
-const PAGE_TOKEN = req("MESSENGER_ACCESS_TOKEN");
-const PAGE_ID = req("MESSENGER_PAGE_ID");
-const PSID = vars.MESSENGER_TEST_PSID ?? "";
-// Admin PSIDs (comma-separated in .dev.vars). --admin uses the first entry.
-const ADMIN_PSIDS = (vars.ADMIN_PSIDS ?? "")
-	.split(",")
-	.map((s) => s.trim())
-	.filter((s) => s.length > 0);
+const WEBHOOK_SECRET = req("ZERNIO_WEBHOOK_SECRET");
+const API_KEY = req("ZERNIO_API_KEY");
+const ACCOUNT_ID = req("ZERNIO_ACCOUNT_ID");
 const WORKER = (vars.MESSENGER_PROBE_URL ?? "https://agent.amerikvitamin.mn").replace(/\/$/, "");
 const WEBHOOK = `${WORKER}/channels/messenger/webhook`;
-const GRAPH = "https://graph.facebook.com/v23.0";
+const API_BASE = (vars.ZERNIO_BASE_URL ?? "https://zernio.com/api").replace(/\/+$/, "");
 
 // ─── args ────────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
-let psid = PSID;
+let conversationId = vars.ZERNIO_CONVERSATION_ID ?? "";
 let postback: string | undefined;
-// --send-only: POST the signed webhook and exit WITHOUT reading the Graph
-// conversation back. Use with a non-deliverable test PSID so the bot's real send
-// goes nowhere; read its replies from the worker log ([bot.say] in `wrangler
-// tail`) instead. Keeps dogfooding out of any real Messenger inbox.
+// --send-only: POST the signed webhook and exit WITHOUT reading the
+// conversation back; read the bot's replies from the worker log ([bot.say] in
+// `wrangler tail`) instead.
 let sendOnly = false;
-let useAdmin = false;
 const words: Array<string> = [];
 for (let i = 0; i < argv.length; i++) {
-	if (argv[i] === "--psid") {
-		psid = argv[++i] ?? psid;
+	if (argv[i] === "--conversation") {
+		conversationId = argv[++i] ?? conversationId;
 	} else if (argv[i] === "--postback") {
 		postback = argv[++i];
 	} else if (argv[i] === "--send-only") {
 		sendOnly = true;
-	} else if (argv[i] === "--admin") {
-		useAdmin = true;
 	} else {
 		words.push(argv[i]!);
 	}
 }
-if (useAdmin) {
-	if (ADMIN_PSIDS.length === 0) {
-		console.error("--admin requires ADMIN_PSIDS in .dev.vars or env.");
-		process.exit(1);
-	}
-	psid = ADMIN_PSIDS[0]!;
-}
 const text = words.join(" ");
-if (!psid) {
-	console.error("No PSID. Pass --psid <id> or set MESSENGER_TEST_PSID.");
+if (!conversationId) {
+	console.error("No conversation. Pass --conversation <id> or set ZERNIO_CONVERSATION_ID.");
 	process.exit(1);
 }
 if (!text && !postback) {
@@ -98,32 +83,23 @@ if (!text && !postback) {
 	process.exit(1);
 }
 
-// ─── send a real signed Meta webhook to the deployed worker ──────────────────
-const mid = `probe-${Date.now().toString(36)}`;
-const messaging = postback
-	? {
-			postback: { mid, payload: postback, title: "(probe)" },
-			recipient: { id: PAGE_ID },
-			sender: { id: psid },
-			timestamp: Date.now(),
-		}
-	: {
-			message: { mid, text },
-			recipient: { id: PAGE_ID },
-			sender: { id: psid },
-			timestamp: Date.now(),
-		};
-const body = JSON.stringify({
-	entry: [{ id: PAGE_ID, messaging: [messaging], time: Date.now() }],
-	object: "page",
+// ─── send a real signed Zernio webhook to the deployed worker ────────────────
+const event = buildZernioInboundEvent({
+	accountId: ACCOUNT_ID,
+	conversationId,
+	eventId: `probe-${randomUUID()}`,
+	metadata: postback ? { postbackPayload: postback } : undefined,
+	text: text || undefined,
 });
-const sig = `sha256=${createHmac("sha256", APP_SECRET).update(body).digest("hex")}`;
+const body = JSON.stringify(event);
+const sig = createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
 
-const sentAt = Math.floor(Date.now() / 1000);
-console.log(`\nyou › ${postback ? `[postback ${postback}]` : text}   (psid=${psid})`);
+console.log(
+	`\nyou › ${postback ? `[postback ${postback}]` : text}   (conversation=${conversationId})`,
+);
 const res = await fetch(WEBHOOK, {
 	body,
-	headers: { "content-type": "application/json", "x-hub-signature-256": sig },
+	headers: { "content-type": "application/json", "x-zernio-signature": sig },
 	method: "POST",
 });
 console.log(`  · webhook ${res.status} ${(await res.text()).trim()}`);
@@ -135,44 +111,40 @@ if (sendOnly) {
 	process.exit(0);
 }
 
-const graphMessageSchema = object({
-	created_time: string(),
-	from: optional(object({ id: optional(string()) })),
-	message: optional(string()),
+const zernioMessageSchema = object({
+	createdAt: optional(string()),
+	direction: optional(string()),
+	sentAt: optional(string()),
+	text: optional(string()),
 });
 
-const graphConversationsResponseSchema = object({
-	data: optional(
-		array(
-			object({
-				messages: optional(object({ data: optional(array(graphMessageSchema)) })),
-			}),
-		),
-	),
-	error: optional(object({ message: string() })),
+const zernioMessagesResponseSchema = object({
+	messages: optional(array(zernioMessageSchema)),
 });
 
-// ─── read the bot's reply back from the Graph conversations API ──────────────
-async function readReplies(sinceUnix: number): Promise<Array<{ text: string; time: string }>> {
-	const url = `${GRAPH}/${PAGE_ID}/conversations?platform=messenger&fields=messages.limit(8)%7Bmessage,from,created_time%7D&limit=5&access_token=${PAGE_TOKEN}`;
-	const r = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-	const parsed = parse(graphConversationsResponseSchema, await r.json());
-	if (parsed.error) {
-		throw new Error(parsed.error.message);
+// ─── read the bot's reply back from the Zernio inbox API ─────────────────────
+async function readReplies(sinceIso: string): Promise<Array<{ text: string; time: string }>> {
+	const url = `${API_BASE}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages`;
+	const r = await fetch(url, {
+		headers: { authorization: `Bearer ${API_KEY}` },
+		signal: AbortSignal.timeout(15_000),
+	});
+	if (!r.ok) {
+		throw new Error(`Zernio ${r.status} ${await r.text()}`);
 	}
+	const parsed = parse(zernioMessagesResponseSchema, await r.json());
+	const since = Date.parse(sinceIso);
 	const out: Array<{ text: string; time: string }> = [];
-	for (const conv of parsed.data ?? []) {
-		for (const m of conv.messages?.data ?? []) {
-			const t = Math.floor(new Date(m.created_time).getTime() / 1000);
-			if (m.from?.id === PAGE_ID && t >= sinceUnix && m.message) {
-				out.push({ text: m.message, time: m.created_time });
-			}
+	for (const m of parsed.messages ?? []) {
+		const time = m.sentAt ?? m.createdAt ?? "";
+		if (m.direction === "outgoing" && m.text && Date.parse(time) >= since) {
+			out.push({ text: m.text, time });
 		}
 	}
 	return out.sort((a, b) => a.time.localeCompare(b.time));
 }
 
-console.log("  … waiting for bot reply (Kimi can take 30-60s for search/advice)");
+console.log("  … waiting for bot reply (the model can take 30-60s for search/advice)");
 const deadline = Date.now() + 95_000;
 const seen = new Set<string>();
 let got = 0;
@@ -181,7 +153,7 @@ while (Date.now() < deadline) {
 	await Bun.sleep(3000);
 	let replies: Array<{ text: string; time: string }> = [];
 	try {
-		replies = await readReplies(sentAt);
+		replies = await readReplies(event.timestamp);
 	} catch (error) {
 		console.error("  read error:", error instanceof Error ? error.message : String(error));
 		break;

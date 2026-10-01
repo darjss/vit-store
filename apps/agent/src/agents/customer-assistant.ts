@@ -13,7 +13,7 @@ import {
 import { cartSessionFor } from "../channels/cart-session";
 import { checkoutSessionFor } from "../channels/checkout-session";
 import {
-	channel,
+	parseConversationKey,
 	postMessage,
 	sendCartSummary,
 	sendPaymentChoices,
@@ -33,7 +33,7 @@ type AgentEnv = {
 };
 
 export default defineAgent<AgentEnv>(({ env, id }) => {
-	const conversation = channel.parseConversationKey(id);
+	const conversation = parseConversationKey(id);
 	// Same per-session CartStore the deterministic button path writes to, keyed
 	// by the assistant session id — so conversational edits and button taps act
 	// on one authoritative cart.

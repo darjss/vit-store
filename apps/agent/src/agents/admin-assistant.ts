@@ -12,10 +12,6 @@ import { createAdminBotClient } from "../lib/admin-bot-client";
 import { loadInboundImage } from "../lib/messenger-inbound";
 import { buildKimiVision } from "../lib/vision";
 import {
-	channel as messengerChannel,
-	postMessage as postMessengerMessage,
-} from "../channels/messenger";
-import {
 	channel as telegramChannel,
 	postTelegramMessage,
 	postTelegramProductPhoto,
@@ -66,10 +62,10 @@ const buildImageTools = (env: AgentEnv, storeApiUrl: string) => {
 	return [purchaseTool, chatOrderTool];
 };
 
+// Admins only ever reach this agent through Telegram now: the customer
+// Messenger webhook dispatches to the customer assistant, so every admin
+// session id is a Telegram conversation key.
 const buildReplyTools = (env: AgentEnv, id: string, storeApiUrl: string) => {
-	if (!id.startsWith("telegram:")) {
-		return [postMessengerMessage(messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")))];
-	}
 	const ref = telegramChannel.parseConversationKey(id);
 	const replyTool = postTelegramMessage(ref);
 	return env.ADMIN_BOT_TOKEN

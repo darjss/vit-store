@@ -1,10 +1,4 @@
-import {
-	createMessengerChannel,
-	type MessengerChannel,
-	type MessengerConversationRef,
-	type MessengerParticipantRef,
-} from "@flue/messenger";
-import { defineTool, dispatch, type AgentDefinition } from "@flue/runtime";
+import { defineTool, dispatch } from "@flue/runtime";
 import {
 	type AssistantProduct,
 	buildPaymentChoice,
@@ -23,12 +17,11 @@ import {
 	TRANSFER_DONE_BUTTON_TITLE,
 	type TransferStatus,
 } from "@vit/assistant";
-import { Messenger, type Recipient } from "@warriorteam/messenger-sdk";
-import { minLength, object, optional, pipe, safeParse, string } from "valibot";
+import type { Context } from "hono";
+import * as v from "valibot";
 import assistant from "../agents/customer-assistant";
-import adminAssistant from "../agents/admin-assistant";
-import { getAssistantProductsByIds } from "../lib/catalog";
 import type { ChannelSendResult } from "../lib/channel-send";
+import { getAssistantProductsByIds } from "../lib/catalog";
 import { stageInboundImage } from "../lib/messenger-inbound";
 import { claimTransfer, fetchPaymentSummary } from "../lib/payment";
 import { detectCartEvent, handleCartEvent } from "./cart-handler";
@@ -38,8 +31,11 @@ import {
 	admitMessengerImageMessage,
 	admitMessengerTextMessage,
 	claimInboundOnce,
-	extractInboundImages,
+	conversationKey,
+	conversationRefFor,
 	releaseInboundClaim,
+	extractInboundImages,
+	type MessengerConversationRef,
 } from "./messenger-admission";
 import {
 	handleChooseTransfer,
@@ -47,167 +43,254 @@ import {
 	type PaymentHandlerDeps,
 } from "./payment-handler";
 
+export {
+	conversationKey,
+	parseConversationKey,
+	type MessengerConversationRef,
+} from "./messenger-admission";
+
 // Worker bindings the Messenger webhook reaches through the Hono context.
 type WebhookEnv = {
-	ADMIN_BOT_TOKEN?: string;
-	// Admin agent gate: comma-separated admin PSIDs + the bot token for the
-	// tRPC bot client. LOADER is the Codemode sandbox binding (used inside the
-	// admin agent, not the webhook, but typed here for completeness).
-	ADMIN_PSIDS?: string;
 	CART_STORE?: DurableObjectNamespace;
 	CHECKOUT_STORE?: DurableObjectNamespace;
-	LOADER?: WorkerLoader;
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
-// Mongolian apology when an inbound photo can't be fetched from Meta (expired
-// CDN url / oversized). Keeps the customer in the conversation instead of
-// silently dropping their picture.
+const ZERNIO_API_KEY = requiredEnv("ZERNIO_API_KEY");
+const ZERNIO_WEBHOOK_SECRET = requiredEnv("ZERNIO_WEBHOOK_SECRET");
+const ZERNIO_ACCOUNT_ID = requiredEnv("ZERNIO_ACCOUNT_ID");
+// Local dev seam: when set, outbound Zernio calls are redirected to a capture
+// endpoint (see apps/agent/cli/messenger-dev.ts) so the real send path runs
+// without touching Zernio. Unset in production -> real API host.
+const ZERNIO_BASE_URL = (process.env.ZERNIO_BASE_URL ?? "https://zernio.com/api").replace(
+	/\/+$/,
+	"",
+);
+
+// Mongolian apology when an inbound photo can't be fetched (expired CDN url /
+// oversized). Keeps the customer in the conversation instead of silently
+// dropping their picture.
 const PHOTO_FETCH_FAILED_MESSAGE =
 	"Уучлаарай, таны илгээсэн зургийг боловсруулж чадсангүй. Барааны нэрийг бичих эсвэл зургаа дахин илгээнэ үү.";
 
-const graphVersion = "v25.0";
+// Events older than this are dropped: Zernio retries a failed webhook inside a
+// short window, so anything older is a replay of a turn we already finished or
+// abandoned.
+const STALE_EVENT_WINDOW_MS = 3 * 60_000;
 
-export const messenger = new Messenger({
-	accessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
-	baseUrl: process.env.MESSENGER_GRAPH_BASE_URL || undefined,
-	maxRetries: 0,
-	version: graphVersion,
+// ─── Inbound event shape (valibot: only the fields we read) ──────────────────
+
+const referralSchema = v.looseObject({
+	ad_id: v.optional(v.string()),
+	ref: v.optional(v.string()),
+	source: v.optional(v.string()),
 });
 
-// Outbound capture at the single SDK choke point: log every text the bot sends.
-// This is prod observability of what the bot actually says, and it lets a CLI
-// dogfood read the bot's replies from `wrangler tail` / Workers Logs WITHOUT the
-// message being delivered (drive the webhook with a non-deliverable test PSID).
-const outboundMessageBodySchema = object({
-	message: optional(object({ text: optional(string()) })),
+const zernioMessageEventSchema = v.looseObject({
+	// Event UUID, identical on every retry: our dedupe key.
+	account: v.looseObject({
+		accountId: v.optional(v.string()),
+		id: v.pipe(v.string(), v.minLength(1)),
+	}),
+	conversation: v.looseObject({
+		id: v.pipe(v.string(), v.minLength(1)),
+		platformConversationId: v.optional(v.string()),
+	}),
+	event: v.literal("message.received"),
+	id: v.pipe(v.string(), v.minLength(1)),
+	message: v.looseObject({
+		attachments: v.optional(
+			v.array(
+				v.looseObject({
+					type: v.string(),
+					url: v.optional(v.nullable(v.string())),
+				}),
+			),
+		),
+		conversationId: v.optional(v.string()),
+		direction: v.string(),
+		id: v.optional(v.string()),
+		platform: v.string(),
+		sender: v.optional(v.looseObject({ id: v.string() })),
+		text: v.nullable(v.string()),
+	}),
+	timestamp: v.string(),
+	// Postback taps and quick-reply taps arrive as message.received carrying
+	// these payload fields; strings come back exactly as we sent them.
+	metadata: v.nullish(
+		v.looseObject({
+			postbackPayload: v.optional(v.string()),
+			quickReplyPayload: v.optional(v.string()),
+			referral: v.optional(referralSchema),
+		}),
+	),
 });
 
-const _sendMessage = messenger.send.message.bind(messenger.send);
-messenger.send.message = async (body, opts) => {
-	const parsed = safeParse(outboundMessageBodySchema, body);
-	const text = parsed.success ? parsed.output.message?.text : undefined;
-	if (text && text.length > 0) {
-		console.log(`[bot.say] ${text.replaceAll("\n", " ⏎ ").slice(0, 700)}`);
+export type ZernioMessageEvent = v.InferOutput<typeof zernioMessageEventSchema>;
+
+const envelopeSchema = v.looseObject({ event: v.optional(v.string()) });
+
+// Only real customer inbound on our connected Zernio account continues to
+// routing. Everything else (outgoing, other platforms, other accounts) is a
+// quiet 200 so Zernio stops retrying it.
+const isInboundForUs = (event: ZernioMessageEvent): boolean =>
+	event.message.direction === "incoming" &&
+	event.message.platform === "facebook" &&
+	conversationRefFor(event).accountId === ZERNIO_ACCOUNT_ID;
+
+// ─── Signature verification ─────────────────────────────────────────────────
+
+const hexToBytes = (hex: string): Uint8Array | undefined => {
+	if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
+		return undefined;
 	}
-	return _sendMessage(body, opts);
+	const bytes = new Uint8Array(hex.length / 2);
+	for (let i = 0; i < bytes.length; i++) {
+		bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+	}
+	return bytes;
 };
 
-export function toRecipient(ref: MessengerParticipantRef): Recipient {
-	return ref.type === "page-scoped-id" ? { id: ref.id } : { user_ref: ref.id };
-}
+let hmacKeyPromise: Promise<CryptoKey> | undefined;
+const hmacKey = (): Promise<CryptoKey> => {
+	if (hmacKeyPromise === undefined) {
+		hmacKeyPromise = crypto.subtle.importKey(
+			"raw",
+			new TextEncoder().encode(ZERNIO_WEBHOOK_SECRET),
+			{ hash: "SHA-256", name: "HMAC" },
+			false,
+			["verify"],
+		);
+	}
+	return hmacKeyPromise;
+};
 
-// Session version suffix for the admin agent. The v1 session accumulated
-// 79k+ chars of tool results that overwhelmed the model. This suffix routes
-// admin messages to a fresh DO instance (:v2) while the admin agent strips
-// it before parsing the conversation key for postMessage. Bump to :v3 etc.
-// if the session ever needs rotating again.
-const ADMIN_SESSION_SUFFIX = ":v2";
-
-export const channel: MessengerChannel = createMessengerChannel({
-	appSecret: requiredEnv("MESSENGER_APP_SECRET"),
-	pageId: requiredEnv("MESSENGER_PAGE_ID"),
-	verifyToken: requiredEnv("MESSENGER_VERIFY_TOKEN"),
-
-	// Mounted at GET/POST /channels/messenger/webhook.
-	async webhook({ c, payload }) {
-		// SAFETY: c.env is the Worker bindings object; WebhookEnv lists the optional ones read here.
-		const env = c.env as WebhookEnv;
-		for (const entry of payload.entry) {
-			for (const event of entry.messaging ?? []) {
-				// Admin PSID gate: an authorized admin's messages route to the
-				// admin agent (Codemode query tool) BEFORE any customer-path
-				// logic. Non-admin PSIDs fall through to the customer agent
-				// unchanged. Reuses the same image/text dispatch helpers with
-				// `adminAssistant` as the target — no duplicated logic.
-				const adminConversation = channel.conversationRef(event);
-				if (adminConversation && isAdminPsid(adminConversation.participant.id, env)) {
-					if (await dispatchInboundImage(event, env, adminAssistant, ADMIN_SESSION_SUFFIX)) {
-						continue;
-					}
-					await dispatchInboundText(event, env, adminAssistant, ADMIN_SESSION_SUFFIX);
-					continue;
-				}
-				// Cart buttons (Захиалах postback + cart_* controls) are handled
-				// deterministically ahead of the text path, so they never reach the
-				// model: add/view/adjust/remove/confirm run with no LLM turn (and thus
-				// run under local miniflare where `env.AI` is unavailable).
-				if (await tryHandleCartEvent(event, env)) {
-					continue;
-				}
-				// Post-order payment surface (#25): the QPay/transfer button taps, a
-				// "Шилжүүлсэн" claim, and (within the transfer context) a "хийсэн"
-				// text or a screenshot are handled deterministically here, ahead of
-				// the photo/text paths, so a transfer claim never reaches the model
-				// and never touches a payment-confirmation API.
-				if (await tryHandlePaymentEvent(event, env)) {
-					continue;
-				}
-				// Photo turns: trusted channel code fetches the Meta image, stages it
-				// under messenger-inbound/ in R2, and dispatches ONLY the key (#20).
-				if (await dispatchInboundImage(event, env)) {
-					continue;
-				}
-				await dispatchInboundText(event, env);
-			}
-		}
-		return undefined;
-	},
-});
-
-// Admin PSID allowlist: env.ADMIN_PSIDS is a comma-separated list of authorized
-// admin PSIDs. Returns true when the sender is an admin (routes to the admin
-// agent), false otherwise (falls through to the customer agent).
-function isAdminPsid(psid: string, env: WebhookEnv): boolean {
-	const raw = env.ADMIN_PSIDS;
-	if (!raw) {
+const verifySignature = async (rawBody: string, header: string | undefined): Promise<boolean> => {
+	if (!header) {
 		return false;
 	}
-	return raw
-		.split(",")
-		.map((s) => s.trim())
-		.filter((s) => s.length > 0)
-		.includes(psid);
+	const hex = header.startsWith("sha256=") ? header.slice(7) : header;
+	const signature = hexToBytes(hex);
+	if (signature === undefined) {
+		return false;
+	}
+	try {
+		return await crypto.subtle.verify(
+			"HMAC",
+			await hmacKey(),
+			signature,
+			new TextEncoder().encode(rawBody),
+		);
+	} catch {
+		return false;
+	}
+};
+
+// ─── Webhook ─────────────────────────────────────────────────────────────────
+
+// Mounted at POST /channels/messenger/webhook. Signature-gated, then the same
+// deterministic routing order as before: cart buttons -> payment buttons ->
+// photo turn -> text turn. Any throw past signature verification returns 500 so
+// Zernio retries the event (dedupe claims are released on the failure paths).
+export async function messengerWebhook(c: Context): Promise<Response> {
+	// SAFETY: Workers passes the wrangler bindings object as c.env; WebhookEnv
+	// lists the optional ones read here.
+	const env = c.env as WebhookEnv;
+	const rawBody = await c.req.text();
+	if (!(await verifySignature(rawBody, c.req.header("x-zernio-signature")))) {
+		return c.text("invalid signature", 401);
+	}
+
+	let payload: unknown;
+	try {
+		payload = JSON.parse(rawBody);
+	} catch {
+		return c.text("ok", 200);
+	}
+	const envelope = v.safeParse(envelopeSchema, payload);
+	if (!envelope.success || envelope.output.event !== "message.received") {
+		return c.text("ok", 200);
+	}
+	const parsed = v.safeParse(zernioMessageEventSchema, payload);
+	if (!parsed.success) {
+		console.error("[zernio.unparsed]", parsed.issues);
+		return c.text("ok", 200);
+	}
+	const event = parsed.output;
+
+	if (!isInboundForUs(event)) {
+		return c.text("ok", 200);
+	}
+
+	const ageMs = Date.now() - Date.parse(event.timestamp);
+	if (!Number.isFinite(ageMs) || ageMs > STALE_EVENT_WINDOW_MS) {
+		console.log(`[zernio.stale] event=${event.id} timestamp=${event.timestamp}`);
+		return c.text("ok", 200);
+	}
+
+	const adId = event.metadata?.referral?.ad_id;
+	if (adId) {
+		console.log(`[zernio.referral] ad_id=${adId} conversation=${event.conversation.id}`);
+	}
+
+	// Cart buttons (Захиалах postback + cart_* controls) are handled
+	// deterministically ahead of the text path, so they never reach the model:
+	// add/view/adjust/remove/confirm run with no LLM turn (and thus run under
+	// local miniflare where `env.AI` is unavailable).
+	if (await tryHandleCartEvent(event, env)) {
+		return c.text("ok", 200);
+	}
+	// Post-order payment surface (#25): the QPay/transfer button taps, a
+	// "Шилжүүлсэн" claim, and (within the transfer context) a "хийсэн" text or a
+	// screenshot are handled deterministically here, ahead of the photo/text
+	// paths, so a transfer claim never reaches the model and never touches a
+	// payment-confirmation API.
+	if (await tryHandlePaymentEvent(event, env)) {
+		return c.text("ok", 200);
+	}
+	// Photo turns: trusted channel code fetches the attachment, stages it under
+	// messenger-inbound/ in R2, and dispatches ONLY the key (#20).
+	if (await dispatchInboundImage(event, env)) {
+		return c.text("ok", 200);
+	}
+	await dispatchInboundText(event, env);
+	return c.text("ok", 200);
 }
 
-// Admits a plain inbound text turn and dispatches it to the target agent.
-// `target` defaults to the customer assistant; the admin gate passes
-// `adminAssistant` to route admin PSIDs to the admin agent without duplicating
-// the admission/dispatch logic.
-// `sessionIdSuffix` appends a version tag to the dispatch id, creating a fresh
-// DO instance (and thus a fresh session) without affecting the conversation key
-// parsing in the agent. Used to rotate the admin session after context bloat.
-async function dispatchInboundText(
-	event: Parameters<typeof admitMessengerTextMessage>[0]["event"],
-	env: WebhookEnv,
-	target: AgentDefinition = assistant,
-	sessionIdSuffix = "",
-): Promise<void> {
-	const admission = await admitMessengerTextMessage({ channel, env, event });
+type MessengerDispatchInput = {
+	attachmentTypes: Array<string>;
+	messageId: string;
+	quickReplyPayload?: string;
+	text: string;
+	type: "messenger.message";
+};
+
+// Admits a plain inbound text turn and dispatches it to the customer agent.
+async function dispatchInboundText(event: ZernioMessageEvent, env: WebhookEnv): Promise<void> {
+	const admission = await admitMessengerTextMessage({ env, event });
 	if (admission === undefined) {
 		return;
 	}
 
 	// dispatch() is the durable commit point. If it throws before the turn is
-	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
-	// re-deliver instead of being swallowed by dedupe.
+	// durably enqueued, release the dedupe claim and rethrow so Zernio's retry
+	// can re-deliver instead of being swallowed by dedupe.
+	// dispatch() input must be JSON-clean: quickReplyPayload is only added when
+	// a quick reply exists rather than passing an explicit undefined.
+	const input: MessengerDispatchInput = {
+		attachmentTypes: admission.attachmentTypes,
+		messageId: admission.messageId,
+		text: admission.text,
+		type: "messenger.message",
+	};
+	if (admission.quickReplyPayload !== undefined) {
+		input.quickReplyPayload = admission.quickReplyPayload;
+	}
 	try {
-		const baseInput = {
-			attachmentTypes: admission.attachmentTypes,
-			messageId: admission.messageId,
-			text: admission.text,
-			type: "messenger.message" as const,
-		};
-		// dispatch() input must be JSON-clean: omit the key entirely when there
-		// is no quick reply rather than passing undefined.
-		const dispatchInput =
-			admission.quickReplyPayload === undefined
-				? baseInput
-				: { ...baseInput, quickReplyPayload: admission.quickReplyPayload };
-		await dispatch(target, {
-			id: admission.sessionId + sessionIdSuffix,
-			input: dispatchInput,
+		await dispatch(assistant, {
+			id: admission.sessionId,
+			input,
 		});
 	} catch (error) {
 		await admission.release();
@@ -215,36 +298,28 @@ async function dispatchInboundText(
 	}
 }
 
-// Admits an inbound photo turn: fetches each Meta CDN attachment server-side,
-// stages it under the short-lived messenger-inbound/ R2 prefix, and dispatches
-// the target agent turn carrying ONLY the R2 key(s) — never a CDN url or base64
+// Admits an inbound photo turn: fetches each attachment server-side, stages it
+// under the short-lived messenger-inbound/ R2 prefix, and dispatches the
+// customer-agent turn carrying ONLY the R2 key(s) — never a CDN url or base64
 // (ADR 0003, #20). Returns true when the event was an image message (consumed),
 // false for non-image messages so the webhook falls through to the text path.
-// `target` defaults to the customer assistant; the admin gate passes
-// `adminAssistant`.
-async function dispatchInboundImage(
-	event: Parameters<typeof admitMessengerImageMessage>[0]["event"],
-	env: WebhookEnv,
-	target: AgentDefinition = assistant,
-	sessionIdSuffix = "",
-): Promise<boolean> {
-	// Extract once and pass the array through to admission so the webhook loop
+async function dispatchInboundImage(event: ZernioMessageEvent, env: WebhookEnv): Promise<boolean> {
+	// Extract once and pass the array through to admission so the webhook
 	// doesn't scan attachments twice per event.
 	const images = extractInboundImages(event);
 	if (images.length === 0) {
 		return false;
 	}
 
-	// Resolve the bucket BEFORE claiming the mid: a missing binding is a
+	// Resolve the bucket BEFORE claiming the event: a missing binding is a
 	// production misconfig that must fail loud (like the cart/admission stores),
-	// leaving the mid unclaimed so Meta's retry is honored.
+	// leaving the event unclaimed so Zernio's retry is honored.
 	const bucket = env.MESSENGER_INBOUND_BUCKET;
 	if (bucket === undefined) {
 		throw new Error("MESSENGER_INBOUND_BUCKET binding is required for inbound Messenger photos.");
 	}
 
 	const admission = await admitMessengerImageMessage({
-		channel,
 		env,
 		event,
 		images,
@@ -270,15 +345,15 @@ async function dispatchInboundImage(
 			}
 		}
 
-		// Nothing staged (expired/oversized url). Keep the claim so a Meta retry
-		// of the same dead url doesn't re-apologize, and tell the customer.
+		// Nothing staged (expired/oversized url). Keep the claim so a retry of
+		// the same dead url doesn't re-apologize, and tell the customer.
 		if (imageKeys.length === 0) {
 			await sendTextReply(admission.conversation)(PHOTO_FETCH_FAILED_MESSAGE);
 			return true;
 		}
 
-		await dispatch(target, {
-			id: admission.sessionId + sessionIdSuffix,
+		await dispatch(assistant, {
+			id: admission.sessionId,
 			input: {
 				messageId: admission.messageId,
 				text: admission.caption,
@@ -286,7 +361,7 @@ async function dispatchInboundImage(
 				// Derive from the STAGED keys, not every attempted attachment, so the
 				// reported type count can't diverge from imageKeys.
 				attachmentTypes: imageKeys.map(() => "image"),
-				// The dispatch input carries R2 KEYS, never the Meta CDN url or any
+				// The dispatch input carries R2 KEYS, never the CDN url or any
 				// base64 payload (#20 acceptance criterion).
 				imageKeys,
 			},
@@ -300,27 +375,22 @@ async function dispatchInboundImage(
 
 // Handles a Messenger event if it is a cart button/quick-reply, returning true
 // when consumed (so the webhook skips the text path). Returns false for plain
-// turns. Extracted from the webhook loop to keep that loop simple. Dedupe on the
-// event mid (when present) makes a Meta retry idempotent for an add.
-async function tryHandleCartEvent(
-	event: Parameters<typeof detectCartEvent>[0],
-	env: WebhookEnv,
-): Promise<boolean> {
+// turns. Dedupe on the Zernio event id makes a webhook retry idempotent for an
+// add.
+async function tryHandleCartEvent(event: ZernioMessageEvent, env: WebhookEnv): Promise<boolean> {
 	const cartEvent = detectCartEvent(event);
 	if (cartEvent === undefined) {
 		return false;
 	}
 
-	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) {
-		return true;
-	}
-	const sessionId = channel.conversationKey(conversation);
+	const conversation = conversationRefFor(event);
+	const sessionId = conversationKey(conversation);
 
-	// Resolve the cart store BEFORE claiming the mid: a missing binding is a
+	// Resolve the cart store BEFORE claiming the event: a missing binding is a
 	// production misconfig that must fail loud (like the admission store does),
-	// not silently swallow the customer's tap and burn the mid. Throwing here —
-	// ahead of the claim — leaves the mid unclaimed so Meta's retry is honored.
+	// not silently swallow the customer's tap and burn the event id. Throwing
+	// here — ahead of the claim — leaves the event unclaimed so Zernio's retry
+	// is honored.
 	const cart = cartSessionFor(env.CART_STORE, sessionId);
 	if (cart === undefined) {
 		throw new Error("CART_STORE binding is required for Messenger cart events.");
@@ -339,7 +409,7 @@ async function tryHandleCartEvent(
 			sendText: sendTextReply(conversation),
 		});
 	} catch (error) {
-		// Release the claim so Meta's retry can re-apply the dropped event.
+		// Release the claim so Zernio's retry can re-apply the dropped event.
 		if (cartEvent.mid.length > 0) {
 			await releaseInboundClaim(claimKey, env);
 		}
@@ -357,21 +427,142 @@ const storePublicUrl = (): string => {
 	return base.replace(/\/+$/, "");
 };
 
-// Maps the channel-neutral payment-choice buttons to the Messenger SDK button
-// shape (web_url needs `url`, postback needs `payload`).
-const toMessengerButtons = (buttons: ReturnType<typeof buildPaymentChoice>["buttons"]) =>
-	buttons.map((b) => {
-		if (b.type === "web_url") {
-			return { title: b.title, type: "web_url" as const, url: b.url };
+// ─── Zernio outbound ─────────────────────────────────────────────────────────
+
+type ZernioButton = {
+	payload?: string;
+	title: string;
+	type: "url" | "postback";
+	url?: string;
+};
+
+type ZernioSendBody = {
+	accountId: string;
+	buttons?: Array<ZernioButton>;
+	message?: string;
+	quickReplies?: Array<{ payload: string; title: string }>;
+	template?: {
+		elements: Array<{
+			buttons?: Array<ZernioButton>;
+			imageUrl?: string;
+			subtitle?: string;
+			title: string;
+		}>;
+		type: "generic";
+	};
+};
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The single outbound choke point: POST a message to one Zernio inbox
+// conversation. The Idempotency-Key is generated once per logical send and
+// reused on the (single) retry, so a slow-but-delivered send can't double-post
+// the way Graph's blind SDK retries did. Retries exactly once on network
+// error, 5xx, or 429 (Retry-After capped at 5s); a non-2xx after that throws.
+// Returns the Zernio messageId, or null when the response doesn't carry one.
+async function zernioSend(
+	conversationId: string,
+	body: Omit<ZernioSendBody, "accountId">,
+): Promise<string | null> {
+	// Outbound capture at the single choke point: log every text the bot sends.
+	// This is prod observability of what the bot actually says, and it lets a
+	// CLI dogfood read the bot's replies from `wrangler tail` / Workers Logs
+	// WITHOUT the message being delivered.
+	if (body.message) {
+		console.log(`[bot.say] ${body.message.replaceAll("\n", " ⏎ ").slice(0, 700)}`);
+	}
+
+	const idempotencyKey = crypto.randomUUID();
+	const payload: ZernioSendBody = { accountId: ZERNIO_ACCOUNT_ID, ...body };
+	const url = `${ZERNIO_BASE_URL}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages`;
+
+	let status = 0;
+	let errorText = "";
+	for (let attempt = 0; attempt < 2; attempt++) {
+		let response: Response;
+		try {
+			response = await fetch(url, {
+				body: JSON.stringify(payload),
+				headers: {
+					authorization: `Bearer ${ZERNIO_API_KEY}`,
+					"content-type": "application/json",
+					"idempotency-key": idempotencyKey,
+				},
+				method: "POST",
+			});
+		} catch (error) {
+			if (attempt === 0) {
+				await sleep(1000);
+				continue;
+			}
+			throw error;
 		}
-		return {
-			payload: b.payload,
-			title: b.title,
-			type: "postback" as const,
-		};
+		if (response.ok) {
+			const parsed = v.safeParse(
+				zernioSendResponseSchema,
+				await response.json().catch(() => undefined),
+			);
+			return parsed.success ? (parsed.output.data?.messageId ?? null) : null;
+		}
+		status = response.status;
+		errorText = await response.text();
+		if (attempt === 0 && (status === 429 || status >= 500)) {
+			await sleep(retryDelayMs(response));
+			continue;
+		}
+		break;
+	}
+	throw new Error(`Zernio send failed: ${status} ${errorText}`);
+}
+
+const zernioSendResponseSchema = v.looseObject({
+	data: v.optional(v.looseObject({ messageId: v.optional(v.string()) })),
+});
+
+// 429 honors Retry-After capped at 5s; 5xx and network errors wait 1s.
+const retryDelayMs = (response: Response): number => {
+	if (response.status !== 429) {
+		return 1000;
+	}
+	const retryAfter = Number(response.headers.get("retry-after"));
+	return Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 5) * 1000 : 1000;
+};
+
+// Best-effort typing indicator (Zernio has no "typing off"; it clears on the
+// next send). Cosmetic: never fail a reply over one.
+async function zernioTyping(conversationId: string): Promise<void> {
+	try {
+		await fetch(
+			`${ZERNIO_BASE_URL}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/typing`,
+			{
+				body: JSON.stringify({ accountId: ZERNIO_ACCOUNT_ID }),
+				headers: {
+					authorization: `Bearer ${ZERNIO_API_KEY}`,
+					"content-type": "application/json",
+				},
+				method: "POST",
+			},
+		);
+	} catch {
+		// ignore
+	}
+}
+
+// Maps the channel-neutral payment-choice buttons to the Zernio button shape
+// (web_url -> "url", postback -> "postback").
+const toZernioButtons = (
+	buttons: ReturnType<typeof buildPaymentChoice>["buttons"],
+): Array<ZernioButton> =>
+	buttons.flatMap((b): Array<ZernioButton> => {
+		if (b.type === "web_url") {
+			// buildPaymentChoice always sets url on a web_url button; skip rather
+			// than send a malformed button if that contract ever breaks.
+			return b.url ? [{ title: b.title, type: "url", url: b.url }] : [];
+		}
+		return b.payload ? [{ payload: b.payload, title: b.title, type: "postback" }] : [];
 	});
 
-// Post-order payment choices (#25): a button template offering QPay (url button
+// Post-order payment choices (#25): a button message offering QPay (url button
 // to the QPay-only page) and bank transfer (postback). Bound to one
 // conversation; injected into the checkout tools' `place_order` so the offer is
 // sent right after the order confirmation.
@@ -384,13 +575,11 @@ export function sendPaymentChoices(ref: MessengerConversationRef) {
 			checkoutToken: order.checkoutToken,
 			paymentNumber: order.paymentNumber,
 		});
-		const result = await messenger.templates.button({
-			buttons: toMessengerButtons(choice.buttons),
-			messaging_type: "RESPONSE",
-			recipient: toRecipient(ref.participant),
-			text: choice.text,
+		const messageId = await zernioSend(ref.conversationId, {
+			buttons: toZernioButtons(choice.buttons),
+			message: choice.text,
 		});
-		return { messageId: result?.message_id ?? null, ok: true };
+		return { messageId, ok: true };
 	};
 }
 
@@ -398,19 +587,17 @@ export function sendPaymentChoices(ref: MessengerConversationRef) {
 // `Шилжүүлсэн` postback button the customer taps to lodge a transfer claim.
 export function sendBankTransferDetails(ref: MessengerConversationRef) {
 	return async (text: string, paymentRef: PaymentRef): Promise<ChannelSendResult> => {
-		const result = await messenger.templates.button({
+		const messageId = await zernioSend(ref.conversationId, {
 			buttons: [
 				{
 					payload: claimTransferPayload(paymentRef),
 					title: TRANSFER_DONE_BUTTON_TITLE,
-					type: "postback" as const,
+					type: "postback",
 				},
 			],
-			messaging_type: "RESPONSE",
-			recipient: toRecipient(ref.participant),
-			text,
+			message: text,
 		});
-		return { messageId: result?.message_id ?? null, ok: true };
+		return { messageId, ok: true };
 	};
 }
 
@@ -448,35 +635,28 @@ function paymentDepsFor(
 // screenshot — but the latter two only inside the transfer context recorded on
 // the checkout session. A claim records `customer_claimed_paid` and NEVER calls
 // a payment-confirmation API.
-async function tryHandlePaymentPostback(
-	event: Parameters<typeof detectCartEvent>[0],
-	env: WebhookEnv,
-	sessionId: string,
-	mid: string,
-): Promise<boolean> {
-	const postback = detectPaymentPostback(event);
-	if (!postback) {
-		return false;
-	}
-	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) {
-		return false;
-	}
+async function tryHandlePaymentEvent(event: ZernioMessageEvent, env: WebhookEnv): Promise<boolean> {
+	const conversation = conversationRefFor(event);
+	const sessionId = conversationKey(conversation);
 	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
-	const run =
-		postback.kind === "choose"
-			? () => handleChooseTransfer(postback.ref, paymentDepsFor(conversation, checkout))
-			: () => handleTransferClaim(postback.ref, paymentDepsFor(conversation, checkout));
-	return runPaymentTransition(env, mid, sessionId, run);
-}
+	// The Zernio event id is stable across retries, so it's the dedupe key for
+	// button taps and free-text claims alike.
+	const mid = event.id;
+	const deps = () => paymentDepsFor(conversation, checkout);
 
-async function tryHandleContextualPaymentClaim(
-	event: Parameters<typeof detectCartEvent>[0],
-	env: WebhookEnv,
-	sessionId: string,
-	mid: string,
-): Promise<boolean> {
-	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
+	// 1. Button taps carry the payment ref in the payload — fully self-contained.
+	const postback = detectPaymentPostback(event);
+	if (postback) {
+		const run =
+			postback.kind === "choose"
+				? () => handleChooseTransfer(postback.ref, deps())
+				: () => handleTransferClaim(postback.ref, deps());
+		return runPaymentTransition(env, mid, sessionId, run);
+	}
+
+	// 2. Free-text "хийсэн"/"hiisen" or a screenshot — a claim ONLY inside the
+	// transfer context recorded on the checkout session. Without a payment
+	// context (or store binding) fall through to the normal paths.
 	if (checkout === undefined) {
 		return false;
 	}
@@ -484,52 +664,21 @@ async function tryHandleContextualPaymentClaim(
 	if (claim === undefined) {
 		return false;
 	}
-	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) {
-		return false;
-	}
-	const d = paymentDepsFor(conversation, checkout);
+	const d = deps();
+	// Already claimed: just re-acknowledge, do not re-record (avoid re-notifying
+	// admin on a repeated "хийсэн").
 	const run = claim.alreadyClaimed
 		? () => d.sendText(TRANSFER_CLAIM_ACK_MESSAGE).then(() => undefined)
 		: () => handleTransferClaim(claim.ref, d);
 	return runPaymentTransition(env, mid, sessionId, run);
 }
 
-function paymentEventMid(event: Parameters<typeof detectCartEvent>[0]): string {
-	const rawMid = event.postback?.mid ?? event.message?.mid;
-	const payPayload = event.postback?.payload ?? event.message?.quick_reply?.payload;
-	if (rawMid && rawMid.length > 0) {
-		return rawMid;
-	}
-	return payPayload ? `syn:${event.timestamp ?? 0}:${payPayload}` : "";
-}
-
-async function tryHandlePaymentEvent(
-	event: Parameters<typeof detectCartEvent>[0],
-	env: WebhookEnv,
-): Promise<boolean> {
-	if (event.message?.is_echo) {
-		return false;
-	}
-	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) {
-		return false;
-	}
-	const sessionId = channel.conversationKey(conversation);
-	const mid = paymentEventMid(event);
-
-	if (await tryHandlePaymentPostback(event, env, sessionId, mid)) {
-		return true;
-	}
-	return tryHandleContextualPaymentClaim(event, env, sessionId, mid);
-}
-
 // Decodes a payment button tap from a postback/quick-reply payload into the
 // transition kind + its payment ref, or undefined when it is not one.
 function detectPaymentPostback(
-	event: Parameters<typeof detectCartEvent>[0],
+	event: ZernioMessageEvent,
 ): { kind: "choose" | "claim"; ref: PaymentRef } | undefined {
-	const payload = event.postback?.payload ?? event.message?.quick_reply?.payload;
+	const payload = event.metadata?.postbackPayload ?? event.metadata?.quickReplyPayload;
 	if (!payload) {
 		return undefined;
 	}
@@ -549,10 +698,10 @@ function detectPaymentPostback(
 // on the bank-details screen (`transfer_pending`); a text claims from the moment
 // the choices were offered. Returns undefined when this is not a claim.
 async function resolveContextualClaim(
-	event: Parameters<typeof detectCartEvent>[0],
+	event: ZernioMessageEvent,
 	checkout: NonNullable<ReturnType<typeof checkoutSessionFor>>,
 ): Promise<{ alreadyClaimed: boolean; ref: PaymentRef } | undefined> {
-	const isClaimText = isTransferDoneText(event.message?.text);
+	const isClaimText = isTransferDoneText(event.message.text ?? undefined);
 	const hasImage = extractInboundImages(event).length > 0;
 	if (!isClaimText && !hasImage) {
 		return undefined;
@@ -578,14 +727,14 @@ async function resolveContextualClaim(
 	};
 }
 
-// Runs a payment transition under the same mid-dedupe discipline as the cart
-// path: claim the mid first (idempotent on a Meta retry), release it on failure
-// so the retry is honored. Always returns true (the event is consumed).
+// Runs a payment transition under the same dedupe discipline as the cart path:
+// claim the event id first (idempotent on a Zernio retry), release it on
+// failure so the retry is honored. Always returns true (the event is consumed).
 async function runPaymentTransition(
 	env: WebhookEnv,
 	mid: string,
 	sessionId: string,
-	run: () => Promise<void>,
+	run: () => Promise<ChannelSendResult | void>,
 ): Promise<boolean> {
 	const claimKey = `messenger:payment:v1:${sessionId}:mid:${mid}`;
 	if (mid.length > 0 && !(await claimInboundOnce(claimKey, env))) {
@@ -603,52 +752,26 @@ async function runPaymentTransition(
 }
 
 export function postMessage(ref: MessengerConversationRef) {
-	const recipientId = ref.participant.id;
 	return defineTool({
 		description: "Post a simple text reply to the bound Messenger customer conversation.",
-		input: object({ text: pipe(string(), minLength(1)) }),
+		input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
 		name: "post_messenger_message",
 		async run({ input }) {
-			// Own the typing lifecycle here so typing_on and typing_off are always
-			// paired: teardown is guaranteed in finally, and typing is never sent
-			// from a path whose termination we cannot observe.
-			await bestEffortTyping("on");
-			try {
-				const result = await messenger.send.message({
-					message: { text: input.text },
-					messaging_type: "RESPONSE",
-					recipient: toRecipient(ref.participant),
-				});
-				return { messageId: result?.message_id ?? null, ok: true };
-			} finally {
-				await bestEffortTyping("off");
-			}
+			await zernioTyping(ref.conversationId);
+			const messageId = await zernioSend(ref.conversationId, {
+				message: input.text,
+			});
+			return { messageId, ok: true };
 		},
 	});
-
-	async function bestEffortTyping(action: "on" | "off"): Promise<void> {
-		try {
-			if (action === "on") {
-				await messenger.send.typingOn(recipientId);
-			} else {
-				await messenger.send.typingOff(recipientId);
-			}
-		} catch {
-			// Typing indicators are cosmetic; never fail a reply over one.
-		}
-	}
 }
 
 // Plain text sender bound to a conversation. Used by the product-search tool's
 // no-match path; mirrors the send shape of post_messenger_message.
 export function sendTextReply(ref: MessengerConversationRef) {
 	return async (text: string): Promise<ChannelSendResult> => {
-		const result = await messenger.send.message({
-			message: { text },
-			messaging_type: "RESPONSE",
-			recipient: toRecipient(ref.participant),
-		});
-		return { messageId: result?.message_id ?? null, ok: true };
+		const messageId = await zernioSend(ref.conversationId, { message: text });
+		return { messageId, ok: true };
 	};
 }
 
@@ -659,18 +782,15 @@ export function sendTextReply(ref: MessengerConversationRef) {
 export function sendCartSummary(ref: MessengerConversationRef) {
 	return async (cart: Cart): Promise<ChannelSendResult> => {
 		const quickReplies = cartQuickReplies(cart).map((qr) => ({
-			content_type: "text" as const,
 			payload: qr.payload,
 			title: qr.title,
 		}));
-		const text = formatCartSummary(cart);
-		const message = quickReplies.length > 0 ? { quick_replies: quickReplies, text } : { text };
-		const result = await messenger.send.message({
-			message,
-			messaging_type: "RESPONSE",
-			recipient: toRecipient(ref.participant),
-		});
-		return { messageId: result?.message_id ?? null, ok: true };
+		const body: Omit<ZernioSendBody, "accountId"> = { message: formatCartSummary(cart) };
+		if (quickReplies.length > 0) {
+			body.quickReplies = quickReplies;
+		}
+		const messageId = await zernioSend(ref.conversationId, body);
+		return { messageId, ok: true };
 	};
 }
 
@@ -681,24 +801,27 @@ export async function resolveProductById(id: number): Promise<AssistantProduct |
 	return product;
 }
 
-// Sends channel-neutral product cards as a Messenger generic template. Each
+// Sends channel-neutral product cards as a Zernio generic template. Each
 // element carries the product's Захиалах postback button whose payload holds
 // the product id. Generic templates allow at most 10 elements.
 export function sendProductCards(ref: MessengerConversationRef) {
 	return async (cards: Array<ProductCard>): Promise<ChannelSendResult & { cardCount: number }> => {
 		const elements = cards.slice(0, 10).map((card) => {
-			const element = {
+			const element: NonNullable<NonNullable<ZernioSendBody["template"]>["elements"]>[number] = {
 				buttons: [
 					{
 						payload: card.button.payload,
 						title: card.button.label,
-						type: "postback" as const,
+						type: "postback",
 					},
 				],
 				subtitle: card.subtitle,
 				title: card.title,
 			};
-			return card.imageUrl ? { ...element, image_url: card.imageUrl } : element;
+			if (card.imageUrl) {
+				element.imageUrl = card.imageUrl;
+			}
+			return element;
 		});
 
 		console.log(
@@ -708,21 +831,20 @@ export function sendProductCards(ref: MessengerConversationRef) {
 				.slice(0, 700)}`,
 		);
 		try {
-			const result = await messenger.templates.generic({
-				elements,
-				messaging_type: "RESPONSE",
-				recipient: toRecipient(ref.participant),
+			const messageId = await zernioSend(ref.conversationId, {
+				template: { elements, type: "generic" },
 			});
 			return {
 				cardCount: elements.length,
-				messageId: result?.message_id ?? null,
+				messageId,
 				ok: true,
 			};
 		} catch (error) {
 			// Cards are best-effort: the catalog search already succeeded, so a
-			// transient Graph send failure (or a non-deliverable test PSID during
-			// dogfooding) must NOT throw out of the tool and make the model apologise
-			// that the search itself failed. Log and report the cards as produced.
+			// transient send failure (or an unreachable test conversation during
+			// dogfooding) must NOT throw out of the tool and make the model
+			// apologise that the search itself failed. Log and report the cards as
+			// produced.
 			console.warn(
 				`[bot.cards] send failed (best-effort): ${error instanceof Error ? error.message : String(error)}`,
 			);

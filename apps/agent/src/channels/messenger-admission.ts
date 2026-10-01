@@ -1,10 +1,39 @@
-import type {
-	MessengerChannel,
-	MessengerConversationRef,
-	MessengerMessagingEvent,
-} from "@flue/messenger";
-import * as v from "valibot";
 import { admissionResponseSchema } from "../lib/admission-response";
+import type { ZernioMessageEvent } from "./messenger";
+import { parse } from "valibot";
+
+// A bound Messenger conversation under Zernio: the Zernio account the webhook
+// arrived on plus Zernio's conversation id (used both as the session-key
+// component and as the send path's {conversationId}).
+export type MessengerConversationRef = {
+	accountId: string;
+	conversationId: string;
+};
+
+export const conversationRefFor = (event: ZernioMessageEvent): MessengerConversationRef => ({
+	accountId: event.account.accountId ?? event.account.id,
+	conversationId: event.conversation.id,
+});
+
+// Session key shape: `zernio:v1:<accountId>:<conversationId>`. The event's
+// account id is pinned so the same customer talking to a different connected
+// account gets a distinct session.
+export const conversationKey = (ref: MessengerConversationRef): string =>
+	`zernio:v1:${ref.accountId}:${ref.conversationId}`;
+
+export const parseConversationKey = (id: string): MessengerConversationRef => {
+	if (!id.startsWith("zernio:v1:")) {
+		throw new Error(`Malformed Messenger conversation key: ${id}`);
+	}
+	const rest = id.slice("zernio:v1:".length);
+	const separator = rest.indexOf(":");
+	const accountId = separator === -1 ? rest : rest.slice(0, separator);
+	const conversationId = separator === -1 ? "" : rest.slice(separator + 1);
+	if (accountId.length === 0 || conversationId.length === 0) {
+		throw new Error(`Malformed Messenger conversation key: ${id}`);
+	}
+	return { accountId, conversationId };
+};
 
 type AdmissionEnv = {
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
@@ -22,33 +51,28 @@ export type MessengerTextAdmission = {
 };
 
 // Bounded fast-path in front of the durable store: an optimization that skips a
-// DO round-trip for mids this isolate already saw, never a fallback for it.
+// DO round-trip for event ids this isolate already saw, never a fallback for it.
 const IN_PROCESS_LIMIT = 1024;
 const admittedInProcess = new Map<string, true>();
 
 export async function admitMessengerTextMessage(input: {
-	channel: MessengerChannel;
 	env?: AdmissionEnv;
-	event: MessengerMessagingEvent;
+	event: ZernioMessageEvent;
 }): Promise<MessengerTextAdmission | undefined> {
-	const { channel, env, event } = input;
-	if (event.message === undefined || event.message.is_echo) {
+	const { env, event } = input;
+	if (event.message.direction !== "incoming") {
 		return undefined;
 	}
 
-	const conversation = channel.conversationRef(event);
-	const messageId = event.message.mid;
+	const conversation = conversationRefFor(event);
+	// The Zernio event id is identical on every webhook retry: our dedupe key.
+	const messageId = event.id;
 	const text = event.message.text?.trim();
-	if (
-		conversation === undefined ||
-		messageId.length === 0 ||
-		text === undefined ||
-		text.length === 0
-	) {
+	if (text === undefined || text.length === 0) {
 		return undefined;
 	}
 
-	const sessionId = channel.conversationKey(conversation);
+	const sessionId = conversationKey(conversation);
 	const dedupeKey = `messenger:inbound:v1:${sessionId}:mid:${messageId}`;
 	if (!(await claimOnce(dedupeKey, env))) {
 		return undefined;
@@ -58,7 +82,7 @@ export async function admitMessengerTextMessage(input: {
 		attachmentTypes: (event.message.attachments ?? []).map((attachment) => attachment.type),
 		conversation,
 		messageId,
-		quickReplyPayload: event.message.quick_reply?.payload,
+		quickReplyPayload: event.metadata?.quickReplyPayload,
 		release: () => releaseClaim(dedupeKey, env),
 		sessionId,
 		text,
@@ -67,7 +91,7 @@ export async function admitMessengerTextMessage(input: {
 
 export type MessengerInboundImage = {
 	index: number;
-	/** Meta CDN attachment URL — fetched server-side, never dispatched. */
+	/** Remote attachment URL — fetched server-side, never dispatched. */
 	url: string;
 };
 
@@ -82,42 +106,39 @@ export type MessengerImageAdmission = {
 	sessionId: string;
 };
 
-// Pull image attachments (with a usable Meta CDN url) out of a message event.
+// Pull image attachments (with a usable url) out of a message event.
 // Exported so the webhook can branch to the photo path before admission.
-const imageAttachmentUrlSchema = v.object({
-	url: v.pipe(v.string(), v.minLength(1)),
-});
-
-export function extractInboundImages(event: MessengerMessagingEvent): Array<MessengerInboundImage> {
-	const attachments = event.message?.attachments ?? [];
+export function extractInboundImages(event: ZernioMessageEvent): Array<MessengerInboundImage> {
+	const attachments = event.message.attachments ?? [];
 	const images: Array<MessengerInboundImage> = [];
 	for (const attachment of attachments) {
 		if (attachment.type !== "image") {
 			continue;
 		}
-		const parsed = v.safeParse(imageAttachmentUrlSchema, attachment.payload);
-		if (parsed.success) {
-			images.push({ index: images.length, url: parsed.output.url });
+		const url = attachment.url;
+		// url is `string | null` from the event schema; truthiness keeps the
+		// non-empty strings.
+		if (url) {
+			images.push({ index: images.length, url });
 		}
 	}
 	return images;
 }
 
-// Admits an inbound image turn and claims its mid for dedupe, mirroring
+// Admits an inbound image turn and claims its event id for dedupe, mirroring
 // `admitMessengerTextMessage` for the text path. Returns undefined when the
-// event is not a fresh image message (echo, no usable image, already claimed),
-// so the caller can fall through to the text path. The dedupe key shares the
-// text namespace (one claim per mid), so a Meta retry of the same photo mid is
-// applied at most once.
+// event is not a fresh image message (no usable image, already claimed), so
+// the caller can fall through to the text path. The dedupe key shares the text
+// namespace (one claim per event id), so a Zernio retry of the same photo event
+// is applied at most once.
 export async function admitMessengerImageMessage(input: {
-	channel: MessengerChannel;
 	env?: AdmissionEnv;
-	event: MessengerMessagingEvent;
+	event: ZernioMessageEvent;
 	/** Pre-extracted images from the webhook, to avoid re-scanning attachments. */
 	images?: Array<MessengerInboundImage>;
 }): Promise<MessengerImageAdmission | undefined> {
-	const { channel, env, event } = input;
-	if (event.message === undefined || event.message.is_echo) {
+	const { env, event } = input;
+	if (event.message.direction !== "incoming") {
 		return undefined;
 	}
 
@@ -126,13 +147,10 @@ export async function admitMessengerImageMessage(input: {
 		return undefined;
 	}
 
-	const conversation = channel.conversationRef(event);
-	const messageId = event.message.mid;
-	if (conversation === undefined || messageId.length === 0) {
-		return undefined;
-	}
+	const conversation = conversationRefFor(event);
+	const messageId = event.id;
 
-	const sessionId = channel.conversationKey(conversation);
+	const sessionId = conversationKey(conversation);
 	const dedupeKey = `messenger:inbound:v1:${sessionId}:mid:${messageId}`;
 	if (!(await claimOnce(dedupeKey, env))) {
 		return undefined;
@@ -150,8 +168,8 @@ export async function admitMessengerImageMessage(input: {
 
 // Generic single-claim primitive shared by the text path and the cart-event
 // path (postback/quick-reply). Returns true exactly once per key within the
-// dedupe window so a Meta webhook retry of the same mid is not applied twice
-// (e.g. a duplicate Захиалах add). Callers namespace their own keys.
+// dedupe window so a Zernio webhook retry of the same event is not applied
+// twice (e.g. a duplicate Захиалах add). Callers namespace their own keys.
 export async function claimInboundOnce(key: string, env?: AdmissionEnv): Promise<boolean> {
 	return claimOnce(key, env);
 }
@@ -184,7 +202,7 @@ async function claimOnce(key: string, env?: AdmissionEnv): Promise<boolean> {
 		.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
 			method: "POST",
 		});
-	const admitted = v.parse(admissionResponseSchema, await response.json()).admitted === true;
+	const admitted = parse(admissionResponseSchema, await response.json()).admitted === true;
 	rememberInProcess(key);
 	return admitted;
 }

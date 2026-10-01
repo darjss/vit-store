@@ -17,9 +17,10 @@ const IMAGE_FETCH_TIMEOUT_MS = 8000;
 
 // Defense-in-depth host allowlist for the server-side attachment fetch. The url
 // is already signature-gated (it only arrives inside an HMAC-verified Meta
-// webhook payload), so this is a second fence: even if Meta's payload contract
-// shifts or a token leaks, we only ever fetch Meta/Facebook CDN hosts and never
-// an attacker-arbitrary origin. Suffix match guards against subdomain spoofing.
+// webhook payload), so this is a second fence. For Facebook, Zernio forwards
+// the direct Meta CDN link, so we only ever fetch Meta/Facebook CDN hosts and
+// never an attacker-arbitrary origin. Suffix match guards against subdomain
+// spoofing.
 const ALLOWED_IMAGE_HOST_SUFFIXES = [".fbcdn.net", ".fbsbx.com"] as const;
 
 const isAllowedImageHost = (rawUrl: string): boolean => {
