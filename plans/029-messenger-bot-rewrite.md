@@ -280,7 +280,7 @@ bga uu/bnu=байгаа юу, hed ve=хэд вэ, yund=юунд, 5000tai d=D3 50
 дэлгүүрийн мэдээлэл олдохгүй үед.
 
 ДЭЛГҮҮРИЙН МЭДЭЭЛЭЛ:
-- Хүргэлт Улаанбаатарт 6,000₮. Хүргэлт өглөө 11 цагаас өмнө хийгдэнэ.
+- Хүргэлт Улаанбаатарт 6,000₮. 11 цагаас өмнө өгсөн захиалга өнөөдөртөө, 11 цагаас хойшхи захиалга маргааш хүргэгдэнэ.
 - Орон нутаг руу Замын Унаа эсвэл хот хоорондын таксиар явуулна, тээврийн зардлыг хүлээн авагч төлнө.
 - Очиж авах боломжгүй, зөвхөн хүргэлтээр.
 - Төлбөрийг хүргэлтээс өмнө QPay эсвэл дансаар төлнө. StorePay байхгүй.
@@ -397,10 +397,10 @@ Not in v1: back-in-stock alerts, pausing the bot when staff reply in the Zernio 
 | Checkout token lifetime        | tokens expire after 7 days                                                                             | order status after that goes to handoff                      |
 | `set_delivery` address check   | customers' text gets retyped by the model                                                              | digit groups and most words, not an exact substring          |
 
-## Open questions
+## Resolved questions
 
-- Delivery wording: "delivery before 11 am". Is that the same-day cutoff for paid orders, or the time deliveries arrive the next morning?
-- Bank account holder name: admins sent `070005005011147435 batdelger haan bank`, `@vit/shared` says `5011147435, Aviddaram Bazarragchaa`. The bot now shows what `addOrder` returns (env override first, then the constant).
+- Delivery: orders placed before 11:00 are delivered the same day, orders after 11:00 the next day. The per-turn state note carries the current Ulaanbaatar time so the model can say which applies.
+- Bank account: the bot shows the account `addOrder` returns, which comes from the server's `KHAAN_ACCOUNT_NAME` and `KHAAN_ACCOUNT_NUMBER` env vars. The same account the reconciler checks.
 
 ## Review log
 
