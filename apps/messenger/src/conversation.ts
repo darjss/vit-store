@@ -33,6 +33,7 @@ import {
 	formatOrderCreated,
 	formatPaid,
 	HANDOFF,
+	IMAGE_UNREADABLE,
 	NEEDS_DELIVERY,
 } from "./copy";
 import type { Env } from "./env";
@@ -84,8 +85,9 @@ const checkPaymentSchema = v.object({ paymentNumber: v.pipe(v.string(), v.minLen
 
 const HISTORY_TURNS = 20;
 const MAX_STEPS = 5;
-// Pending rows older than this are dead replays: Zernio's own retry window is
-// 3 minutes, so past 10 the event is never coming back through admission.
+const MAX_ATTEMPTS = 3;
+// Rows older than this or past MAX_ATTEMPTS go to 'failed' and hand off.
+// Zernio's own retry window is 3 minutes; past 10 the event is dead anyway.
 const REPROCESS_MAX_AGE_MS = 10 * 60_000;
 // A 'processing' row older than this had its worker die mid-turn; safe to
 // reclaim. Outbound sends still can't double-post — outbox keys gate them.
@@ -93,15 +95,31 @@ const CLAIM_STALE_MS = 90_000;
 const FALLBACK_TEXT = "Шалгаад хэлье.";
 const PAUSE_MS = 12 * 60 * 60_000;
 const PAYMENT_DEADLINE_MS = 2 * 60 * 60_000;
+// After the payment deadline the watcher keeps polling: a late QPay or
+// reconciled transfer still gets announced, just less often.
+const PAYMENT_WATCH_END_MS = 24 * 60 * 60_000;
 const RECON_FAIL_STATES = new Set(["timeout", "ambiguous", "failed", "auth_required"]);
+// Terminal payment statuses from the store (packages/shared paymentStatus):
+// "failed" is the only terminal non-success one.
+const PAYMENT_TERMINAL_FAIL = "failed";
+
+// The validated outcome of a model turn, written to `turns` before the first
+// send. A retried turn replays this instead of re-running the model.
+type TurnOutcome = {
+	handoff?: string;
+	reply?: ReplyResult;
+	superseded?: boolean;
+};
 
 type InboxRow = {
 	at: number;
+	attempts: number;
 	claimed_at: number | null;
 	event_id: string;
 	payload: string;
 	seq: number;
 	status: string;
+	turn_id: string | null;
 };
 
 type CartRow = { name: string; price: number; product_id: number; qty: number };
@@ -133,6 +151,7 @@ type PaymentDbRow = {
 };
 
 type RowAction =
+	| { kind: "ambiguous" }
 	| { kind: "claim"; paymentNumber: string }
 	| { item: InboundItem; kind: "model" }
 	| { kind: "none" }
@@ -159,7 +178,9 @@ export class Conversation extends Agent<Env> {
 				payload TEXT NOT NULL,
 				status TEXT NOT NULL DEFAULT 'pending',
 				at INTEGER NOT NULL,
-				claimed_at INTEGER
+				claimed_at INTEGER,
+				attempts INTEGER NOT NULL DEFAULT 0,
+				turn_id TEXT
 			)`;
 		void this.sql`
 			CREATE TABLE IF NOT EXISTS messages (
@@ -171,6 +192,12 @@ export class Conversation extends Agent<Env> {
 			)`;
 		void this
 			.sql`CREATE TABLE IF NOT EXISTS outbox (key TEXT PRIMARY KEY, sent_at INTEGER NOT NULL)`;
+		void this.sql`
+			CREATE TABLE IF NOT EXISTS turns (
+				turn_id TEXT PRIMARY KEY,
+				reply TEXT NOT NULL,
+				created_at INTEGER NOT NULL
+			)`;
 		void this.sql`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`;
 		void this.sql`
 			CREATE TABLE IF NOT EXISTS cart (
@@ -256,8 +283,9 @@ export class Conversation extends Agent<Env> {
 	}
 
 	// Payment watcher. Scheduled on order creation, reschedules itself while the
-	// payment stays pending. Survives DO evictions through the agents alarm
-	// table.
+	// payment stays pending: every `watchSeconds` until the 2h deadline, then a
+	// slower tick until 24h after creation, then it stops. Survives DO evictions
+	// through the agents alarm table.
 	async checkPayment(payload: { paymentNumber: string }): Promise<void> {
 		const parsed = v.safeParse(checkPaymentSchema, payload);
 		if (!parsed.success) {
@@ -265,7 +293,10 @@ export class Conversation extends Agent<Env> {
 		}
 		const { paymentNumber } = parsed.output;
 		const row = this.paymentByNumber(paymentNumber);
-		if (row === undefined || row.notified === 1 || row.deadline < Date.now()) {
+		if (row === undefined || row.notified === 1) {
+			return;
+		}
+		if (Date.now() > row.created_at + PAYMENT_WATCH_END_MS) {
 			return;
 		}
 		let status = "error";
@@ -283,11 +314,21 @@ export class Conversation extends Agent<Env> {
 		}
 		console.log(JSON.stringify({ event: "payment_check", paymentNumber, status }));
 		if (status === "success") {
-			void this
-				.sql`UPDATE payments SET status = 'success', notified = 1 WHERE payment_number = ${paymentNumber}`;
-			await this.sendPart(`pay_${paymentNumber}:paid`, {
-				message: formatPaid(row.created_at),
-			});
+			void this.sql`UPDATE payments SET status = 'success' WHERE payment_number = ${paymentNumber}`;
+			// notified flips only after the paid message actually went out, so a
+			// failed send is retried on the next tick instead of lost.
+			try {
+				await this.sendPart(`pay_${paymentNumber}:paid`, {
+					message: formatPaid(row.created_at),
+				});
+				void this.sql`UPDATE payments SET notified = 1 WHERE payment_number = ${paymentNumber}`;
+			} catch {
+				await this.armWatcher(paymentNumber);
+			}
+			return;
+		}
+		if (status === PAYMENT_TERMINAL_FAIL) {
+			void this.sql`UPDATE payments SET status = 'failed' WHERE payment_number = ${paymentNumber}`;
 			return;
 		}
 		if (row.claimed === 1 && row.handed_off === 0) {
@@ -297,22 +338,35 @@ export class Conversation extends Agent<Env> {
 				await this.handoffToAdmin("payment_unmatched", `pay_${paymentNumber}:handoff`);
 			}
 		}
-		// The currently-executing schedule still shows in getSchedules while the
-		// callback runs, so "skip if one exists" can never arm a second tick.
-		// Cancel every pending checkPayment for this payment, then arm the next
-		// one: the invariant is exactly one pending schedule per payment.
+		await this.armWatcher(paymentNumber);
+	}
+
+	private watchSeconds(): number {
+		const raw = Number(this.env.PAYMENT_WATCH_SECONDS ?? "60");
+		return Number.isFinite(raw) && raw > 0 ? raw : 60;
+	}
+
+	private slowWatchSeconds(): number {
+		const raw = Number(this.env.PAYMENT_WATCH_SLOW_SECONDS ?? "900");
+		return Number.isFinite(raw) && raw > 0 ? raw : 900;
+	}
+
+	// The currently-executing schedule still shows in getSchedules while the
+	// callback runs, so "skip if one exists" can never arm a tick. Cancel every
+	// pending checkPayment for this payment, then arm the next one: the
+	// invariant is exactly one pending schedule per payment.
+	private async armWatcher(paymentNumber: string): Promise<void> {
 		const pendingSchedules = this.getSchedules<{ paymentNumber: string }>().filter(
 			(s) => s.callback === "checkPayment" && s.payload?.paymentNumber === paymentNumber,
 		);
 		for (const s of pendingSchedules) {
 			await this.cancelSchedule(s.id);
 		}
-		await this.schedule(this.watchSeconds(), "checkPayment", { paymentNumber });
-	}
-
-	private watchSeconds(): number {
-		const raw = Number(this.env.PAYMENT_WATCH_SECONDS ?? "60");
-		return Number.isFinite(raw) && raw > 0 ? raw : 60;
+		const row = this.paymentByNumber(paymentNumber);
+		const slow = row !== undefined && Date.now() >= row.deadline;
+		await this.schedule(slow ? this.slowWatchSeconds() : this.watchSeconds(), "checkPayment", {
+			paymentNumber,
+		});
 	}
 
 	private async reconciliationStatus(row: PaymentDbRow): Promise<string | undefined> {
@@ -428,9 +482,16 @@ export class Conversation extends Agent<Env> {
 			text: this.messageText(row.content),
 		}));
 		const inbox = this.sql<InboxRow>`
-			SELECT event_id, seq, status, at, claimed_at, payload FROM inbox ORDER BY seq ASC`.map(
-			({ at, claimed_at, event_id, seq, status }) => ({ at, claimed_at, event_id, seq, status }),
-		);
+			SELECT event_id, seq, status, at, claimed_at, attempts, turn_id, payload FROM inbox
+			ORDER BY seq ASC`.map(({ at, attempts, claimed_at, event_id, seq, status, turn_id }) => ({
+			at,
+			attempts,
+			claimed_at,
+			event_id,
+			seq,
+			status,
+			turn_id,
+		}));
 		return {
 			cart: this.cartLines(),
 			checkout: this.checkout(),
@@ -458,34 +519,60 @@ export class Conversation extends Agent<Env> {
 	// ─── Item processing ────────────────────────────────────────────────────
 
 	private pendingRows(): Array<InboxRow> {
-		const now = Date.now();
-		const cutoff = now - REPROCESS_MAX_AGE_MS;
-		const staleClaim = now - CLAIM_STALE_MS;
+		const staleClaim = Date.now() - CLAIM_STALE_MS;
 		return this.sql<InboxRow>`
-			SELECT event_id, seq, payload, status, at, claimed_at FROM inbox
-			WHERE at > ${cutoff}
-				AND (status = 'pending' OR (status = 'processing' AND claimed_at < ${staleClaim}))
+			SELECT event_id, seq, payload, status, at, claimed_at, attempts, turn_id FROM inbox
+			WHERE status = 'pending'
+				OR status = 'applied'
+				OR (status = 'processing' AND claimed_at < ${staleClaim})
 			ORDER BY seq ASC`;
 	}
 
 	// Flip rows to 'processing' before any await: DO sql calls are synchronous,
 	// so this whole loop is atomic against a concurrent process() or an onStart
-	// recovery in the same instance. Only rows we actually claimed come back.
+	// recovery in the same instance. 'applied' rows are re-claimable: their
+	// mutation is done and only the resend is pending. attempts counts claims
+	// so repeated failures can be detected. Only rows we actually claimed come
+	// back, with their fresh attempt count.
 	private claimRows(rows: Array<InboxRow>): Array<InboxRow> {
 		const now = Date.now();
 		const staleClaim = now - CLAIM_STALE_MS;
 		const claimed: Array<InboxRow> = [];
 		for (const row of rows) {
-			const won = this.sql<{ event_id: string }>`
-				UPDATE inbox SET status = 'processing', claimed_at = ${now}
+			const won = this.sql<{ attempts: number; event_id: string }>`
+				UPDATE inbox SET status = 'processing', claimed_at = ${now}, attempts = attempts + 1
 				WHERE event_id = ${row.event_id}
-					AND (status = 'pending' OR (status = 'processing' AND claimed_at < ${staleClaim}))
-				RETURNING event_id`;
-			if (won.length > 0) {
-				claimed.push(row);
+					AND (status = 'pending'
+						OR status = 'applied'
+						OR (status = 'processing' AND claimed_at < ${staleClaim}))
+				RETURNING event_id, attempts`;
+			if (won.length > 0 && won[0] !== undefined) {
+				claimed.push({ ...row, attempts: won[0].attempts });
 			}
 		}
 		return claimed;
+	}
+
+	// A failed turn leaves rows in 'processing'/'applied'; this schedule is the
+	// retry. Arm once per claim; the tick re-runs processItems over whatever is
+	// still unfinished.
+	private async armRecovery(): Promise<void> {
+		const pending = this.getSchedules().filter((s) => s.callback === "recoverInbox");
+		if (pending.length === 0) {
+			await this.schedule(this.recoverSeconds(), "recoverInbox", {});
+		}
+	}
+
+	private recoverSeconds(): number {
+		const raw = Number(this.env.INBOX_RECOVER_SECONDS ?? "120");
+		return Number.isFinite(raw) && raw > 0 ? raw : 120;
+	}
+
+	async recoverInbox(): Promise<void> {
+		const rows = this.pendingRows();
+		if (rows.length > 0) {
+			await this.processItems(rows);
+		}
 	}
 
 	// The adapter keeps `platformMessageId` as the chat message id and the
@@ -495,7 +582,7 @@ export class Conversation extends Agent<Env> {
 		const raw = v.safeParse(inboundRawSchema, item.raw ?? {});
 		const zernioId = raw.success ? raw.output.id : undefined;
 		const rows = this.sql<InboxRow>`
-			SELECT event_id, seq, payload, status, at, claimed_at FROM inbox
+			SELECT event_id, seq, payload, status, at, claimed_at, attempts, turn_id FROM inbox
 			WHERE status = 'pending' ORDER BY seq ASC`;
 		for (const row of rows) {
 			const envelope = v.safeParse(zernioMessageEventSchema, JSON.parse(row.payload));
@@ -532,9 +619,23 @@ export class Conversation extends Agent<Env> {
 		if (claimed.length === 0) {
 			return;
 		}
-		const pausedUntil = Number(this.getMeta("paused_until") ?? "0");
-		const paused = Number.isFinite(pausedUntil) && pausedUntil > Date.now();
+		await this.armRecovery();
+		try {
+			await this.runClaimed(claimed);
+		} catch (error) {
+			console.error("[conversation.processItems]", error);
+			// Rows still 'processing' go back to pending; the recovery schedule
+			// retries them. 'applied' rows keep their status (mutation done,
+			// resend pending) and are claimable as-is.
+			for (const row of claimed) {
+				void this
+					.sql`UPDATE inbox SET status = 'pending', claimed_at = NULL WHERE event_id = ${row.event_id} AND status = 'processing'`;
+			}
+		}
+	}
 
+	private async runClaimed(claimed: Array<InboxRow>): Promise<void> {
+		const cutoff = Date.now() - REPROCESS_MAX_AGE_MS;
 		const seqAtStart = this.latestSeq();
 
 		// Strict arrival order: a tap or claim must not jump ahead of earlier
@@ -547,13 +648,61 @@ export class Conversation extends Agent<Env> {
 				return;
 			}
 			const turnId = await this.turnIdFor(modelRows);
+			// Tag the rows before the model call: on recovery the same turn_id
+			// regroups them, so a replayed turn can't merge with new rows.
+			for (const row of modelRows) {
+				void this.sql`UPDATE inbox SET turn_id = ${turnId} WHERE event_id = ${row.event_id}`;
+			}
 			await this.respond({ items, rows: modelRows, seqAtStart, turnId });
 			items = [];
 			modelRows = [];
 		};
 
-		for (const row of claimed) {
-			const action = this.classifyRow(row, paused);
+		let handedOff = false;
+		for (let i = 0; i < claimed.length; i++) {
+			const row = claimed[i];
+			if (row === undefined) {
+				continue;
+			}
+			// Dead rows fail instead of silently dropping; the conversation
+			// hands off once per batch.
+			if (row.attempts >= MAX_ATTEMPTS || row.at < cutoff) {
+				await flush();
+				void this.sql`UPDATE inbox SET status = 'failed' WHERE event_id = ${row.event_id}`;
+				if (!handedOff) {
+					handedOff = true;
+					await this.handoffToAdmin("bot_failed", `bot_failed:${row.event_id}`);
+				}
+				continue;
+			}
+			// A recovered turn's rows already carry turn_id: regroup them and
+			// replay that turn (saved outcome) instead of merging into a new one.
+			if (row.turn_id !== null) {
+				const turnId = row.turn_id;
+				const group: Array<InboxRow> = [];
+				while (i < claimed.length && claimed[i]?.turn_id === turnId) {
+					const grouped = claimed[i];
+					if (grouped !== undefined) {
+						group.push(grouped);
+					}
+					i++;
+				}
+				i--;
+				await flush();
+				await this.respond({
+					items: group.flatMap((r) => {
+						const item = this.itemFromRow(r);
+						return item === undefined ? [] : [item];
+					}),
+					rows: group,
+					seqAtStart,
+					turnId,
+				});
+				continue;
+			}
+			// Pause is re-read per row: a handoff earlier in this batch or a
+			// concurrent pause stops later taps from mutating anything.
+			const action = this.classifyRow(row, this.isPaused());
 			if (action.kind === "model") {
 				items.push(action.item);
 				modelRows.push(row);
@@ -564,10 +713,17 @@ export class Conversation extends Agent<Env> {
 				await this.handleTap(row, action.payload);
 			} else if (action.kind === "claim") {
 				await this.claimTransfer(row.event_id, action.paymentNumber);
+			} else if (action.kind === "ambiguous") {
+				await this.handoffToAdmin("payment_ambiguous", `${row.event_id}:ambiguous`);
 			}
 			this.markDone(row.event_id);
 		}
 		await flush();
+	}
+
+	private isPaused(): boolean {
+		const pausedUntil = Number(this.getMeta("paused_until") ?? "0");
+		return Number.isFinite(pausedUntil) && pausedUntil > Date.now();
 	}
 
 	// Decides what a row is without executing side effects, so the caller can
@@ -593,8 +749,11 @@ export class Conversation extends Agent<Env> {
 			return { kind: "tap", payload: tapPayload };
 		}
 		const claim = this.classifyClaim(item);
+		if (claim === "ambiguous") {
+			return { kind: "ambiguous" };
+		}
 		if (claim !== undefined) {
-			return { kind: "claim", paymentNumber: claim };
+			return { kind: "claim", paymentNumber: claim.paymentNumber };
 		}
 		if (paused) {
 			return { kind: "none" };
@@ -604,24 +763,29 @@ export class Conversation extends Agent<Env> {
 
 	// A free text ("хийсэн") or an image counts as a transfer claim only while
 	// a pending payment exists — otherwise it's model input. An image counts
-	// only once BANK_DETAILS went out (transfer_shown), so a product photo
-	// sent right after ordering isn't read as a receipt. transfer_done buttons
-	// are handled before this point and claim unconditionally.
-	private classifyClaim(item: InboundItem): string | undefined {
-		const pending = this.pendingPaymentRow();
-		if (pending === undefined) {
+	// only once BANK_DETAILS went out (transfer_shown on some pending row), so
+	// a product photo sent right after ordering isn't read as a receipt. With
+	// more than one pending payment a claim can't be attributed: hand off.
+	// transfer_done buttons name their payment and claim unconditionally.
+	private classifyClaim(item: InboundItem): "ambiguous" | { paymentNumber: string } | undefined {
+		const pendings = this.pendingPaymentRows();
+		if (pendings.length === 0) {
 			return undefined;
 		}
-		if (isTransferDoneText(item.text)) {
-			return pending.payment_number;
+		const qualifies =
+			isTransferDoneText(item.text) ||
+			((item.attachments ?? []).some(
+				(a) => a.type === "image" && a.url !== undefined && a.url !== null,
+			) &&
+				pendings.some((p) => p.transfer_shown === 1));
+		if (!qualifies) {
+			return undefined;
 		}
-		const hasImage = (item.attachments ?? []).some(
-			(a) => a.type === "image" && a.url !== undefined && a.url !== null,
-		);
-		if (hasImage && pending.transfer_shown === 1) {
-			return pending.payment_number;
+		const pending = pendings[0];
+		if (pendings.length > 1 || pending === undefined) {
+			return "ambiguous";
 		}
-		return undefined;
+		return { paymentNumber: pending.payment_number };
 	}
 
 	private async claimTransfer(key: string, paymentNumber: string): Promise<boolean> {
@@ -672,12 +836,12 @@ export class Conversation extends Agent<Env> {
 		}
 		const command = parseCartPayload(payload);
 		if (command !== undefined) {
-			await this.cartCommandTap(key, command);
+			await this.cartCommandTap(row, command);
 			return;
 		}
 		const productId = parseOrderPayload(payload);
 		if (productId !== undefined) {
-			await this.orderProductTap(key, productId);
+			await this.orderProductTap(row, productId);
 			return;
 		}
 		console.log(JSON.stringify({ event: "tap", kind: payload, outcome: "unknown" }));
@@ -763,22 +927,51 @@ export class Conversation extends Agent<Env> {
 		});
 	}
 
-	private async orderProductTap(key: string, productId: number): Promise<void> {
-		try {
-			await this.cartAdd(productId);
-		} catch (error) {
-			this.tapLog("order_product", error instanceof Error ? error.message : "failed");
-			await this.sendPart(`${key}:tap`, { message: ERROR });
-			return;
+	// Mutating taps are exactly-once: the mutation, the revision bump and the
+	// 'applied' flip happen in one synchronous block, so a send failure leaves
+	// the row replayable without re-applying. A replayed 'applied' row only
+	// re-sends the view under the same outbox key.
+	private markApplied(eventId: string): void {
+		void this.sql`UPDATE inbox SET status = 'applied' WHERE event_id = ${eventId}`;
+	}
+
+	private async orderProductTap(row: InboxRow, productId: number): Promise<void> {
+		const key = row.event_id;
+		if (row.status !== "applied") {
+			let product: { name: string; price: number };
+			try {
+				const products = await storeClient(this.env).product.getProductsByIdsForAssistant.query(
+					{ ids: [productId] },
+					{ signal: withTimeout() },
+				);
+				const found = products.find((p) => p.id === productId);
+				if (found === undefined) {
+					throw new Error("product_not_found");
+				}
+				product = found;
+			} catch (error) {
+				this.tapLog("order_product", error instanceof Error ? error.message : "failed");
+				await this.sendPart(`${key}:tap`, { message: ERROR });
+				return;
+			}
+			// Mutation + revision + 'applied' in one synchronous block.
+			const existing = this.sql<CartRow>`SELECT qty FROM cart WHERE product_id = ${productId}`[0];
+			const qty = Math.min((existing?.qty ?? 0) + 1, 99);
+			void this.sql`
+				INSERT INTO cart (product_id, qty, name, price) VALUES (${productId}, ${qty}, ${product.name}, ${product.price})
+				ON CONFLICT(product_id) DO UPDATE SET qty = ${qty}`;
+			this.bumpRevision();
+			this.markApplied(key);
 		}
 		await this.sendCartView(`${key}:tap`);
 		this.tapLog("order_product", "added");
 	}
 
 	private async cartCommandTap(
-		key: string,
+		row: InboxRow,
 		command: NonNullable<ReturnType<typeof parseCartPayload>>,
 	): Promise<void> {
+		const key = row.event_id;
 		if (command.kind === "view") {
 			await this.sendCartView(`${key}:tap`);
 			this.tapLog("cart_view", "sent");
@@ -789,8 +982,11 @@ export class Conversation extends Agent<Env> {
 			this.tapLog("cart_confirm", "sent");
 			return;
 		}
-		this.applyCartCommand(command);
-		this.bumpRevision();
+		if (row.status !== "applied") {
+			this.applyCartCommand(command);
+			this.bumpRevision();
+			this.markApplied(key);
+		}
 		await this.sendCartView(`${key}:tap`);
 		this.tapLog(`cart_${command.kind}`, "applied");
 	}
@@ -824,23 +1020,6 @@ export class Conversation extends Agent<Env> {
 			return;
 		}
 		void this.sql`DELETE FROM cart WHERE product_id = ${command.productId}`;
-	}
-
-	private async cartAdd(productId: number): Promise<void> {
-		const products = await storeClient(this.env).product.getProductsByIdsForAssistant.query(
-			{ ids: [productId] },
-			{ signal: withTimeout() },
-		);
-		const product = products.find((p) => p.id === productId);
-		if (product === undefined) {
-			throw new Error("product_not_found");
-		}
-		const existing = this.sql<CartRow>`SELECT qty FROM cart WHERE product_id = ${productId}`[0];
-		const qty = Math.min((existing?.qty ?? 0) + 1, 99);
-		void this.sql`
-			INSERT INTO cart (product_id, qty, name, price) VALUES (${productId}, ${qty}, ${product.name}, ${product.price})
-			ON CONFLICT(product_id) DO UPDATE SET qty = ${qty}`;
-		this.bumpRevision();
 	}
 
 	private async confirmTap(key: string, revision: number): Promise<void> {
@@ -893,22 +1072,31 @@ export class Conversation extends Agent<Env> {
 				throw new Error("no_payment_number");
 			}
 			const now = Date.now();
+			// addOrder can return an existing payment number (the store reuses a
+			// matching pending checkout), so upsert instead of failing the whole
+			// order on the payments PK.
 			void this.sql`
 				INSERT INTO payments
 					(payment_number, order_number, revision, checkout_token, account_name, account_number,
 					 total, phone, created_at, status, claimed, deadline, notified, handed_off)
 				VALUES (${res.paymentNumber}, ${res.orderNumber}, ${checkout.revision}, ${res.checkoutToken},
 					${res.accountName}, ${res.accountNumber}, ${res.total}, ${checkout.phone}, ${now},
-					'pending', 0, ${now + PAYMENT_DEADLINE_MS}, 0, 0)`;
+					'pending', 0, ${now + PAYMENT_DEADLINE_MS}, 0, 0)
+				ON CONFLICT(payment_number) DO UPDATE SET
+					order_number = excluded.order_number,
+					revision = excluded.revision,
+					checkout_token = excluded.checkout_token,
+					account_name = excluded.account_name,
+					account_number = excluded.account_number,
+					total = excluded.total,
+					phone = excluded.phone`;
 			void this.sql`DELETE FROM cart`;
 			this.bumpRevision();
 			const row = this.paymentByNumber(res.paymentNumber);
 			if (row === undefined) {
 				throw new Error("payment_row_missing");
 			}
-			await this.schedule(this.watchSeconds(), "checkPayment", {
-				paymentNumber: res.paymentNumber,
-			});
+			await this.armWatcher(res.paymentNumber);
 			await this.sendOrderCreated(row, `${key}:order`);
 			this.tapLog("order_confirm", "created");
 		} catch (error) {
@@ -990,7 +1178,67 @@ export class Conversation extends Agent<Env> {
 		const { items, rows, seqAtStart, turnId } = opts;
 		const started = Date.now();
 
-		const { persistedUserMessage, photoCount, userMessage } = await this.buildUserMessages(items);
+		// A saved outcome means this turn already ran the model; replay the
+		// sends (outbox keys dedupe the ones that landed) instead of mixing a
+		// second model answer into the same turn.
+		const saved = this.turnOutcome(turnId);
+		if (saved !== undefined) {
+			const outcome = await this.dispatchTurn({
+				handoffReason: saved.handoff,
+				reply: saved.reply,
+				superseded: saved.superseded ?? false,
+				turnId,
+			});
+			this.finishTurn(rows);
+			turnLog({
+				ad_id: this.getMeta("ad_id"),
+				conversation: this.conversationId(),
+				handoff: saved.handoff !== undefined,
+				inputs: items.length,
+				model: modelName(this.env),
+				outcome,
+				photos: 0,
+				product_ids: saved.reply?.productIds ?? [],
+				replayed: true,
+				step_ms: [],
+				steps: 0,
+				tokens_cached: 0,
+				tokens_in: 0,
+				tokens_out: 0,
+				tools: [],
+				total_ms: Date.now() - started,
+			});
+			return;
+		}
+
+		const { hadPhotos, persistedUserMessage, photoCount, text, userMessage } =
+			await this.buildUserMessages(items);
+
+		// A photo-only turn whose images all failed to fetch has nothing to
+		// show the model: answer with the fixed resend prompt.
+		if (text.length === 0 && hadPhotos && photoCount === 0) {
+			this.persistTurn(turnId, persistedUserMessage, [], false);
+			await this.sendPart(`${turnId}:text`, { message: IMAGE_UNREADABLE });
+			this.finishTurn(rows);
+			turnLog({
+				conversation: this.conversationId(),
+				handoff: false,
+				inputs: items.length,
+				model: modelName(this.env),
+				outcome: "image_unreadable",
+				photos: 0,
+				product_ids: [],
+				step_ms: [],
+				steps: 0,
+				tokens_cached: 0,
+				tokens_in: 0,
+				tokens_out: 0,
+				tools: [],
+				total_ms: Date.now() - started,
+			});
+			return;
+		}
+
 		const messages: Array<ModelMessage> = [
 			...this.historyByTurns(HISTORY_TURNS),
 			this.stateMessage(),
@@ -1009,11 +1257,12 @@ export class Conversation extends Agent<Env> {
 				stepMs.push(now - lastStepAt);
 				lastStepAt = now;
 			},
-			// The last allowed step must answer: without this a long list order
-			// spends every step on searches and the customer gets the fallback.
+			// The last allowed step must answer or escalate: without this a long
+			// list order spends every step on searches and the customer gets the
+			// fallback. handoff stays available so complaints still reach admin.
 			prepareStep: ({ stepNumber }) =>
 				stepNumber === MAX_STEPS - 1
-					? { toolChoice: { toolName: "reply", type: "tool" } as const }
+					? { activeTools: ["reply", "handoff"], toolChoice: "required" as const }
 					: undefined,
 			providerOptions,
 			stopWhen: [hasToolCall("reply"), hasToolCall("handoff"), stepCountIs(MAX_STEPS)],
@@ -1025,18 +1274,18 @@ export class Conversation extends Agent<Env> {
 		const reply = this.extractReply(result);
 		const handoffReason = this.extractHandoff(result);
 		const superseded = this.latestSeq() > seqAtStart;
+		// The validated outcome is stored before the first send; a retried turn
+		// replays exactly this.
+		this.saveTurnOutcome(turnId, { handoff: handoffReason, reply, superseded });
 		this.persistTurn(turnId, persistedUserMessage, result.response.messages, superseded);
 		const outcome = await this.dispatchTurn({
-			env,
 			handoffReason,
 			reply,
 			superseded,
 			turnId,
 		});
 
-		for (const row of rows) {
-			this.markDone(row.event_id);
-		}
+		this.finishTurn(rows);
 
 		turnLog({
 			action: reply?.action,
@@ -1058,18 +1307,46 @@ export class Conversation extends Agent<Env> {
 		});
 	}
 
+	// Mark the turn's rows done: synchronous, so no await can wedge between
+	// the last send and the status flip.
+	private finishTurn(rows: Array<InboxRow>): void {
+		for (const row of rows) {
+			this.markDone(row.event_id);
+		}
+	}
+
+	private turnOutcome(turnId: string): TurnOutcome | undefined {
+		const row = this.sql<{ reply: string }>`
+			SELECT reply FROM turns WHERE turn_id = ${turnId}`[0];
+		if (row === undefined) {
+			return undefined;
+		}
+		// SAFETY: `reply` is written only by saveTurnOutcome below, which stores
+		// JSON.stringify(TurnOutcome).
+		return JSON.parse(row.reply) as TurnOutcome;
+	}
+
+	private saveTurnOutcome(turnId: string, outcome: TurnOutcome): void {
+		void this.sql`
+			INSERT OR IGNORE INTO turns (turn_id, reply, created_at)
+			VALUES (${turnId}, ${JSON.stringify(outcome)}, ${Date.now()})`;
+	}
+
 	// Build the model-facing user message: text lines from every merged item
 	// plus fetched image parts. History must not carry image bytes, so the
 	// persisted variant swaps each image part for a short placeholder.
 	private async buildUserMessages(items: Array<InboundItem>): Promise<{
+		hadPhotos: boolean;
 		persistedUserMessage: ModelMessage;
 		photoCount: number;
+		text: string;
 		userMessage: ModelMessage;
 	}> {
 		const text = items
 			.map((i) => i.text)
 			.filter((t) => t.length > 0)
 			.join("\n");
+		const hadPhotos = items.some((i) => (i.attachments ?? []).some((a) => a.type === "image"));
 		const imageParts = (
 			await Promise.all(items.map((i) => fetchImageParts(this.env, i.attachments ?? [])))
 		).flat();
@@ -1078,6 +1355,7 @@ export class Conversation extends Agent<Env> {
 			...imageParts,
 		];
 		return {
+			hadPhotos,
 			persistedUserMessage: {
 				content: userParts.map((part) =>
 					part.type === "image" ? { text: "[зураг]", type: "text" as const } : part,
@@ -1085,6 +1363,7 @@ export class Conversation extends Agent<Env> {
 				role: "user",
 			},
 			photoCount: imageParts.length,
+			text,
 			userMessage: { content: userParts, role: "user" },
 		};
 	}
@@ -1116,32 +1395,36 @@ export class Conversation extends Agent<Env> {
 		superseded: boolean,
 	): void {
 		const created = Date.now();
-		this.saveTurn(turnId, persistedUserMessage, created);
+		this.saveTurn(turnId, 0, persistedUserMessage, created);
 		if (!superseded) {
 			for (const [i, message] of responseMessages.entries()) {
-				this.saveTurn(turnId, message, created + i + 1);
+				this.saveTurn(turnId, i + 1, message, created + i + 1);
 			}
 		}
 	}
 
 	// Sends after the model run. Handoff wins over reply; a superseded turn
-	// sends nothing. reply.action renders the fixed cart/confirm screens.
+	// sends nothing. Pause is re-read right before sending: a handoff in the
+	// same batch or a concurrent pause drops the reply rather than answering
+	// after the bot was stopped.
 	private async dispatchTurn(opts: {
-		env: Env;
 		handoffReason: string | undefined;
 		reply: ReplyResult | undefined;
 		superseded: boolean;
 		turnId: string;
 	}): Promise<string> {
-		const { env, handoffReason, reply, superseded, turnId } = opts;
+		const { handoffReason, reply, superseded, turnId } = opts;
 		if (superseded) {
 			return "superseded";
+		}
+		if (this.isPaused()) {
+			return "paused_drop";
 		}
 		if (handoffReason !== undefined) {
 			await this.handoffToAdmin(handoffReason, `${turnId}:handoff`);
 			return "handoff";
 		}
-		await this.sendReply({ env, reply, turnId });
+		await this.sendReply({ env: this.env, reply, turnId });
 		if (reply?.action === "show_cart") {
 			await this.sendCartView(`${turnId}:cart`);
 		} else if (reply?.action === "confirm_order") {
@@ -1220,11 +1503,12 @@ export class Conversation extends Agent<Env> {
 		return JSON.parse(content) as ModelMessage;
 	}
 
-	private saveTurn(turnId: string, message: ModelMessage, at: number): void {
-		const id = crypto.randomUUID();
+	private saveTurn(turnId: string, index: number, message: ModelMessage, at: number): void {
+		// Deterministic ids: a retried persistTurn INSERT OR IGNOREs onto the
+		// same rows instead of duplicating history.
 		void this.sql`
 			INSERT OR IGNORE INTO messages (id, turn_id, role, content, created_at)
-			VALUES (${id}, ${turnId}, ${message.role}, ${JSON.stringify(message)}, ${at})`;
+			VALUES (${`${turnId}:${index}`}, ${turnId}, ${message.role}, ${JSON.stringify(message)}, ${at})`;
 	}
 
 	// Deterministic turn id from the claimed inbox rows: a re-processed turn
@@ -1272,9 +1556,9 @@ export class Conversation extends Agent<Env> {
 		return this.sql<PaymentDbRow>`SELECT * FROM payments WHERE revision = ${revision}`[0];
 	}
 
-	private pendingPaymentRow(): PaymentDbRow | undefined {
+	private pendingPaymentRows(): Array<PaymentDbRow> {
 		return this.sql<PaymentDbRow>`
-			SELECT * FROM payments WHERE status = 'pending' ORDER BY created_at DESC LIMIT 1`[0];
+			SELECT * FROM payments WHERE status = 'pending' ORDER BY created_at DESC`;
 	}
 
 	private markDone(eventId: string): void {

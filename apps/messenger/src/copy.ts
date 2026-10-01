@@ -11,6 +11,8 @@ export const NEEDS_DELIVERY = "Утас, хаягаа бичээрэй.";
 export const CLAIM_ACK = "Баярлалаа 🙏 Шилжүүлгийг шалгаад баталгаажуулна.";
 export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
 export const HANDOFF = "Админ удахгүй хариулна 🙏";
+export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, дахин илгээнэ үү.";
+
 export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин оролдоно уу.";
 
 export const DELIVERY_FEE = 6000;

@@ -7,11 +7,14 @@ import type { Env } from "./env";
 // the local eval uses to serve export photos from 127.0.0.1.
 const DEFAULT_PHOTO_HOSTS = ".fbcdn.net,.fbsbx.com";
 
-const allowedHosts = (env: Env): Array<string> =>
-	(env.PHOTO_HOSTS ?? DEFAULT_PHOTO_HOSTS)
+const allowedHosts = (env: Env): Array<string> => {
+	// An empty PHOTO_HOSTS means "use the defaults", not "allow nothing".
+	const raw = env.PHOTO_HOSTS?.trim();
+	return (raw === undefined || raw === "" ? DEFAULT_PHOTO_HOSTS : raw)
 		.split(",")
 		.map((h) => h.trim())
 		.filter((h) => h.length > 0);
+};
 
 const isAllowedHost = (url: string, hosts: Array<string>): boolean => {
 	try {
@@ -26,6 +29,37 @@ const PHOTO_TIMEOUT_MS = 8000;
 const PHOTO_MAX_BYTES = 5_000_000;
 
 export type InboundAttachment = { type: string; url?: string | null };
+
+// Reads a response body while counting bytes; aborts and returns undefined
+// past the cap.
+const readCapped = async (body: ReadableStream<Uint8Array>): Promise<Uint8Array | undefined> => {
+	const reader = body.getReader();
+	const chunks: Array<Uint8Array> = [];
+	let total = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			total += value.byteLength;
+			if (total > PHOTO_MAX_BYTES) {
+				await reader.cancel();
+				return undefined;
+			}
+			chunks.push(value);
+		}
+	} finally {
+		reader.releaseLock();
+	}
+	const bytes = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return bytes;
+};
 
 // Fetches image attachments into AI SDK image parts. Expired or oversized urls
 // are skipped — the text turn still runs.
@@ -43,11 +77,18 @@ export const fetchImageParts = async (
 	for (const url of urls) {
 		try {
 			const response = await fetch(url, { signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS) });
-			if (!response.ok) {
+			if (!response.ok || response.body === null) {
 				continue;
 			}
-			const bytes = new Uint8Array(await response.arrayBuffer());
-			if (bytes.byteLength > PHOTO_MAX_BYTES) {
+			// Enforce the size cap before and while reading: a declared
+			// content-length over the cap or a body that grows past it aborts.
+			const declared = Number(response.headers.get("content-length") ?? "0");
+			if (declared > PHOTO_MAX_BYTES) {
+				await response.body.cancel();
+				continue;
+			}
+			const bytes = await readCapped(response.body);
+			if (bytes === undefined) {
 				continue;
 			}
 			parts.push({
