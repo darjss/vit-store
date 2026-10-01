@@ -12,20 +12,19 @@ Facebook Messenger AI shopping agent — plus shared packages, all deployed to C
 
 ### Apps (`apps/`)
 
-| App           | Stack                                                             | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`storev2`** | Astro 5 + SolidJS islands, Tailwind v4, tRPC                      | Customer-facing storefront. Catalog with brand/category filtering, search, product detail pages, SolidJS cart, checkout (phone → address → delivery zone → confirmation), order tracking, QPay payment, OTP phone login. Neo-brutalist, mobile-first design (see `DESIGN.md`).                                                                                                                                                                                                                                 |
-| **`admin`**   | React 19 + Vite + TanStack Router/Query, tRPC, shadcn/ui          | Internal dashboard. Product CRUD with AI-assisted extraction from Amazon URLs, order management, customer records (phone-based), brand/category management, purchase/inventory tracking (Amazon/iHerb imports), payment confirmation (QPay + bank transfer), analytics (sales, top products, PostHog web analytics).                                                                                                                                                                                           |
-| **`server`**  | Hono + tRPC + Drizzle, Cloudflare Workers                         | Central API gateway. Three tRPC routers: `/trpc/admin` (dashboard), `/trpc/store` (storefront), `/trpc/bot` (Messenger admin agent). REST routes for Google OAuth, QPay webhook, Messenger webhook, image uploads. PostgreSQL via Hyperdrive, R2 for images, Upstash Redis Search for product discovery, KV for sessions, rate limiting, and structured logging.                                                                                                                                               |
-| **`agent`**   | Flue (`@flue/runtime`, `@flue/messenger`) + Cloudflare Workers AI | Facebook Messenger bot. **Customer agent** (`@cf/moonshotai/kimi-k2.6`): product search, photo identification (vision model + R2-staged images), advice/comparison, conversational cart, checkout, QPay/transfer payment choices. **Admin agent**: Codemode query tool, PSID-gated. Inbound photos are fetched from Meta's CDN, staged to R2 under `messenger-inbound/` (auto-expired after 3 days), and only the R2 key enters session history. Dedup via Durable Objects (admission, cart, checkout stores). |
+| App             | Stack                                                    | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`storev2`**   | Astro 5 + SolidJS islands, Tailwind v4, tRPC             | Customer-facing storefront. Catalog with brand/category filtering, search, product detail pages, SolidJS cart, checkout (phone → address → delivery zone → confirmation), order tracking, QPay payment, OTP phone login. Neo-brutalist, mobile-first design (see `DESIGN.md`).                                                                                                                                                                     |
+| **`admin`**     | React 19 + Vite + TanStack Router/Query, tRPC, shadcn/ui | Internal dashboard. Product CRUD with AI-assisted extraction from Amazon URLs, order management, customer records (phone-based), brand/category management, purchase/inventory tracking (Amazon/iHerb imports), payment confirmation (QPay + bank transfer), analytics (sales, top products, PostHog web analytics).                                                                                                                               |
+| **`server`**    | Hono + tRPC + Drizzle, Cloudflare Workers                | Central API gateway. Three tRPC routers: `/trpc/admin` (dashboard), `/trpc/store` (storefront), `/trpc/bot` (Messenger admin agent). REST routes for Google OAuth, QPay webhook, Messenger webhook, image uploads. PostgreSQL via Hyperdrive, R2 for images, Upstash Redis Search for product discovery, KV for sessions, rate limiting, and structured logging.                                                                                   |
+| **`messenger`** | Agents SDK Durable Objects + Chat SDK (Zernio) + AI SDK  | Customer Messenger bot through Zernio: product search, cart, checkout, QPay/transfer payments, handoff with Telegram alerts. The **Telegram admin bot** lives here too: `POST /telegram/webhook` feeds a per-chat `Admin` Durable Object with the Codemode `query` tool, image extractors, seven skills, and inline-button callbacks. Inbound admin photos stage in R2 under `messenger-inbound/` (auto-expired), and only the key enters history. |
 
 ### Packages (`packages/`)
 
-| Package              | Purpose                                                                                                                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`@vit/api`**       | tRPC routers (admin/store/bot), Drizzle DB queries, integrations (Messenger, QPay, PostHog, Resend, SMS gateway), AI product-extraction pipeline, payment logic.                   |
-| **`@vit/assistant`** | Shared tools and instructions for the Messenger agents — product search, advice, photo identification, cart/checkout, payment choices, delivery-zone ranking, admin Codemode tool. |
-| **`@vit/shared`**    | Domain types, Valibot schemas, constants (delivery fee 6,000₮, bank transfer details, status enums).                                                                               |
+| Package           | Purpose                                                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`@vit/api`**    | tRPC routers (admin/store/bot), Drizzle DB queries, integrations (Messenger, QPay, PostHog, Resend, SMS gateway), AI product-extraction pipeline, payment logic. |
+| **`@vit/shared`** | Domain types, Valibot schemas, constants (delivery fee 6,000₮, bank transfer details, status enums).                                                             |
 
 ## Tech stack
 
@@ -33,11 +32,11 @@ Facebook Messenger AI shopping agent — plus shared packages, all deployed to C
 - **Storefront**: Astro 5 (SSR via `@astrojs/cloudflare`), SolidJS islands, Tailwind v4
 - **Admin**: React 19, Vite, TanStack Router/Query, shadcn/ui
 - **Server**: Hono, tRPC v11, Drizzle ORM
-- **Agent**: Flue framework, Cloudflare Workers AI (`@cf/moonshotai/kimi-k2.6`)
+- **Bots**: `apps/messenger` — Agents SDK + Chat SDK + AI SDK (customer Messenger via Zernio, admin Telegram bot)
 - **Database**: PostgreSQL 16 (Drizzle ORM, Hyperdrive connection pooling in prod)
 - **Storage**: Cloudflare R2 (product + inbound images), KV (sessions/cache)
-- **State**: Upstash Redis Search (product discovery); Durable Objects (Flue agent sessions, Messenger dedup/cart/checkout)
-- **IaC/deploy**: Alchemy → Cloudflare Workers (server, agent) and Pages (storev2, admin)
+- **State**: Upstash Redis Search (product discovery); Durable Objects (agent sessions, inbox/outbox, cart/checkout, payments)
+- **IaC/deploy**: Alchemy → Cloudflare Workers (server) and Pages (storev2, admin)
 - **Lint/format**: Vite+ (`vp check`: oxfmt + oxlint); type checks via `tsc`
 
 ## Getting started
@@ -81,10 +80,10 @@ bun dev:server
 bunx turbo dev --filter=admin
 ```
 
-The agent runs via Wrangler locally:
+The messenger worker runs via Wrangler locally:
 
 ```bash
-cd apps/agent && bun dev   # builds then wrangler dev
+cd apps/messenger && bun dev   # wrangler dev
 ```
 
 ### Deploy
@@ -156,10 +155,9 @@ vit-store/
 │   ├── storev2/   # Storefront (Astro + SolidJS)
 │   ├── admin/     # Admin dashboard (React + TanStack Router)
 │   ├── server/    # API gateway (Hono + tRPC, Cloudflare Workers)
-│   └── agent/     # Messenger AI bot (Flue + Workers AI)
+│   └── messenger/ # Messenger + Telegram bots (Agents SDK)
 ├── packages/
 │   ├── api/       # @vit/api — routers, DB queries, integrations
-│   ├── assistant/ # @vit/assistant — agent tools & instructions
 │   └── shared/    # @vit/shared — types, schemas, constants
 ├── docs/
 │   ├── adr/       # Architecture decision records

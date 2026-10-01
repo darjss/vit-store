@@ -81,6 +81,7 @@ const shuffle = <T>(items: Array<T>, rand: () => number): Array<T> => {
 };
 
 const PHONE_RE = /(?<!\d)([6-9]\d{3})[\s-]?(\d{4})(?!\d)/;
+const PHONE_RE_G = /(?<!\d)([6-9]\d{3})[\s-]?(\d{4})(?!\d)/g;
 const ADDRESS_RE =
 	/horoo|horoolol|hothon|bair|toot|duureg|dvvreg|хороо|хороолол|хотхон|байр|тоот|дүүрэг/i;
 const GREETING_RE = /^hi, thanks for contacting us|call now for faster service/i;
@@ -145,7 +146,7 @@ for (const folder of readdirSync(inbox)) {
 				expect: { phone: fake },
 				id: `delivery_${counter++}`,
 				kind: "delivery",
-				texts: [text.replace(PHONE_RE, `${fake.slice(0, 4)} ${fake.slice(4)}`)],
+				texts: [text.replaceAll(PHONE_RE_G, `${fake.slice(0, 4)} ${fake.slice(4)}`)],
 			});
 			continue;
 		}

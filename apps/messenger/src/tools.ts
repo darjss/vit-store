@@ -97,8 +97,8 @@ const significantWords = (text: string): Array<string> =>
 		.filter((w) => w.length >= 3);
 
 // set_delivery only accepts a phone/address the customer actually typed in
-// this conversation: digits must appear in recent texts, and at least half
-// of the address's longer words must too. Blocks hallucinated details.
+// this conversation: every digit group and every longer word of the address
+// must appear in recent texts verbatim. Blocks hallucinated details.
 const corroboratePhone = (phone: string, texts: Array<string>): boolean => {
 	const haystack = texts.map((t) => t.replaceAll(/\D/g, "")).join("|");
 	return haystack.includes(phone);
@@ -110,12 +110,7 @@ const corroborateAddress = (address: string, texts: Array<string>): boolean => {
 	if (!digitGroups(address).every((g) => digitHaystack.includes(g))) {
 		return false;
 	}
-	const words = significantWords(address);
-	if (words.length === 0) {
-		return true;
-	}
-	const hits = words.filter((w) => haystack.includes(w)).length;
-	return hits * 2 >= words.length;
+	return significantWords(address).every((w) => haystack.includes(w));
 };
 
 export const createTools = (env: Env, deps: ToolDeps) => ({
@@ -283,7 +278,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 			}
 			if (input.address) {
 				if (!corroborateAddress(input.address, texts)) {
-					errors.address = "address_not_in_customer_text";
+					errors.address = "copy the address words exactly as the customer wrote them";
 				} else {
 					out.address = input.address;
 					saved.push("address");
