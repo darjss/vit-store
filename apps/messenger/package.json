@@ -5,7 +5,8 @@
 	"scripts": {
 		"dev": "wrangler dev",
 		"check-types": "tsc --noEmit",
-		"send-event": "bun scripts/send-event.ts"
+		"send-event": "bun scripts/send-event.ts",
+		"deploy": "wrangler deploy"
 	},
 	"dependencies": {
 		"@ai-sdk/openai": "3.0.117",

@@ -1,0 +1,13 @@
+# The customer Messenger bot runs on the Agents SDK, not Flue
+
+The customer bot moves from `apps/agent` (Flue) to a new worker, `apps/messenger`, built on the Cloudflare Agents SDK, the Chat SDK with Zernio's official adapter, and the AI SDK. The Flue bot answered slowly (13 to 33 seconds per model step on GLM 5.3 Flash), sent a carousel from every search, and sometimes answered after the customer had already tapped a button. Plan 029 has the data behind the decisions below, taken from the page's Messenger export.
+
+Code owns every button tap, order and payment. The model only reads data and changes the cart or delivery details through tools, and it ends each turn with one `reply` that renders as text plus at most one carousel. Orders are created by a ✅ postback button, once per checkout revision, so a double tap or a stale button cannot create a second order. The bot asks for no delivery zone; the admin sets it in the dashboard before dispatch (ADR 0009). Payment is upfront by QPay or bank transfer. The bot shows the account `order.addOrder` returns, restarts the Khaan reconciler when a customer claims a transfer, and sends one confirmation when `payment.getPaymentStatus` reports success.
+
+`Ingress` is one Durable Object that verifies the Zernio signature, filters events and runs the Chat SDK. Every thread gets its own `Conversation` Durable Object, which holds the inbox, history, cart, checkout, payments and an outbox of sent message parts. An event is written to the inbox before the Chat SDK sees it, and every send carries an idempotency key derived from the inbox rows, so a crash mid-turn resumes without losing the message or posting twice. A reply is dropped when a newer customer message arrives while it is being written; the next turn answers both.
+
+Customer photos go to the model as image bytes inside the user message. This replaces the R2 staging in ADR 0003 and the separate vision call. History keeps a text placeholder instead of the bytes.
+
+The model is GPT-6 Luna with reasoning off, called through an OpenAI-compatible endpoint set by `OPENAI_BASE_URL`. It replies in short Cyrillic even though most customers write Latin-script Mongolian; the prompt carries a glossary and the store's fixed policies. Complaints, undelivered orders, order changes and customs questions hand off: the thread pauses for 12 hours and admins get a Telegram alert.
+
+This supersedes the customer half of ADR 0011's implementation notes (the webhook path and session key in `apps/agent`) and ADR 0003. Zernio stays the transport. `apps/agent` keeps the Telegram admin bot until it moves to the same worker.

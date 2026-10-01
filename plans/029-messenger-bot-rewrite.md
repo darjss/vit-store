@@ -397,6 +397,15 @@ Not in v1: back-in-stock alerts, pausing the bot when staff reply in the Zernio 
 | Checkout token lifetime        | tokens expire after 7 days                                                                             | order status after that goes to handoff                      |
 | `set_delivery` address check   | customers' text gets retyped by the model                                                              | digit groups and most words, not an exact substring          |
 
+## Cutover runbook
+
+1. Deploy from the main checkout after the stack merges: `cd apps/messenger && bunx wrangler deploy`. This creates `messenger.amerikvitamin.mn`.
+2. Secrets: `bunx wrangler secret put` for `ZERNIO_API_KEY`, `ZERNIO_WEBHOOK_SECRET` (the same value the Zernio webhook already signs with), `OPENAI_API_KEY`, `ADMIN_TOKEN`, `TELEGRAM_ADMIN_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID`. Set `OPENAI_BASE_URL` only when routing through AI Gateway.
+3. Check `GET https://messenger.amerikvitamin.mn/health`, then point Zernio webhook `6abe39e25f4721daada6e7a3` at `https://messenger.amerikvitamin.mn/zernio/webhook` (`PUT /v1/webhooks/settings` with `webhookId`) and send Zernio's test event.
+4. Send real DMs to the NatureBell page: a product question, a photo, a card tap, address and phone, ✅, transfer details, "хийсэн". Watch `wrangler tail` or Axiom for one `turn` event per reply.
+5. Rollback: point the webhook back at `https://agent.amerikvitamin.mn/channels/messenger/webhook`. The old worker still runs.
+6. Main page: connect it in Zernio, add its account id to `ZERNIO_ACCOUNT_IDS`, move Zernio to the paid plan first (about 400 bot messages a day exceeds the free 10,000 a month).
+
 ## Resolved questions
 
 - Delivery: orders placed before 11:00 are delivered the same day, orders after 11:00 the next day. The per-turn state note carries the current Ulaanbaatar time so the model can say which applies.

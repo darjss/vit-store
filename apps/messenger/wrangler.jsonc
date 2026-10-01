@@ -3,8 +3,23 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2026-09-01",
 	"compatibility_flags": ["nodejs_compat"],
+	// Zernio's message.received webhook points here after cutover (plan 029).
+	"routes": [{ "pattern": "messenger.amerikvitamin.mn", "custom_domain": true }],
+	// Same Axiom destination as the store API, so one wide event per turn lands
+	// next to the server logs. Workers Logs keeps a queryable copy too.
 	"observability": {
 		"enabled": true,
+		"logs": { "enabled": true, "persist": true, "destinations": ["axiom-logs"] },
+	},
+	// Non-secret settings. Local wrangler dev overrides all of them from .dev.vars.
+	// Secrets (wrangler secret put): ZERNIO_API_KEY, ZERNIO_WEBHOOK_SECRET,
+	// OPENAI_API_KEY, ADMIN_TOKEN, TELEGRAM_ADMIN_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID.
+	"vars": {
+		"MODEL": "gpt-6-luna",
+		"STORE_API_URL": "https://api.amerikvitamin.mn",
+		"STORE_PUBLIC_URL": "https://amerikvitamin.mn",
+		"ZERNIO_ACCOUNT_IDS": "6abd496a8fa7e621847d9954",
+		"ZERNIO_BASE_URL": "https://zernio.com/api",
 	},
 	"durable_objects": {
 		"bindings": [
