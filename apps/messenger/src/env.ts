@@ -1,10 +1,16 @@
+import type { Admin } from "./admin/admin";
 import type { Conversation } from "./conversation";
 import type { Ingress } from "./ingress";
 
 export interface Env extends Cloudflare.Env {
+	Admin: DurableObjectNamespace<Admin>;
+	ADMIN_BOT_TOKEN?: string;
 	ADMIN_TOKEN?: string;
+	AI?: Ai;
 	Conversation: DurableObjectNamespace<Conversation>;
 	Ingress: DurableObjectNamespace<Ingress>;
+	LOADER?: WorkerLoader;
+	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 	MODEL?: string;
 	OPENAI_API_KEY: string;
 	OPENAI_BASE_URL?: string;
@@ -15,6 +21,7 @@ export interface Env extends Cloudflare.Env {
 	TELEGRAM_ADMIN_BOT_TOKEN?: string;
 	TELEGRAM_ADMIN_CHAT_ID?: string;
 	TELEGRAM_API_BASE?: string;
+	TELEGRAM_WEBHOOK_SECRET?: string;
 	ZERNIO_ACCOUNT_IDS?: string;
 	ZERNIO_API_KEY: string;
 	ZERNIO_BASE_URL?: string;

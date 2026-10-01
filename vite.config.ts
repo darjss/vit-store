@@ -26,11 +26,6 @@ export default defineConfig({
 				command: "alchemy dev --app admin --stage dev",
 				cwd: "apps/admin",
 			},
-			"agent:dev": {
-				cache: false,
-				command: "bun run dev",
-				cwd: "apps/agent",
-			},
 			"db:generate": {
 				cache: false,
 				command: "vp exec drizzle-kit generate",

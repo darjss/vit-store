@@ -17,6 +17,13 @@ Bun.serve({
 		};
 		await appendFile(LOG, `${JSON.stringify(record)}\n`).catch(() => undefined);
 		console.log(`[capture] ${request.method} ${url.pathname}`);
+		// grammy expects { ok: true, result: ... } from <apiRoot>/bot<token>/<method>.
+		if (url.pathname.startsWith("/bot")) {
+			return Response.json({
+				ok: true,
+				result: { file_path: "file.jpg", message_id: 42 },
+			});
+		}
 		return Response.json({ data: { messageId: `cap_${crypto.randomUUID().slice(0, 8)}` } });
 	},
 	port: 8799,

@@ -19,6 +19,10 @@ TELEGRAM_ADMIN_CHAT_ID=
 # Defaults to https://api.telegram.org. Point at http://127.0.0.1:8799 with
 # scripts/capture.ts to record alerts locally.
 TELEGRAM_API_BASE=
+# Admin Telegram bot: X-Admin-Bot-Token for /trpc/bot calls, and the webhook
+# secret Telegram sends as X-Telegram-Bot-Api-Secret-Token on /telegram/webhook.
+ADMIN_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
 # Payment watcher interval in seconds (default 60; 5 is enough locally).
 PAYMENT_WATCH_SECONDS=
 OPENAI_API_KEY=

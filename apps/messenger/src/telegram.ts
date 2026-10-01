@@ -1,8 +1,7 @@
 import type { Env } from "./env";
 
 // One-shot admin alert. Best effort: caller logs failures, nothing throws.
-// Plain text only — no inline button: this worker has no Telegram webhook,
-// and a callback would land on the old apps/agent bot.
+// Plain text only — no inline button: the Resume path is the admin route.
 export const sendTelegramAlert = async (
 	env: Env,
 	input: { reason: string; recentTexts: Array<string>; threadId: string },
