@@ -573,6 +573,19 @@ export class Conversation extends Agent<Env> {
 		if (rows.length > 0) {
 			await this.processItems(rows);
 		}
+		// A tick can fire while another processItems is still mid-turn: every
+		// row it would retry is still 'processing', and the only schedule gets
+		// consumed. If that turn then fails, nothing is armed. Re-arm whenever
+		// unfinished rows remain so the next failure always has a follow-up.
+		const unfinished = this.sql`
+			SELECT event_id FROM inbox WHERE status IN ('pending', 'processing', 'applied') LIMIT 1`;
+		if (unfinished.length > 0) {
+			const pending = this.getSchedules().filter((s) => s.callback === "recoverInbox");
+			for (const s of pending) {
+				await this.cancelSchedule(s.id);
+			}
+			await this.schedule(this.recoverSeconds(), "recoverInbox", {});
+		}
 	}
 
 	// The adapter keeps `platformMessageId` as the chat message id and the
@@ -614,22 +627,41 @@ export class Conversation extends Agent<Env> {
 		};
 	}
 
+	// DO entry points interleave at awaits: without this gate a second dispatch
+	// can run a tap while an earlier turn is still mid-model, before that
+	// turn's handoff pause lands. Rows arriving during a run stay pending and
+	// get drained by the trailing pass below.
+	private processing = false;
+
 	private async processItems(rows: Array<InboxRow>): Promise<void> {
-		const claimed = this.claimRows(rows);
-		if (claimed.length === 0) {
+		if (this.processing) {
 			return;
 		}
-		await this.armRecovery();
+		this.processing = true;
 		try {
-			await this.runClaimed(claimed);
-		} catch (error) {
-			console.error("[conversation.processItems]", error);
-			// Rows still 'processing' go back to pending; the recovery schedule
-			// retries them. 'applied' rows keep their status (mutation done,
-			// resend pending) and are claimable as-is.
-			for (const row of claimed) {
-				void this
-					.sql`UPDATE inbox SET status = 'pending', claimed_at = NULL WHERE event_id = ${row.event_id} AND status = 'processing'`;
+			const claimed = this.claimRows(rows);
+			if (claimed.length === 0) {
+				return;
+			}
+			await this.armRecovery();
+			try {
+				await this.runClaimed(claimed);
+			} catch (error) {
+				console.error("[conversation.processItems]", error);
+				// Rows still 'processing' go back to pending; the recovery
+				// schedule retries them. 'applied' rows keep their status
+				// (mutation done, resend pending) and are claimable as-is.
+				for (const row of claimed) {
+					void this
+						.sql`UPDATE inbox SET status = 'pending', claimed_at = NULL WHERE event_id = ${row.event_id} AND status = 'processing'`;
+				}
+			}
+		} finally {
+			this.processing = false;
+			// Drain whatever arrived while this run was in flight.
+			const leftover = this.pendingRows();
+			if (leftover.length > 0) {
+				void this.processItems(leftover);
 			}
 		}
 	}
@@ -709,16 +741,27 @@ export class Conversation extends Agent<Env> {
 				continue;
 			}
 			await flush();
-			if (action.kind === "tap") {
-				await this.handleTap(row, action.payload);
-			} else if (action.kind === "claim") {
-				await this.claimTransfer(row.event_id, action.paymentNumber);
-			} else if (action.kind === "ambiguous") {
-				await this.handoffToAdmin("payment_ambiguous", `${row.event_id}:ambiguous`);
+			// classifyRow ran before the flushed turn above, so a pause that
+			// turn's handoff set is only visible now. Taps are not claims:
+			// paused means mark done without mutating.
+			if (action.kind === "tap" && this.isPaused()) {
+				this.markDone(row.event_id);
+				continue;
 			}
+			await this.runRowAction(row, action);
 			this.markDone(row.event_id);
 		}
 		await flush();
+	}
+
+	private async runRowAction(row: InboxRow, action: RowAction): Promise<void> {
+		if (action.kind === "tap") {
+			await this.handleTap(row, action.payload);
+		} else if (action.kind === "claim") {
+			await this.claimTransfer(row.event_id, action.paymentNumber);
+		} else if (action.kind === "ambiguous") {
+			await this.handoffToAdmin("payment_ambiguous", `${row.event_id}:ambiguous`);
+		}
 	}
 
 	private isPaused(): boolean {
