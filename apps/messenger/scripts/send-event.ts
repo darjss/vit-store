@@ -30,6 +30,9 @@ const FLAGS_WITH_VALUE = new Set([
 	"--direction",
 	"--event",
 	"--event-id",
+	"--image",
+	"--postback",
+	"--quick-reply",
 	"--url",
 ]);
 const positional: Array<string> = [];
@@ -43,7 +46,11 @@ for (let i = 2; i < process.argv.length; i++) {
 	}
 	positional.push(a);
 }
-const text = positional[0] ?? "sain bnu";
+const image = arg("--image");
+const postback = arg("--postback");
+const quickReply = arg("--quick-reply");
+const isTap = postback !== undefined || quickReply !== undefined;
+const text = positional[0] ?? (isTap ? "" : "sain bnu");
 
 const secret = await devVar("ZERNIO_WEBHOOK_SECRET");
 const account = arg("--account") ?? (await devVar("ZERNIO_ACCOUNT_IDS")).split(",")[0].trim();
@@ -62,7 +69,7 @@ const envelope = {
 	event: eventType,
 	id: eventId,
 	message: {
-		attachments: [],
+		attachments: image === undefined ? [] : [{ type: "image", url: image }],
 		conversationId: conversation,
 		direction,
 		id: messageId,
@@ -72,7 +79,11 @@ const envelope = {
 		sentAt: timestamp,
 		text: direction === "incoming" ? text : `[outgoing] ${text}`,
 	},
-	metadata: null,
+	metadata: postback
+		? { postbackPayload: postback }
+		: quickReply
+			? { quickReplyPayload: quickReply }
+			: null,
 	timestamp,
 };
 

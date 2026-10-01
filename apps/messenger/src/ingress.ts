@@ -107,6 +107,11 @@ export class Ingress extends Agent<Env> {
 		});
 	}
 
+	adminList() {
+		return this.sql<{ last_at: number; thread_id: string }>`
+			SELECT thread_id, last_at FROM threads ORDER BY last_at DESC LIMIT 100`;
+	}
+
 	private conversation(threadId: string) {
 		return getAgentByName<Env, Conversation>(this.env.Conversation, threadId);
 	}
