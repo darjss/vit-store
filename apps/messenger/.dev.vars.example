@@ -6,7 +6,32 @@ ZERNIO_ACCOUNT_IDS=
 # Defaults to https://zernio.com/api. Point at http://127.0.0.1:8799/api with
 # scripts/capture.ts to see outbound sends locally.
 ZERNIO_BASE_URL=https://zernio.com/api
+# Point at http://127.0.0.1:8798 with scripts/store-stub.ts so addOrder and
+# payment mutations never hit production.
 STORE_API_URL=https://api.amerikvitamin.mn
+# Storefront origin for the QPay page link in ORDER_CREATED.
+STORE_PUBLIC_URL=https://amerikvitamin.mn
+# Bearer token required by /admin/conversations* routes.
+ADMIN_TOKEN=
+# Telegram admin handoff alerts.
+TELEGRAM_ADMIN_BOT_TOKEN=
+TELEGRAM_ADMIN_CHAT_ID=
+# Defaults to https://api.telegram.org. Point at http://127.0.0.1:8799 with
+# scripts/capture.ts to record alerts locally.
+TELEGRAM_API_BASE=
+# Admin Telegram bot: X-Admin-Bot-Token for /trpc/bot calls, and the webhook
+# secret Telegram sends as X-Telegram-Bot-Api-Secret-Token on /telegram/webhook.
+ADMIN_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
+# Payment watcher interval in seconds (default 60; 5 is enough locally).
+PAYMENT_WATCH_SECONDS=
+# Slow-phase watcher tick after the 2h deadline (seconds). Default 900.
+PAYMENT_WATCH_SLOW_SECONDS=
+# Inbox recovery tick (seconds). Default 120.
+INBOX_RECOVER_SECONDS=
 OPENAI_API_KEY=
 OPENAI_BASE_URL=
 MODEL=gpt-6-luna
+# Photo hosts the worker may fetch (".suffix" or exact host). Default .fbcdn.net,.fbsbx.com.
+# The local eval adds 127.0.0.1 to serve export photos.
+PHOTO_HOSTS=

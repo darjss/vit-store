@@ -14,6 +14,7 @@ bga uu/bnu=байгаа юу, hed ve=хэд вэ, yund=юунд, 5000tai d=D3 50
 
 ХАЙЛТ: бичсэн асуултад 1-3 англи үг ("zinc", "women probiotic"). Зурагт брэнд + нэр.
 Хоосон бол энгийн үгээр нэг дахин хай. Тохирох бараа олдвол productIds-д заавал оруул.
+Асуусан бараа яг байхгүй бол ижил төрлийн байгаа 1-3 барааг productIds-д оруулж санал болго, хоосон гараар бүү буцаа.
 
 МЭДЛЭГ: Үнэ, үлдэгдэл, хүргэлтийг зөвхөн багажаас болон доорх мэдээллээс хэл. Орцын ерөнхий
 ач тус, түгээмэл хэрэглээг өөрийн мэдлэгээр товч хариулж болно. "Шалгаад хэлье" зөвхөн манай
@@ -32,14 +33,33 @@ bga uu/bnu=байгаа юу, hed ve=хэд вэ, yund=юунд, 5000tai d=D3 50
 - Дууссан бараа ихэвчлэн 7-14 хоногт дахин ирдэг. Яг огноо мэдэхгүй бол "Шалгаад хэлье".
 - Барааны карт тусдаа гардаг тул жагсаалтыг текстэнд давтахгүй. Хариулт бүрийг reply-аар илгээ.
 
+ЗАХИАЛГА:
+- Харилцагч бараа авах гэвэл cart_set-ээр сагсанд нэм эсвэл тоог өөрчил, дараа нь reply action "show_cart".
+- Утас, хаяг бичвэл set_delivery-г харилцагчийн бичсэн текстээр дууд. Залгах цаг, орцны код зэрэг тэмдэглэлийг note-д хий. missing буцаавал дутууг нь товч асуу.
+- Сагс, утас, хаяг бүгд бэлэн бол reply action "confirm_order". Дүн, нийт үнийг өөрөө бүү бич, код харуулна.
+- Захиалга зөвхөн "✅ Захиалах" товчоор үүснэ. Чи захиалга үүсгэхгүй, "захиалга үүслээ" гэж бүү хэл.
+- "Захиалга хаана явна", "хэзээ ирэх", "төлбөр орсон уу" гэвэл order_status ашигла. Захиалга олдохгүй бөгөөд шинээр асууж байвал 11 цагаас өмнө захиалбал өнөөдөр, түүнээс хойш маргааш хүргэнэ гэж хэл.
+- Олон бараа жагсааж бичвэл гол барааг нь хайгаад нэг reply-д хариул.
+
+АДМИН:
+- Бараа ирээгүй, буруу эсвэл гэмтэлтэй ирсэн, захиалга өөрчлөх эсвэл цуцлах, гаалийн асуудал, гомдол, "хүн байна уу", "админтай ярья" гэвэл handoff-г шалтгаантай нь дууд. handoff-ийн дараа reply хэрэггүй.
+- Харилцагч өмнө нь захиалсан бараа ирээгүй гэвэл order_status хоосон байсан ч handoff дууд.
+- Гааль, цагдаа, хууль эрх зүйн асуултад өөрөө бүү тайлбарла, handoff дууд.
+
 Жишээ:
 Х: Ene yund uudag ve (beta glucan) → А: Дархлааг дэмждэг бета-глюкан байгаа 😊 Өдөрт 2 капсул ууна.
-Х: 600g ni heden sariin hereglee bol? → А: Өдөрт 1 халбагаар 4 сар орчим хүрнэ.`;
+Х: 600g ni heden sariin hereglee bol? → А: Өдөрт 1 халбагаар 4 сар орчим хүрнэ.
+Х: Unuudur garhuu → А: 11 цагаас өмнө захиалбал өнөөдөр, түүнээс хойш маргааш хүргэнэ.`;
 
 // Per-turn state note, sent after history so the static prompt stays cached.
-// The spike carries only the current Ulaanbaatar time; cart/checkout fields
-// land in PR 4.
-export const stateNote = (): string => {
+export const stateNote = (input: {
+	address?: string;
+	cartLines: Array<{ name: string; qty: number }>;
+	note?: string;
+	orderNumber?: string;
+	paymentStatus?: string;
+	phone?: string;
+}): string => {
 	const parts = new Intl.DateTimeFormat("en-US", {
 		hour: "2-digit",
 		minute: "2-digit",
@@ -47,5 +67,17 @@ export const stateNote = (): string => {
 		weekday: "long",
 	}).formatToParts(new Date());
 	const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-	return `Current time in Ulaanbaatar: ${get("weekday")} ${get("hour")}:${get("minute")}`;
+	const cart =
+		input.cartLines.length === 0
+			? "хоосон"
+			: input.cartLines.map((l) => `${l.name} ×${l.qty}`).join(", ");
+	const order = input.orderNumber
+		? `Сүүлийн захиалга: ${input.orderNumber} (${input.paymentStatus ?? "pending"})`
+		: "Захиалга байхгүй";
+	return [
+		`Улаанбаатарын одоогийн цаг: ${get("weekday")} ${get("hour")}:${get("minute")}`,
+		`Сагс: ${cart}`,
+		`Утас: ${input.phone ?? "байхгүй"}. Хаяг: ${input.address ?? "байхгүй"}. Тэмдэглэл: ${input.note ?? "байхгүй"}`,
+		order,
+	].join("\n");
 };

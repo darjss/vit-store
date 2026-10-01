@@ -25,7 +25,7 @@
 			"dependsOn": ["server#deploy"],
 			"cache": false
 		},
-		"agent#deploy": {
+		"messenger#deploy": {
 			"dependsOn": ["server#deploy"],
 			"cache": false
 		},
