@@ -48,6 +48,13 @@ export class Admin extends Agent<Env> {
 	onStart() {
 		void this.sql`CREATE TABLE IF NOT EXISTS seen (update_id INTEGER PRIMARY KEY)`;
 		void this.sql`CREATE TABLE IF NOT EXISTS claims (key TEXT PRIMARY KEY, at INTEGER NOT NULL)`;
+		// Queue retries rerun runQueuedTurn; this table makes turns at-most-once.
+		void this.sql`
+			CREATE TABLE IF NOT EXISTS admin_turns (
+				update_id INTEGER PRIMARY KEY,
+				status TEXT NOT NULL,
+				at INTEGER NOT NULL
+			)`;
 		void this.sql`
 			CREATE TABLE IF NOT EXISTS messages (
 				id TEXT PRIMARY KEY,
@@ -97,12 +104,17 @@ export class Admin extends Agent<Env> {
 		if (text === "" && !hasPhoto) {
 			return false;
 		}
-		if (!this.markSeen(updateId)) {
+		if (this.seenBefore(updateId)) {
 			return true;
 		}
 
 		const imageKeys = hasPhoto ? await this.stagePhoto(message) : [];
-		if (imageKeys === undefined || (imageKeys.length === 0 && text === "")) {
+		// A staging failure must not mark the update seen: throwing surfaces a
+		// non-2xx on the webhook so Telegram retries and the photo can land.
+		if (imageKeys === undefined) {
+			throw new Error("telegram photo staging failed");
+		}
+		if (imageKeys.length === 0 && text === "") {
 			return false;
 		}
 
@@ -113,6 +125,10 @@ export class Admin extends Agent<Env> {
 			typingAction: hasPhoto ? "upload_photo" : "typing",
 			updateId,
 		});
+		// Seen marks only after the turn is durably queued; a racing duplicate
+		// delivery replaces the queue item (stable id) and this insert is a
+		// no-op for it.
+		void this.sql`INSERT OR IGNORE INTO seen (update_id) VALUES (${updateId})`;
 		return true;
 	}
 
@@ -120,10 +136,26 @@ export class Admin extends Agent<Env> {
 	// update is admitted, deduped and staged, so Telegram never retries a slow
 	// model run.
 	private async enqueueTurn(payload: QueuedTurn): Promise<void> {
-		await this.queue("runQueuedTurn", payload);
+		// Stable id: a racing duplicate webhook pushes onto the same item
+		// instead of queuing the turn twice.
+		await this.queue("runQueuedTurn", payload, { id: `upd_${payload.updateId}` });
 	}
 
+	// Queue retries rerun this after a crash; admin_turns makes the model turn
+	// at-most-once so stock mutations and Telegram sends can't repeat.
 	async runQueuedTurn(payload: QueuedTurn): Promise<void> {
+		const existing = this.sql<{ status: string }>`
+			SELECT status FROM admin_turns WHERE update_id = ${payload.updateId}`[0];
+		if (existing !== undefined) {
+			const api = adminApi(this.env);
+			if (api !== undefined) {
+				await api.sendMessage(payload.chatId, "Өмнөх хүсэлт тасарсан, дахин илгээнэ үү.");
+			}
+			return;
+		}
+		void this.sql`
+			INSERT INTO admin_turns (update_id, status, at)
+			VALUES (${payload.updateId}, 'started', ${Date.now()})`;
 		await runWithTyping(
 			this.env,
 			payload.chatId,
@@ -135,6 +167,8 @@ export class Admin extends Agent<Env> {
 				}),
 			payload.typingAction,
 		);
+		void this.sql`
+			UPDATE admin_turns SET status = 'done' WHERE update_id = ${payload.updateId}`;
 	}
 
 	// Undefined means the photo could not be fetched/staged at all — nothing to
@@ -171,23 +205,24 @@ export class Admin extends Agent<Env> {
 		return rows.map((row) => JSON.parse(row.content) as ModelMessage);
 	}
 
-	private saveMessages(turnId: string, messages: Array<ModelMessage>, startAt: number): void {
+	private saveMessages(
+		turnId: string,
+		messages: Array<ModelMessage>,
+		startAt: number,
+		idOffset: number,
+	): void {
 		messages.forEach((message, i) => {
 			void this.sql`
 				INSERT OR REPLACE INTO messages (id, turn_id, role, content, created_at)
-				VALUES (${`${turnId}:${i}`}, ${turnId}, ${message.role}, ${JSON.stringify(message)}, ${startAt + i})`;
+				VALUES (${`${turnId}:${idOffset + i}`}, ${turnId}, ${message.role}, ${JSON.stringify(message)}, ${startAt + i})`;
 		});
 	}
 
-	private markSeen(updateId: number): boolean {
-		const exists =
+	private seenBefore(updateId: number): boolean {
+		return (
 			this.sql<{ update_id: number }>`SELECT update_id FROM seen WHERE update_id = ${updateId}`
-				.length > 0;
-		if (exists) {
-			return false;
-		}
-		void this.sql`INSERT INTO seen (update_id) VALUES (${updateId})`;
-		return true;
+				.length > 0
+		);
 	}
 
 	private claimOnce(key: string): boolean {
@@ -276,8 +311,8 @@ export class Admin extends Agent<Env> {
 		});
 
 		const created = Date.now();
-		this.saveMessages(turnId, [userMessage], created);
-		this.saveMessages(turnId, result.response.messages, created + 1);
+		this.saveMessages(turnId, [userMessage], created, 0);
+		this.saveMessages(turnId, result.response.messages, created + 1, 1);
 
 		// Parity guard: a turn that ended in assistant text but never called
 		// post_telegram_message would otherwise be silently dropped.

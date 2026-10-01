@@ -33,7 +33,14 @@ const telegramWebhook = async (request: Request, env: Env): Promise<Response> =>
 		return Response.json({ ok: true });
 	}
 	const admin = await getAgentByName(env.Admin, `telegram:${chatId}`);
-	await admin.handleUpdate(parsed.output);
+	try {
+		await admin.handleUpdate(parsed.output);
+	} catch (error) {
+		// Admission failures (e.g. photo staging) surface as non-2xx so
+		// Telegram retries instead of the update being dropped.
+		console.error("[telegram.webhook]", error);
+		return new Response("error", { status: 500 });
+	}
 	return Response.json({ ok: true });
 };
 
