@@ -1,9 +1,0 @@
-dist/
-.flue-vite/
-.flue-vite.wrangler.jsonc
-.wrangler/
-worker-configuration.d.ts
-
-# Local Messenger dev harness output (state + captured Send API payloads)
-.dev/
-.probe.vars

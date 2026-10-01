@@ -48,7 +48,6 @@ export default defineConfig({
 		"tools/oxlint/anti-slop/**",
 		"**/.agents/**",
 		"**/.cursor/**",
-		"apps/agent/.flue/**",
 		"packages/api/src/db/schema.d.ts",
 	],
 	jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
@@ -70,7 +69,7 @@ export default defineConfig({
 		},
 		{
 			env: { node: true },
-			files: ["apps/server/**", "apps/agent/**", "packages/**"],
+			files: ["apps/server/**", "apps/messenger/**", "packages/**"],
 			rules: {
 				"@nkzw/no-instanceof": "off",
 				"eslint/no-console": "off",
