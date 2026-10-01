@@ -44,6 +44,7 @@ export const createTools = (env: Env) => ({
 						amount: detail?.amount ?? "",
 						brand: hit.brand,
 						dailyIntake: detail?.dailyIntake ?? 0,
+						expiry: detail?.expirationDate ?? "",
 						id: hit.id,
 						name: hit.name,
 						price: hit.price,
