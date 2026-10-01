@@ -24,3 +24,6 @@ PAYMENT_WATCH_SECONDS=
 OPENAI_API_KEY=
 OPENAI_BASE_URL=
 MODEL=gpt-6-luna
+# Photo hosts the worker may fetch (".suffix" or exact host). Default .fbcdn.net,.fbsbx.com.
+# The local eval adds 127.0.0.1 to serve export photos.
+PHOTO_HOSTS=

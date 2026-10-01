@@ -83,6 +83,7 @@ const noteInboundSchema = v.object({
 const checkPaymentSchema = v.object({ paymentNumber: v.pipe(v.string(), v.minLength(1)) });
 
 const HISTORY_TURNS = 20;
+const MAX_STEPS = 5;
 // Pending rows older than this are dead replays: Zernio's own retry window is
 // 3 minutes, so past 10 the event is never coming back through admission.
 const REPROCESS_MAX_AGE_MS = 10 * 60_000;
@@ -1008,8 +1009,14 @@ export class Conversation extends Agent<Env> {
 				stepMs.push(now - lastStepAt);
 				lastStepAt = now;
 			},
+			// The last allowed step must answer: without this a long list order
+			// spends every step on searches and the customer gets the fallback.
+			prepareStep: ({ stepNumber }) =>
+				stepNumber === MAX_STEPS - 1
+					? { toolChoice: { toolName: "reply", type: "tool" } as const }
+					: undefined,
 			providerOptions,
-			stopWhen: [hasToolCall("reply"), hasToolCall("handoff"), stepCountIs(5)],
+			stopWhen: [hasToolCall("reply"), hasToolCall("handoff"), stepCountIs(MAX_STEPS)],
 			system: SYSTEM_PROMPT,
 			toolChoice: "required",
 			tools,
@@ -1064,7 +1071,7 @@ export class Conversation extends Agent<Env> {
 			.filter((t) => t.length > 0)
 			.join("\n");
 		const imageParts = (
-			await Promise.all(items.map((i) => fetchImageParts(i.attachments ?? [])))
+			await Promise.all(items.map((i) => fetchImageParts(this.env, i.attachments ?? [])))
 		).flat();
 		const userParts: Array<ImagePart | TextPart> = [
 			...(text.length > 0 ? [{ text, type: "text" as const }] : []),

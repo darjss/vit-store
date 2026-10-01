@@ -9,6 +9,7 @@ export interface Env extends Cloudflare.Env {
 	OPENAI_API_KEY: string;
 	OPENAI_BASE_URL?: string;
 	PAYMENT_WATCH_SECONDS?: string;
+	PHOTO_HOSTS?: string;
 	STORE_API_URL: string;
 	STORE_PUBLIC_URL?: string;
 	TELEGRAM_ADMIN_BOT_TOKEN?: string;
