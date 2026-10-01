@@ -1,7 +1,7 @@
 import { send } from "./zernio";
 import { storeClient, withTimeout } from "./store";
 import type { Env } from "./env";
-import type { ReplyPayload } from "./tools";
+import type { ReplyResult } from "./tools";
 
 // Renders a model turn into Zernio sends. Every part key is deterministic
 // (${turn}:text, ${turn}:cards) and recorded in `outbox` only after a
@@ -13,7 +13,7 @@ export const renderTurn = async (opts: {
 	env: Env;
 	hasSent: (key: string) => boolean;
 	markSent: (key: string) => void;
-	reply: ReplyPayload;
+	reply: ReplyResult;
 	turnId: string;
 }): Promise<void> => {
 	const { accountId, conversationId, env, hasSent, markSent, reply, turnId } = opts;

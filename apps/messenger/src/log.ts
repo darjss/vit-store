@@ -1,7 +1,10 @@
 // One canonical JSON line per turn. Wide fields beat many narrow lines: grep
 // for `event":"turn"` gets the whole story.
 export const turnLog = (fields: {
+	action?: string;
+	ad_id?: string;
 	conversation: string;
+	handoff: boolean;
 	inputs: number;
 	model: string;
 	outcome: string;

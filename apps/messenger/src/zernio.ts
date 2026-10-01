@@ -6,6 +6,7 @@ export type ZernioSendBody = {
 	accountId: string;
 	buttons?: Array<{ payload?: string; title: string; type: "url" | "postback"; url?: string }>;
 	message?: string;
+	quickReplies?: Array<{ payload: string; title: string }>;
 	template?: {
 		elements: Array<{
 			buttons?: Array<{ payload?: string; title: string; type: "url" | "postback"; url?: string }>;
