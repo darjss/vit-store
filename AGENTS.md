@@ -66,7 +66,7 @@ Do not merge a lint PR whose only diff is config overrides or comment spam.
 
 ## Messenger agent implementation notes
 
-- `@flue/messenger` should own inbound Messenger verification/parsing/conversation-key behavior.
-- Do not guess Flue Messenger APIs; verify them with `btca-local` against local Flue source/examples.
-- If `@flue/messenger` does not provide outbound Send API helpers, keep any project-owned Messenger client as a thin Graph Send API boundary only. Avoid broad generic Graph clients or unused Messenger features in v1.
-- Messenger delivery retries must be deduped by inbound message identity before dispatching assistant turns.
+- Customer Messenger runs through Zernio, not the Meta Graph API (ADR 0011). `apps/agent/src/channels/messenger.ts` owns the whole Zernio boundary: signature check, event parsing, session key, and sends.
+- Check Zernio request and webhook shapes against its OpenAPI spec or the Zernio MCP `docs_search` tool before changing them.
+- Keep the Zernio client a thin fetch over the inbox send and typing endpoints. Add endpoints only when a feature needs them.
+- Dedupe inbound events by Zernio event id before dispatching assistant turns, and drop events older than three minutes.

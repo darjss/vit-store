@@ -1,22 +1,27 @@
 ---
 name: store-analytics
 description: >-
-  Store-analytics pulse: revenue, orders, web traffic, checkout funnel. Use when
-  the admin asks борлуулалт / revenue / today-week-month stats, web visitors,
-  funnel, or тайлан.
+  Store-analytics pulse covering revenue, orders, web traffic and the checkout
+  funnel. Use when the admin asks борлуулалт / revenue / today, week or month
+  stats, visitors, funnel, or тайлан.
 ---
 
 # Store analytics
 
 ## Steps
 
-1. Default pulse: `sales.analytics()` → use `daily` + `weekly` (revenue, profit, salesCount).  
-   **Done:** numbers in hand.
+1. Run `sales.analytics()`. It returns `daily`, `weekly` and `monthly`, each with `revenue`, `profit` and `salesCount`.
+   Done when the numbers are in hand.
 
-2. Branches: web/traffic → `analytics.getWebAnalytics({ timeRange })`; funnel → `analytics.getConversionFunnel({ timeRange })`; top sellers → `sales.topProducts`. Default `timeRange` `weekly` unless they said today/month.  
-   **Done:** requested slices loaded.
+2. Add only the slices the admin asked for:
+   - traffic: `analytics.getWebAnalytics({ timeRange })`
+   - funnel: `analytics.getConversionFunnel({ timeRange })`
+   - top sellers: `sales.topProducts({ timeRange, productCount: 5 })`
 
-3. **Deliver** short readable brief.  
-   **Done:** brief delivered.
+   `timeRange` is `"daily"`, `"weekly"` or `"monthly"`. Use `"weekly"` unless the admin said today or month.
+   Done when every requested slice is loaded.
 
-Order line-items → skill `lookup-orders`. Shipping → skill `named-zone-ship`.
+3. Deliver a short brief with amounts in ₮.
+   Done when the brief is delivered.
+
+Order-level detail goes to skill `lookup-orders`. Shipping goes to skill `named-zone-ship`.
