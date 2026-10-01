@@ -1,0 +1,9 @@
+# Zernio carries customer Messenger traffic
+
+The customer agent reaches Facebook Messenger through Zernio's inbox API instead of our own Meta app. Our Meta app never cleared app review for `pages_messaging`, so it could not talk to real customers. Zernio's app already holds that permission, and connecting a Page in Zernio is enough to start receiving its DMs. The first Page is the Naturebell MicroIngredients sandbox, used for a small real-customer test with Facebook ads before the main Page.
+
+The agent owns one webhook, `POST /channels/messenger/webhook`, that accepts Zernio `message.received` events signed with `X-Zernio-Signature`. It drops events for other Zernio accounts, outgoing messages, and events older than three minutes. Zernio retries a failed delivery up to 51 hours later, and a reply that late does more harm than no reply. Dedupe keys on Zernio's event id, which stays the same across retries and covers postback taps that carry no Meta message id. Sends go to `POST /v1/inbox/conversations/{id}/messages` with an `Idempotency-Key`, so one retry after a timeout or 429 cannot post the same reply twice.
+
+This supersedes the parts of ADR 0001 and ADR 0008 that put inbound parsing in `@flue/messenger` and outbound sends on the Graph Send API. Both packages are removed from the agent. The admin agent no longer answers on Messenger; admins use Telegram only. The session key is `zernio:v1:<accountId>:<conversationId>`, so the agent can send without a lookup. Cart, checkout, payment, photo staging (ADR 0003) and the Messenger payment surface (ADR 0004) are unchanged, because they never depended on the transport.
+
+Customer DMs and photo URLs now pass through a third party. Zernio's free tier covers two connected accounts and 10,000 outbound messages a month, capped at 60 API requests a minute; the main Page will likely need the paid tier for its rate limit.
