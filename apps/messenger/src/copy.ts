@@ -1,8 +1,10 @@
 // Owner-approved customer-facing text (~/dev/scratchpad/vit-store/briefs/pr4-copy.md).
 // Verbatim: do not rewrite or translate. The model never produces these.
 
-export const DELIVERY_TODAY = "Төлбөр орсны дараа өнөөдөр хүргэнэ.";
-export const DELIVERY_TOMORROW = "Төлбөр орсны дараа маргааш хүргэнэ.";
+export const DELIVERY_UB =
+	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
+export const DISPATCH_COUNTRYSIDE =
+	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна.";
 
 export const CART_EMPTY = 'Сагс хоосон байна. Бараагаа сонгоод "Захиалах" дээр дарна уу.';
 export const CART_CHANGED = "Сагс өөрчлөгдсөн байна. Шинэ мэдээллээ шалгаарай.";
@@ -15,19 +17,11 @@ export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, �
 
 export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин оролдоно уу.";
 
-export const DELIVERY_FEE = 6000;
+export const CONFIRM_PROMPT = "Зөв бол захиалгаа баталгаажуулна уу 👇";
+export const PAY_PROMPT = "Төлбөрөө сонгоно уу 👇";
+export const TRANSFER_PROMPT = "Шилжүүлсний дараа дарна уу 👇";
 
-// Order created before 11:00 Ulaanbaatar time -> same-day line, else tomorrow.
-export const deliveryLine = (createdAtMs: number): string => {
-	const hour = Number(
-		new Intl.DateTimeFormat("en-US", {
-			hour: "2-digit",
-			hour12: false,
-			timeZone: "Asia/Ulaanbaatar",
-		}).format(new Date(createdAtMs)),
-	);
-	return hour < 11 ? DELIVERY_TODAY : DELIVERY_TOMORROW;
-};
+export const DELIVERY_FEE = 6000;
 
 const mnt = (amount: number): string => `${Math.round(amount).toLocaleString("en-US")}₮`;
 
@@ -52,19 +46,15 @@ export const formatConfirmSummary = (input: {
 	].join("\n");
 };
 
-export const DISPATCH_COUNTRYSIDE =
-	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна.";
-
 export const formatOrderCreated = (input: {
 	countryside: boolean;
-	createdAtMs: number;
 	orderNumber: string;
 	total: number;
 }): string =>
 	[
 		`Захиалга авлаа 🙏 №${input.orderNumber}`,
 		`Нийт: ${mnt(input.total)}`,
-		input.countryside ? DISPATCH_COUNTRYSIDE : deliveryLine(input.createdAtMs),
+		input.countryside ? DISPATCH_COUNTRYSIDE : DELIVERY_UB,
 	].join("\n");
 
 export const formatBankDetails = (input: {
@@ -81,10 +71,10 @@ export const formatBankDetails = (input: {
 		`Дүн: ${mnt(input.total)}`,
 		`Гүйлгээний утга: ${input.phone}`,
 		"",
-		`Гүйлгээний утга хэсэгт заавал ${input.phone} гэж бичнэ үү. Шилжүүлсний дараа "Шилжүүлсэн" товчийг дарна уу.`,
+		`Гүйлгээний утга хэсэгт заавал ${input.phone} гэж бичнэ үү.`,
 	].join("\n");
 
-export const formatPaid = (input: { countryside: boolean; createdAtMs: number }): string =>
-	input.countryside
+export const formatPaid = (countryside: boolean): string =>
+	countryside
 		? "Төлбөр баталгаажлаа 🙏 Өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна."
-		: `Төлбөр баталгаажлаа 🙏 ${deliveryLine(input.createdAtMs) === DELIVERY_TODAY ? "өнөөдөр" : "маргааш"} хүргэнэ.`;
+		: "Төлбөр баталгаажлаа 🙏 Өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";

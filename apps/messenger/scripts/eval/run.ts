@@ -6,6 +6,7 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as v from "valibot";
+import { EVAL_DIR } from "./paths";
 import { evalCaseSchema, score, type EvalCase, type Observation } from "./rubric";
 
 const arg = (flag: string): string | undefined => {
@@ -14,8 +15,7 @@ const arg = (flag: string): string | undefined => {
 };
 
 const appRoot = join(import.meta.dirname, "..", "..");
-const repoRoot = join(appRoot, "..", "..");
-const evalDir = join(repoRoot, "messenger-chat-history", "eval");
+const evalDir = EVAL_DIR;
 const casesPath = arg("--cases") ?? join(evalDir, "cases.jsonl");
 const kinds = arg("--kinds")?.split(",");
 const limit = Number(arg("--limit") ?? "1000");
@@ -235,6 +235,7 @@ const runCase = async (c: EvalCase) => {
 		id: c.id,
 		kind: c.kind,
 		observation,
+		reference: c.reference,
 		score: score(c, observation),
 		texts: c.texts,
 		total_ms: turn?.total_ms ?? null,

@@ -54,6 +54,16 @@ const TRANSFER_DONE_RE = /^transfer_done:(\S+)$/;
 export const parseTransferDonePayload = (payload: string): string | undefined =>
 	TRANSFER_DONE_RE.exec(payload)?.[1];
 
+const DELIVERY_CHANGE_RE = /^delivery_change:(\d+)$/;
+export const parseDeliveryChangePayload = (payload: string): number | undefined => {
+	const match = DELIVERY_CHANGE_RE.exec(payload);
+	if (!match) {
+		return undefined;
+	}
+	const rev = Number(match[1]);
+	return Number.isSafeInteger(rev) ? rev : undefined;
+};
+
 // ─── Cart commands ───────────────────────────────────────────────────────────
 
 const ID_RE = /^(\d+)$/;
@@ -147,6 +157,12 @@ export const normalizePhone = (raw: string): string => {
 };
 
 export const PHONE_RE = /^[6-9]\d{7}$/;
+
+// Phones written inside free text ("85646862 bzd 3 horoo", "+976 8564-6862").
+export const phonesInText = (text: string): Array<string> =>
+	[...text.matchAll(/(?<!\d)(?:\+?976[\s-]?)?([6-9]\d{3})[\s-]?(\d{4})(?!\d)/g)].map(
+		(m) => `${m[1]}${m[2]}`,
+	);
 
 // Recognises a free-text transfer claim ("хийсэн" / "hiisen"). Only meaningful
 // while a pending payment exists; the caller gates on that.

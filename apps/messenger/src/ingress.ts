@@ -4,7 +4,7 @@ import { createChatSdkState } from "agents/chat-sdk";
 import { Chat, type Message } from "chat";
 import { admit } from "./admit";
 import type { Conversation } from "./conversation";
-import type { InboundItem } from "./conversation";
+import { type InboundItem, normalizeInboundItem } from "./conversation";
 import type { Env } from "./env";
 import { zernioBaseUrl } from "./env";
 import { typing } from "./zernio";
@@ -12,12 +12,13 @@ import { typing } from "./zernio";
 // Chat SDK Message -> plain serializable item for the Conversation DO. `raw`
 // is the Zernio message object with the envelope's top-level `metadata` merged
 // in by the adapter, so taps (postbackPayload) and platformMessageId survive.
-const toEvent = (message: Message): InboundItem => ({
-	attachments: message.attachments.map((a) => ({ type: a.type, url: a.url })),
-	id: message.id,
-	raw: message.raw,
-	text: message.text,
-});
+const toEvent = (message: Message): InboundItem =>
+	normalizeInboundItem({
+		attachments: message.attachments.map((a) => ({ type: a.type, url: a.url })),
+		id: message.id,
+		raw: message.raw,
+		text: message.text,
+	});
 
 // One shared ingress DO: admits (signature + filters) before Chat SDK, records
 // every admitted event in the conversation's inbox, then hands the raw request

@@ -1,7 +1,5 @@
-import { createTRPCClient, httpLink } from "@trpc/client";
-import type { BotRouter } from "@vit/api";
-import { SuperJSON } from "superjson";
 import * as v from "valibot";
+import { makeBotClient } from "../store";
 import { addressTokens, rankZoneCandidates, type ZoneKnowledge } from "./delivery-zones";
 import { bindInput, bindVoid, bindWireInput, type CodemodeFn } from "./codemode-boundary";
 import {
@@ -86,16 +84,7 @@ export function buildReadFns({
 	botToken: string;
 	storeApiUrl: string;
 }): Array<ResolvedProvider> {
-	const url = `${storeApiUrl.replace(/\/+$/, "")}/trpc/bot`;
-	const botClient = createTRPCClient<BotRouter>({
-		links: [
-			httpLink({
-				headers: () => ({ "X-Admin-Bot-Token": botToken }),
-				transformer: SuperJSON,
-				url,
-			}),
-		],
-	});
+	const botClient = makeBotClient(botToken, `${storeApiUrl.replace(/\/+$/, "")}/trpc/bot`);
 
 	return [
 		{
@@ -471,7 +460,7 @@ const normalizeDeliveryZones = (raw: v.InferInput<typeof deliveryZonesWireSchema
 	}));
 
 const buildZoneKnowledgeFromShippedOrders = async (
-	botClient: ReturnType<typeof createTRPCClient<BotRouter>>,
+	botClient: ReturnType<typeof makeBotClient>,
 	address: string,
 ): Promise<Array<ZoneKnowledge>> => {
 	const target = new Set(addressTokens(address));

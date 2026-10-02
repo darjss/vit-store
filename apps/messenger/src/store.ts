@@ -1,5 +1,5 @@
 import { createTRPCClient, httpLink, type TRPCClient } from "@trpc/client";
-import type { StoreRouter } from "@vit/api";
+import type { BotRouter, StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 import type { Env } from "./env";
 
@@ -29,6 +29,35 @@ export const storeClient = (env: Env): TRPCClient<StoreRouter> => {
 			links: [httpLink({ transformer: SuperJSON, url: storeApiUrl(env) })],
 		});
 		clients.set(env, client);
+	}
+	return client;
+};
+
+// The bot router is the same tRPC host with a token-authenticated surface.
+export const makeBotClient = (botToken: string, url: string): TRPCClient<BotRouter> =>
+	createTRPCClient<BotRouter>({
+		links: [
+			httpLink({
+				headers: () => ({ "X-Admin-Bot-Token": botToken }),
+				transformer: SuperJSON,
+				url,
+			}),
+		],
+	});
+
+const botApiUrl = (env: Env): string =>
+	`${(env.STORE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "")}/trpc/bot`;
+
+const botClients = new WeakMap<Env, TRPCClient<BotRouter>>();
+export const botClient = (env: Env): TRPCClient<BotRouter> | undefined => {
+	const token = env.ADMIN_BOT_TOKEN?.trim();
+	if (!token) {
+		return undefined;
+	}
+	let client = botClients.get(env);
+	if (client === undefined) {
+		client = makeBotClient(token, botApiUrl(env));
+		botClients.set(env, client);
 	}
 	return client;
 };

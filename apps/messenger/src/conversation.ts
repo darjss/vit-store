@@ -15,10 +15,12 @@ import {
 	formatCartSummary,
 	isTransferDoneText,
 	parseCartPayload,
+	parseDeliveryChangePayload,
 	parseOrderConfirmPayload,
 	parseOrderPayload,
 	parsePayTransferPayload,
 	parseTransferDonePayload,
+	phonesInText,
 	buildQpayPageUrl,
 	type CartLine,
 } from "./cart";
@@ -27,6 +29,7 @@ import {
 	CART_CHANGED,
 	CART_EMPTY,
 	CLAIM_ACK,
+	CONFIRM_PROMPT,
 	ERROR,
 	formatBankDetails,
 	formatConfirmSummary,
@@ -35,6 +38,8 @@ import {
 	HANDOFF,
 	IMAGE_UNREADABLE,
 	NEEDS_DELIVERY,
+	PAY_PROMPT,
+	TRANSFER_PROMPT,
 } from "./copy";
 import type { Env } from "./env";
 import { turnLog } from "./log";
@@ -42,10 +47,10 @@ import { createModel, modelName, providerOptions } from "./model";
 import { fetchImageParts } from "./photos";
 import { stateNote, SYSTEM_PROMPT } from "./prompt";
 import { renderTurn } from "./render";
-import { storeClient, withTimeout } from "./store";
+import { botClient, storeClient, withTimeout } from "./store";
 import { sendTelegramAlert } from "./telegram";
 import { createTools, replyInputSchema, type CheckoutState, type ReplyResult } from "./tools";
-import { send, type ZernioSendBody } from "./zernio";
+import { listMessages, send, type ZernioSendBody } from "./zernio";
 
 // A chat message handed from Ingress (mapped off the Chat SDK Message) or
 // rebuilt from a persisted inbox payload on recovery. `raw` is the Zernio
@@ -61,6 +66,35 @@ const inboundItemSchema = v.looseObject({
 });
 const inboundItemsSchema = v.array(inboundItemSchema);
 export type InboundItem = v.InferOutput<typeof inboundItemSchema>;
+
+// Messenger stickers (including the thumbs-up "like") arrive as image
+// attachments on the /t39.1997-6/ CDN namespace; real photos are /t1.15752-9/.
+// Drop them so a sticker never reaches the photo fetch or the transfer-receipt
+// check, and leave a "[стикер]" marker in the text instead.
+const isStickerAttachment = (a: { type: string; url?: null | string }): boolean => {
+	if (a.type !== "image" || !a.url) {
+		return false;
+	}
+	try {
+		return new URL(a.url).pathname.includes("/t39.1997-6/");
+	} catch {
+		return a.url.includes("/t39.1997-6/");
+	}
+};
+
+export const normalizeInboundItem = (item: InboundItem): InboundItem => {
+	const attachments = item.attachments ?? [];
+	const stickers = attachments.filter(isStickerAttachment).length;
+	if (stickers === 0) {
+		return item;
+	}
+	const parts = [item.text, ...Array.from({ length: stickers }, () => "[стикер]")];
+	return {
+		...item,
+		attachments: attachments.filter((a) => !isStickerAttachment(a)),
+		text: parts.filter((t) => t.length > 0).join("\n"),
+	};
+};
 
 const inboundRawSchema = v.looseObject({
 	id: v.optional(v.string()),
@@ -93,6 +127,8 @@ const REPROCESS_MAX_AGE_MS = 10 * 60_000;
 // reclaim. Outbound sends still can't double-post — outbox keys gate them.
 const CLAIM_STALE_MS = 90_000;
 const FALLBACK_TEXT = "Шалгаад хэлье.";
+const prefillLog = (outcome: string): void =>
+	console.log(JSON.stringify({ event: "history_prefill", outcome }));
 const PAUSE_MS = 12 * 60 * 60_000;
 const PAYMENT_DEADLINE_MS = 2 * 60 * 60_000;
 // After the payment deadline the watcher keeps polling: a late QPay or
@@ -344,10 +380,7 @@ export class Conversation extends Agent<Env> {
 			// failed send is retried on the next tick instead of lost.
 			try {
 				await this.sendPart(`pay_${paymentNumber}:paid`, {
-					message: formatPaid({
-						countryside: row.countryside === 1,
-						createdAtMs: row.created_at,
-					}),
+					message: formatPaid(row.countryside === 1),
 				});
 				void this.sql`UPDATE payments SET notified = 1 WHERE payment_number = ${paymentNumber}`;
 			} catch {
@@ -508,6 +541,64 @@ export class Conversation extends Agent<Env> {
 		this.bumpRevision();
 	}
 
+	// Returning customers whose history predates this worker: once per
+	// conversation, scan the last 100 Zernio messages for a phone and reuse the
+	// first one the store knows a saved address for. Best-effort (4 s budget),
+	// never fails the turn.
+	private async prefillDeliveryFromHistory(): Promise<void> {
+		if (this.getMeta("history_checked") !== undefined) {
+			return;
+		}
+		this.setMeta("history_checked", "1");
+		const client = botClient(this.env);
+		if (this.checkoutRow().phone !== null || client === undefined) {
+			return;
+		}
+		try {
+			const budget = AbortSignal.timeout(4000);
+			const messages = await listMessages(
+				this.env,
+				this.conversationId(),
+				this.accountId(),
+				100,
+				budget,
+			);
+			const candidates: Array<string> = [];
+			for (const message of messages) {
+				if (message.direction !== "incoming" || message.message === undefined) {
+					continue;
+				}
+				for (const phone of phonesInText(message.message)) {
+					if (!candidates.includes(phone)) {
+						candidates.push(phone);
+					}
+				}
+				if (candidates.length >= 3) {
+					break;
+				}
+			}
+			candidates.splice(3);
+			for (const phone of candidates) {
+				try {
+					const customer = await client.customer.getCustomerByPhone.query(
+						{ phone: Number(phone) },
+						{ signal: budget },
+					);
+					if (customer.address) {
+						this.saveDelivery({ address: customer.address, phone });
+						prefillLog("found");
+						return;
+					}
+				} catch {
+					// NOT_FOUND, timeout, anything else: try the next candidate.
+				}
+			}
+			prefillLog("none");
+		} catch {
+			prefillLog("error");
+		}
+	}
+
 	// ─── Admin ──────────────────────────────────────────────────────────────
 
 	adminSnapshot() {
@@ -654,12 +745,12 @@ export class Conversation extends Agent<Env> {
 			return undefined;
 		}
 		const { message, metadata } = envelope.output;
-		return {
+		return normalizeInboundItem({
 			attachments: message.attachments,
 			id: message.platformMessageId ?? message.id ?? row.event_id,
 			raw: { ...message, metadata: metadata ?? null },
 			text: message.text ?? "",
-		};
+		});
 	}
 
 	// DO entry points interleave at awaits: without this gate a second dispatch
@@ -914,6 +1005,11 @@ export class Conversation extends Agent<Env> {
 			await this.confirmTap(key, confirm);
 			return;
 		}
+		const deliveryChange = parseDeliveryChangePayload(payload);
+		if (deliveryChange !== undefined) {
+			await this.deliveryChangeTap(row, deliveryChange);
+			return;
+		}
 		const command = parseCartPayload(payload);
 		if (command !== undefined) {
 			await this.cartCommandTap(row, command);
@@ -972,10 +1068,9 @@ export class Conversation extends Agent<Env> {
 			await this.sendPart(key, { message: NEEDS_DELIVERY });
 			return;
 		}
+		// Messenger collapses multi-line text into a truncated button template,
+		// so the summary goes plain and the buttons ride a short second part.
 		await this.sendPart(key, {
-			buttons: [
-				{ payload: `order_confirm:${checkout.revision}`, title: "✅ Захиалах", type: "postback" },
-			],
 			message: formatConfirmSummary({
 				address: checkout.address,
 				items: lines.map((l) => ({ name: l.name, price: l.price, qty: l.qty })),
@@ -983,14 +1078,32 @@ export class Conversation extends Agent<Env> {
 				phone: checkout.phone,
 			}),
 		});
+		await this.sendPart(`${key}:btn`, {
+			buttons: [
+				{ payload: `order_confirm:${checkout.revision}`, title: "✅ Захиалах", type: "postback" },
+				{
+					payload: `delivery_change:${checkout.revision}`,
+					title: "✏️ Хаяг солих",
+					type: "postback",
+				},
+			],
+			message: CONFIRM_PROMPT,
+		});
 	}
 
-	private sendOrderCreated(row: PaymentDbRow, key: string): Promise<void> {
+	private async sendOrderCreated(row: PaymentDbRow, key: string): Promise<void> {
 		const qpay = buildQpayPageUrl(this.env.STORE_PUBLIC_URL ?? "https://amerikvitamin.mn", {
 			checkoutToken: row.checkout_token,
 			paymentNumber: row.payment_number,
 		});
-		return this.sendPart(key, {
+		await this.sendPart(key, {
+			message: formatOrderCreated({
+				countryside: row.countryside === 1,
+				orderNumber: row.order_number,
+				total: row.total,
+			}),
+		});
+		await this.sendPart(`${key}:btn`, {
 			buttons: [
 				{ title: "QPay-р төлөх", type: "url", url: qpay },
 				{
@@ -999,12 +1112,7 @@ export class Conversation extends Agent<Env> {
 					type: "postback",
 				},
 			],
-			message: formatOrderCreated({
-				countryside: row.countryside === 1,
-				createdAtMs: row.created_at,
-				orderNumber: row.order_number,
-				total: row.total,
-			}),
+			message: PAY_PROMPT,
 		});
 	}
 
@@ -1101,6 +1209,27 @@ export class Conversation extends Agent<Env> {
 			return;
 		}
 		void this.sql`DELETE FROM cart WHERE product_id = ${command.productId}`;
+	}
+
+	// "✏️ Хаяг солих" clears saved delivery fields so the model asks again.
+	// Mutating tap: same exactly-once pattern as cart commands.
+	private async deliveryChangeTap(row: InboxRow, revision: number): Promise<void> {
+		const key = row.event_id;
+		if (row.status !== "applied") {
+			if (revision !== this.checkoutRow().revision) {
+				await this.sendPart(`${key}:tap`, { message: CART_CHANGED });
+				await this.sendConfirmOrNeed(`${key}:confirm`);
+				this.tapLog("delivery_change", "stale");
+				return;
+			}
+			void this.sql`
+				UPDATE checkout SET phone = NULL, address = NULL, note = NULL, countryside = 0
+				WHERE id = 1`;
+			this.bumpRevision();
+			this.markApplied(key);
+		}
+		await this.sendPart(`${key}:tap`, { message: NEEDS_DELIVERY });
+		this.tapLog("delivery_change", "cleared");
 	}
 
 	private async confirmTap(key: string, revision: number): Promise<void> {
@@ -1213,6 +1342,14 @@ export class Conversation extends Agent<Env> {
 			return;
 		}
 		await this.sendPart(`${key}:tap`, {
+			message: formatBankDetails({
+				accountName: row.account_name ?? "",
+				accountNumber: row.account_number ?? "",
+				phone: row.phone,
+				total: row.total,
+			}),
+		});
+		await this.sendPart(`${key}:btn`, {
 			buttons: [
 				{
 					payload: `transfer_done:${paymentNumber}`,
@@ -1220,12 +1357,7 @@ export class Conversation extends Agent<Env> {
 					type: "postback",
 				},
 			],
-			message: formatBankDetails({
-				accountName: row.account_name ?? "",
-				accountNumber: row.account_number ?? "",
-				phone: row.phone,
-				total: row.total,
-			}),
+			message: TRANSFER_PROMPT,
 		});
 		// Bank details are on screen now: an image reply is a receipt.
 		void this.sql`UPDATE payments SET transfer_shown = 1 WHERE payment_number = ${paymentNumber}`;
@@ -1292,6 +1424,8 @@ export class Conversation extends Agent<Env> {
 			});
 			return;
 		}
+
+		await this.prefillDeliveryFromHistory();
 
 		const { hadPhotos, persistedUserMessage, photoCount, text, userMessage } =
 			await this.buildUserMessages(items);
