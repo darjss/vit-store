@@ -52,7 +52,11 @@ export const formatConfirmSummary = (input: {
 	].join("\n");
 };
 
+export const DISPATCH_COUNTRYSIDE =
+	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна.";
+
 export const formatOrderCreated = (input: {
+	countryside: boolean;
 	createdAtMs: number;
 	orderNumber: string;
 	total: number;
@@ -60,7 +64,7 @@ export const formatOrderCreated = (input: {
 	[
 		`Захиалга авлаа 🙏 №${input.orderNumber}`,
 		`Нийт: ${mnt(input.total)}`,
-		deliveryLine(input.createdAtMs),
+		input.countryside ? DISPATCH_COUNTRYSIDE : deliveryLine(input.createdAtMs),
 	].join("\n");
 
 export const formatBankDetails = (input: {
@@ -80,5 +84,7 @@ export const formatBankDetails = (input: {
 		`Гүйлгээний утга хэсэгт заавал ${input.phone} гэж бичнэ үү. Шилжүүлсний дараа "Шилжүүлсэн" товчийг дарна уу.`,
 	].join("\n");
 
-export const formatPaid = (createdAtMs: number): string =>
-	`Төлбөр баталгаажлаа 🙏 ${deliveryLine(createdAtMs) === DELIVERY_TODAY ? "өнөөдөр" : "маргааш"} хүргэнэ.`;
+export const formatPaid = (input: { countryside: boolean; createdAtMs: number }): string =>
+	input.countryside
+		? "Төлбөр баталгаажлаа 🙏 Өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна."
+		: `Төлбөр баталгаажлаа 🙏 ${deliveryLine(input.createdAtMs) === DELIVERY_TODAY ? "өнөөдөр" : "маргааш"} хүргэнэ.`;

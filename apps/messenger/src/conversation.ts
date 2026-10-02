@@ -126,6 +126,7 @@ type CartRow = { name: string; price: number; product_id: number; qty: number };
 
 type CheckoutRow = {
 	address: string | null;
+	countryside: number;
 	id: number;
 	note: string | null;
 	phone: string | null;
@@ -137,6 +138,7 @@ type PaymentDbRow = {
 	account_number: string | null;
 	checkout_token: string | null;
 	claimed: number;
+	countryside: number;
 	created_at: number;
 	deadline: number;
 	handed_off: number;
@@ -212,7 +214,8 @@ export class Conversation extends Agent<Env> {
 				revision INTEGER NOT NULL DEFAULT 0,
 				phone TEXT,
 				address TEXT,
-				note TEXT
+				note TEXT,
+				countryside INTEGER NOT NULL DEFAULT 0
 			)`;
 		void this.sql`
 			CREATE TABLE IF NOT EXISTS payments (
@@ -230,8 +233,21 @@ export class Conversation extends Agent<Env> {
 				deadline INTEGER NOT NULL,
 				notified INTEGER NOT NULL DEFAULT 0,
 				handed_off INTEGER NOT NULL DEFAULT 0,
-				transfer_shown INTEGER NOT NULL DEFAULT 0
+				transfer_shown INTEGER NOT NULL DEFAULT 0,
+				countryside INTEGER NOT NULL DEFAULT 0
 			)`;
+		// Deployed DOs already have these tables; add the column only to the
+		// ones missing it (ALTER TABLE has no IF NOT EXISTS).
+		const checkoutCols = this.sql<{ name: string }>`
+			SELECT name FROM pragma_table_info(${"checkout"})`;
+		if (!checkoutCols.some((c) => c.name === "countryside")) {
+			void this.sql`ALTER TABLE checkout ADD COLUMN countryside INTEGER NOT NULL DEFAULT 0`;
+		}
+		const paymentCols = this.sql<{ name: string }>`
+			SELECT name FROM pragma_table_info(${"payments"})`;
+		if (!paymentCols.some((c) => c.name === "countryside")) {
+			void this.sql`ALTER TABLE payments ADD COLUMN countryside INTEGER NOT NULL DEFAULT 0`;
+		}
 
 		const pending = this.pendingRows();
 		if (pending.length > 0) {
@@ -328,7 +344,10 @@ export class Conversation extends Agent<Env> {
 			// failed send is retried on the next tick instead of lost.
 			try {
 				await this.sendPart(`pay_${paymentNumber}:paid`, {
-					message: formatPaid(row.created_at),
+					message: formatPaid({
+						countryside: row.countryside === 1,
+						createdAtMs: row.created_at,
+					}),
 				});
 				void this.sql`UPDATE payments SET notified = 1 WHERE payment_number = ${paymentNumber}`;
 			} catch {
@@ -425,6 +444,7 @@ export class Conversation extends Agent<Env> {
 		const row = this.checkoutRow();
 		return {
 			address: row.address ?? undefined,
+			countryside: row.countryside === 1,
 			note: row.note ?? undefined,
 			phone: row.phone ?? undefined,
 			revision: row.revision,
@@ -470,14 +490,20 @@ export class Conversation extends Agent<Env> {
 		return texts;
 	}
 
-	saveDelivery(input: { address?: string; note?: string; phone?: string }): void {
+	saveDelivery(input: {
+		address?: string;
+		countryside?: boolean;
+		note?: string;
+		phone?: string;
+	}): void {
 		this.ensureCheckout();
 		const current = this.checkoutRow();
 		void this.sql`
 			UPDATE checkout SET
 				phone = ${input.phone ?? current.phone},
 				address = ${input.address ?? current.address},
-				note = ${input.note ?? current.note}
+				note = ${input.note ?? current.note},
+				countryside = ${input.countryside === undefined ? current.countryside : input.countryside ? 1 : 0}
 			WHERE id = 1`;
 		this.bumpRevision();
 	}
@@ -974,6 +1000,7 @@ export class Conversation extends Agent<Env> {
 				},
 			],
 			message: formatOrderCreated({
+				countryside: row.countryside === 1,
 				createdAtMs: row.created_at,
 				orderNumber: row.order_number,
 				total: row.total,
@@ -1132,10 +1159,10 @@ export class Conversation extends Agent<Env> {
 			void this.sql`
 				INSERT INTO payments
 					(payment_number, order_number, revision, checkout_token, account_name, account_number,
-					 total, phone, created_at, status, claimed, deadline, notified, handed_off)
+					 total, phone, created_at, status, claimed, deadline, notified, handed_off, countryside)
 				VALUES (${res.paymentNumber}, ${res.orderNumber}, ${checkout.revision}, ${res.checkoutToken},
 					${res.accountName}, ${res.accountNumber}, ${res.total}, ${checkout.phone}, ${now},
-					'pending', 0, ${now + PAYMENT_DEADLINE_MS}, 0, 0)
+					'pending', 0, ${now + PAYMENT_DEADLINE_MS}, 0, 0, ${checkout.countryside})
 				ON CONFLICT(payment_number) DO UPDATE SET
 					order_number = excluded.order_number,
 					revision = excluded.revision,
@@ -1143,7 +1170,8 @@ export class Conversation extends Agent<Env> {
 					account_name = excluded.account_name,
 					account_number = excluded.account_number,
 					total = excluded.total,
-					phone = excluded.phone`;
+					phone = excluded.phone,
+					countryside = excluded.countryside`;
 			void this.sql`DELETE FROM cart`;
 			this.bumpRevision();
 			const row = this.paymentByNumber(res.paymentNumber);
@@ -1429,6 +1457,7 @@ export class Conversation extends Agent<Env> {
 			content: stateNote({
 				address: checkout.address,
 				cartLines: this.cartLines().map((l) => ({ name: l.name, qty: l.qty })),
+				countryside: checkout.countryside,
 				note: checkout.note,
 				orderNumber: payment?.orderNumber,
 				paymentStatus: payment?.status,
