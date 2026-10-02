@@ -20,7 +20,12 @@ export type SearchHit = {
 
 // The conversation side supplies cart/checkout persistence and the recent
 // customer texts set_delivery validates against. tools.ts stays free of SQL.
-export type DeliveryPatch = { address?: string; note?: string; phone?: string };
+export type DeliveryPatch = {
+	address?: string;
+	countryside?: boolean;
+	note?: string;
+	phone?: string;
+};
 
 export type DeliveryErrors = { address?: string; phone?: string };
 
@@ -259,7 +264,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 
 	set_delivery: tool({
 		description:
-			"Харилцагчийн бичсэн утас/хаяг/тэмдэглэлийг хадгалах. Харилцагчийн өгүүлбэрээс салгаж авна; missing-д дутуу талбарууд буцна.",
+			"Харилцагчийн бичсэн утас/хаяг/тэмдэглэлийг хадгалах. Харилцагчийн өгүүлбэрээс салгаж авна; missing-д дутуу талбарууд буцна. Хаяг Улаанбаатараас гадна бол (аймаг, сум, Дархан, Эрдэнэт г.м.) countryside: true; харилцагч УБ хаяг руугаа засвал countryside: false.",
 		execute: async (input) => {
 			const texts = deps.recentCustomerTexts();
 			const saved: Array<string> = [];
@@ -288,6 +293,10 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 				out.note = input.note;
 				saved.push("note");
 			}
+			if (input.countryside !== undefined) {
+				out.countryside = input.countryside;
+				saved.push("countryside");
+			}
 			if (saved.length > 0) {
 				deps.saveDelivery(out);
 			}
@@ -304,6 +313,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 		inputSchema: valibotSchema(
 			v.object({
 				address: v.optional(v.pipe(v.string(), v.minLength(3), v.maxLength(500))),
+				countryside: v.optional(v.boolean()),
 				note: v.optional(v.pipe(v.string(), v.maxLength(300))),
 				phone: v.optional(v.pipe(v.string(), v.maxLength(30))),
 			}),
