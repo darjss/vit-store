@@ -61,11 +61,32 @@ const retryDelayMs = (response: Response): number => {
 	return Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 5) * 1000 : 1000;
 };
 
-type ListedMessage = v.InferOutput<typeof listedMessageSchema>["messages"] extends
+export type ListedMessage = v.InferOutput<typeof listedMessageSchema>["messages"] extends
 	| Array<infer M>
 	| undefined
 	? M
 	: never;
+
+export const listMessages = async (
+	env: Env,
+	conversationId: string,
+	accountId: string,
+	limit = 100,
+	signal?: AbortSignal,
+): Promise<Array<ListedMessage>> => {
+	const url =
+		`${zernioBaseUrl(env)}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages` +
+		`?accountId=${encodeURIComponent(accountId)}&sortOrder=desc&limit=${limit}`;
+	const response = await fetch(url, {
+		headers: { authorization: `Bearer ${env.ZERNIO_API_KEY}` },
+		signal: signal ?? AbortSignal.timeout(SEND_TIMEOUT_MS),
+	});
+	if (!response.ok) {
+		throw new Error(`Zernio list messages failed: ${response.status}`);
+	}
+	const parsed = v.safeParse(listedMessageSchema, await response.json().catch(() => undefined));
+	return parsed.success ? (parsed.output.messages ?? []) : [];
+};
 
 // Does this listed outgoing message carry the same content we tried to send?
 // Text compares exactly; a template send has no `message` string, so match an

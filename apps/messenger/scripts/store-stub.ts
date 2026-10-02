@@ -98,6 +98,62 @@ const mutations = new Map<string, (body: string) => Response>([
 	],
 ]);
 
+// Local answer for the history-prefill lookup: 99112233 has a saved address,
+// every other phone is NOT_FOUND. No production read.
+const customerByPhone = (url: URL): Response => {
+	const raw = url.searchParams.get("input");
+	const parsed = v.safeParse(
+		v.looseObject({ json: v.looseObject({ phone: v.optional(v.number()) }) }),
+		raw === null ? undefined : JSON.parse(raw),
+	);
+	const phone = parsed.success ? parsed.output.json.phone : undefined;
+	if (phone === 99_112_233) {
+		return ok({ address: "БЗД, 3-р хороо, тест байр 12", phone });
+	}
+	return trpcError("Customer not found", "NOT_FOUND", 404);
+};
+
+// Admin bot surface: GETs forward to production (reads are safe), POSTs are
+// mutations and must never reach production.
+const botRoute = async (request: Request, url: URL, procedure: string): Promise<Response> => {
+	if (request.method === "POST") {
+		const body = await request.text();
+		appendFileSync(
+			LOG,
+			`${JSON.stringify({ at: new Date().toISOString(), body, procedure: `bot.${procedure}` })}\n`,
+		);
+		return trpcError("blocked by local stub", "FORBIDDEN", 403);
+	}
+	if (procedure === "customer.getCustomerByPhone") {
+		return customerByPhone(url);
+	}
+	return forward(request, url);
+};
+
+const storeRoute = async (request: Request, url: URL, procedure: string): Promise<Response> => {
+	if (request.method === "GET" && procedure === "payment.getPaymentStatus") {
+		const { paymentNumber } = queryParamInput(url);
+		return ok({
+			provider: "transfer",
+			status: paymentNumber !== undefined && paid.has(paymentNumber) ? "success" : "pending",
+		});
+	}
+	if (request.method === "GET" && procedure === "payment.getTransferReconciliationStatus") {
+		return ok({ status: "polling" });
+	}
+	if (request.method === "POST") {
+		const handler = mutations.get(procedure);
+		if (handler === undefined) {
+			// Never forward a mutation to production.
+			return trpcError("stub does not implement this mutation", "NOT_IMPLEMENTED", 501);
+		}
+		const body = await request.text();
+		record(procedure, body);
+		return handler(body);
+	}
+	return forward(request, url);
+};
+
 Bun.serve({
 	fetch: async (request) => {
 		const url = new URL(request.url);
@@ -107,50 +163,13 @@ Bun.serve({
 			paid.add(payMatch[1]);
 			return Response.json({ ok: true, paymentNumber: payMatch[1] });
 		}
-
-		// Admin bot surface: GETs forward to production (reads are safe), POSTs
-		// are mutations and must never reach production.
 		if (url.pathname.startsWith("/trpc/bot/")) {
-			const procedure = url.pathname.slice("/trpc/bot/".length);
-			if (request.method === "POST") {
-				const body = await request.text();
-				appendFileSync(
-					LOG,
-					`${JSON.stringify({ at: new Date().toISOString(), body, procedure: `bot.${procedure}` })}\n`,
-				);
-				return trpcError("blocked by local stub", "FORBIDDEN", 403);
-			}
-			return forward(request, url);
+			return botRoute(request, url, url.pathname.slice("/trpc/bot/".length));
 		}
-
 		if (!url.pathname.startsWith("/trpc/store/")) {
 			return new Response("not found", { status: 404 });
 		}
-		const procedure = url.pathname.slice("/trpc/store/".length);
-
-		if (request.method === "GET" && procedure === "payment.getPaymentStatus") {
-			const { paymentNumber } = queryParamInput(url);
-			return ok({
-				provider: "transfer",
-				status: paymentNumber !== undefined && paid.has(paymentNumber) ? "success" : "pending",
-			});
-		}
-		if (request.method === "GET" && procedure === "payment.getTransferReconciliationStatus") {
-			return ok({ status: "polling" });
-		}
-
-		if (request.method === "POST") {
-			const handler = mutations.get(procedure);
-			if (handler === undefined) {
-				// Never forward a mutation to production.
-				return trpcError("stub does not implement this mutation", "NOT_IMPLEMENTED", 501);
-			}
-			const body = await request.text();
-			record(procedure, body);
-			return handler(body);
-		}
-
-		return forward(request, url);
+		return storeRoute(request, url, url.pathname.slice("/trpc/store/".length));
 	},
 	port: PORT,
 });

@@ -49,7 +49,7 @@ export const FAQ_THEMES = [
 		name: "delivery_fee",
 	},
 	{
-		expect: /11|өнөөдөр|маргааш/i,
+		expect: /^(?![\s\S]*11 цаг)[\s\S]*(өнөөдөр|маргааш)/i,
 		match: /hezee (hurge|ireh)|unuudur|onoodor|margaash|хэзээ (хүргэ|ирэх)|өнөөдөр|маргааш/i,
 		name: "delivery_time",
 	},
@@ -104,6 +104,8 @@ export const evalCaseSchema = v.object({
 	id: v.string(),
 	kind: v.picklist(["delivery", "faq", "handoff", "photo", "product"]),
 	photos: v.optional(v.array(v.string())),
+	// What the human admin actually answered: for reading results, never scored.
+	reference: v.optional(v.string()),
 	texts: v.array(v.string()),
 });
 export type EvalCase = v.InferOutput<typeof evalCaseSchema>;
