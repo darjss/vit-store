@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 import * as v from "valibot";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 type UploadContext = Context<ServerHonoEnv>;
-const CDN_BASE_URL = "https://cdn.darjs.dev";
+const CDN_BASE_URL = "https://cdn.amerikvitamin.mn";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;
 
@@ -197,7 +197,7 @@ app.post("/products", async (c) => {
 				contentType: "image/webp",
 			},
 		});
-		const carouselUrl = `https://cdn.darjs.dev/${carouselKey}`;
+		const carouselUrl = `https://cdn.amerikvitamin.mn/${carouselKey}`;
 		let thumbnailUrl: string | undefined;
 		if (isPrimary) {
 			const thumbnailImageStream = image.stream();

@@ -19,6 +19,6 @@ export const DEFAULT_BRAND_LOGO_URL = "";
 
 export const AI_PRODUCT_SESSION_TTL = 60 * 60;
 
-export const CDN_BASE_URL = "https://cdn.darjs.dev";
+export const CDN_BASE_URL = "https://cdn.amerikvitamin.mn";
 
 export const PRODUCT_IMAGE_UPLOAD_PREFIX = "products/catalog";
