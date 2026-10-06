@@ -1,6 +1,6 @@
 type ProductImageVariant = "thumb" | "card" | "feature" | "hero" | "sm" | "md";
 
-const CDN_HOST = "https://cdn.darjs.dev";
+const CDN_HOST = "https://cdn.amerikvitamin.mn";
 
 const PRODUCT_IMAGE_VARIANTS = {
 	card: {
