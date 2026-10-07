@@ -44,8 +44,9 @@ async function sendConfirmation(input: {
 }) {
 	if (input.channel === "sms") {
 		const finalState = await smsGateway.sendSmsAndWait({
-			message: `Baraa oroh medegdel batalgaajuulah kod: ${input.code}`,
+			message: `amerikvitamin.mn baraa oroh medegdel batalgaajuulah kod: ${input.code}\n\n@amerikvitamin.mn #${input.code}`,
 			phoneNumbers: [`+976${input.contact}`],
+			ttl: CHALLENGE_TTL_SECONDS,
 		});
 		if (finalState.state === "Failed") {
 			throw new Error("Restock confirmation SMS failed");

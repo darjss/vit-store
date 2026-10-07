@@ -66,8 +66,11 @@ export async function sendOrderConfirmationSms(input: OrderConfirmationSmsInput)
 		throw new SmsAmbiguousError();
 	}
 
+	if (finalState.state === "Failed") {
+		throw new SmsRetryableError("provider_failed");
+	}
 	if (!SMS_SUCCESS_STATES.has(finalState.state)) {
-		throw new SmsRetryableError("provider_not_accepted");
+		throw new SmsAmbiguousError();
 	}
 
 	logger.info("order.sms_confirmation_sent", {

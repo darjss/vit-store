@@ -173,8 +173,9 @@ export const storeAuthRouter = router({
 				});
 				ctx.log.info("auth.otp_sent", { phone: Number(input.phone) });
 				const finalState = await smsGateway.sendSmsAndWait({
-					message: `Tanii nevtreh kod ${otp}`,
+					message: `amerikvitamin.mn nevtreh kod: ${otp}\n\n@amerikvitamin.mn #${otp}`,
 					phoneNumbers: [`+976${input.phone}`],
+					ttl: OTP_TTL_SECONDS,
 				});
 				if (finalState.state === "Failed") {
 					const errorMsg = finalState.recipients[0]?.error ?? "Unknown SMS error";
