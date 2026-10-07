@@ -12,6 +12,7 @@ import Client, {
 } from "android-sms-gateway";
 import ky from "ky";
 import * as v from "valibot";
+import { alertSmsGatewayProblem } from "./alert";
 
 // Re-export types from android-sms-gateway
 export type {
@@ -29,6 +30,7 @@ export type {
 export { WebHookEventType };
 
 const SMS_GATEWAY_BASE_URL = "https://api.sms-gate.app/3rdparty/v1";
+const DEFAULT_SMS_TTL_SECONDS = 15 * 60;
 
 type SmsGatewayJson =
 	| null
@@ -232,7 +234,7 @@ export const smsGateway = {
 		message: Message,
 		options?: { skipPhoneValidation?: boolean },
 	): Promise<MessageState> {
-		return smsClient.send(message, options);
+		return smsClient.send({ ...message, ttl: message.ttl ?? DEFAULT_SMS_TTL_SECONDS }, options);
 	},
 
 	/**
@@ -266,21 +268,27 @@ export const smsGateway = {
 	): Promise<MessageState> {
 		const { intervalMs = 1000, maxAttempts = 10, skipPhoneValidation } = options ?? {};
 
-		const result = await smsClient.send(message, { skipPhoneValidation });
+		const result = await smsClient.send(
+			{ ...message, ttl: message.ttl ?? DEFAULT_SMS_TTL_SECONDS },
+			{ skipPhoneValidation },
+		);
 
 		// Poll until status changes from Pending
-		for (let attempt = 0; attempt < maxAttempts; attempt++) {
-			const state = await smsClient.getState(result.id);
-
-			if (state.state !== "Pending") {
-				return state;
-			}
-
+		let state = await smsClient.getState(result.id);
+		for (let attempt = 0; state.state === "Pending" && attempt < maxAttempts; attempt++) {
 			await new Promise((resolve) => setTimeout(resolve, intervalMs));
+			state = await smsClient.getState(result.id);
 		}
 
-		// Return final state after max attempts
-		return smsClient.getState(result.id);
+		if (state.state === "Pending") {
+			await alertSmsGatewayProblem({ kind: "pending" });
+		} else if (state.state === "Failed") {
+			await alertSmsGatewayProblem({
+				error: state.recipients[0]?.error ?? "Unknown SMS error",
+				kind: "failed",
+			});
+		}
+		return state;
 	},
 
 	/**
