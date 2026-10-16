@@ -5,6 +5,24 @@ const MAX_OBJECT_KEYS = 40;
 const MAX_STRING_LENGTH = 500;
 const MAX_DEPTH = 4;
 
+/**
+ * Field names that carry customer personal data or payment-account/credential
+ * values. Plan 024: log wide events without recording Customer content, so the
+ * summarizer keeps the field name but drops the value at every depth.
+ */
+const REDACTED_LOG_KEYS: ReadonlySet<string> = new Set([
+	"accountName",
+	"accountNumber",
+	"address",
+	"checkoutToken",
+	"customerPhone",
+	"notes",
+	"phone",
+	"phoneNumber",
+]);
+
+const REDACTED_LOG_VALUE = "[redacted]";
+
 const OBJECT_TAG = {
 	bigint: "[object BigInt]",
 	boolean: "[object Boolean]",
@@ -204,7 +222,9 @@ export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue
 	const entries = Object.entries(value);
 	const result: SummarizedLogObject = {};
 	for (const [key, nestedValue] of entries.slice(0, MAX_OBJECT_KEYS)) {
-		result[key] = summarizeLogValue(nestedValue, depth + 1);
+		result[key] = REDACTED_LOG_KEYS.has(key)
+			? REDACTED_LOG_VALUE
+			: summarizeLogValue(nestedValue, depth + 1);
 	}
 	if (entries.length > MAX_OBJECT_KEYS) {
 		result.__truncated_keys = entries.length - MAX_OBJECT_KEYS;

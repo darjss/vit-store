@@ -33,7 +33,24 @@ initLogger({
 		service: "vit-store-server",
 	},
 	pretty: false,
-	redact: false,
+	redact: {
+		// Keep the field name, drop the value: customer PII and payment-account
+		// identifiers must not reach the log drains (plan 024). `paths` matches the
+		// top-level fields the routers and the auth middleware add; nested tRPC
+		// payloads are redacted by @vit/api summarizeLogValue before they are logged.
+		builtins: false,
+		paths: [
+			"accountName",
+			"accountNumber",
+			"address",
+			"checkoutToken",
+			"customerPhone",
+			"notes",
+			"phone",
+			"phoneNumber",
+			"user.phone",
+		],
+	},
 	sampling: {
 		keep: [
 			{ status: 400 },
