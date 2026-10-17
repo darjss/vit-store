@@ -101,19 +101,21 @@ if (expirationDisplay) {
 					)}
 				</div>
 
-				<div>
-					<h3 class="mb-2 font-semibold text-sm sm:text-base">Хэзээ уух вэ?</h3>
-					<div class="space-y-2">
-						<div class="flex items-center gap-3 text-sm text-foreground/80 sm:text-base">
-							<IconSunrise class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
-							<span><span class="font-medium text-foreground">Өглөө</span> - өглөөний цайны дараа</span>
-						</div>
-						<div class="flex items-center gap-3 text-sm text-foreground/80 sm:text-base">
-							<IconMoon class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
-							<span><span class="font-medium text-foreground">Орой</span> - оройн хоолны дараа</span>
+				{product.dailyIntake ? (
+					<div>
+						<h3 class="mb-2 font-semibold text-sm sm:text-base">Хэзээ уух вэ?</h3>
+						<div class="space-y-2">
+							<div class="flex items-center gap-3 text-sm text-foreground/80 sm:text-base">
+								<IconSunrise class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
+								<span><span class="font-medium text-foreground">Өглөө</span> - өглөөний цайны дараа</span>
+							</div>
+							<div class="flex items-center gap-3 text-sm text-foreground/80 sm:text-base">
+								<IconMoon class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
+								<span><span class="font-medium text-foreground">Орой</span> - оройн хоолны дараа</span>
+							</div>
 						</div>
 					</div>
-				</div>
+				) : null}
 
 				<div class="rounded-xl bg-sand/40 p-4">
 					<h4 class="mb-2 flex items-center gap-2 font-semibold text-sm">
