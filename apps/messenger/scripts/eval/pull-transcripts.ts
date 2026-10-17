@@ -44,7 +44,16 @@ const ubDate = (d: Date): string =>
 
 const ubMidnightYesterday = (): Date =>
 	new Date(`${ubDate(new Date(Date.now() - 86_400_000))}T00:00:00+08:00`);
-const since = arg("--since") === undefined ? ubMidnightYesterday() : new Date(arg("--since") ?? "");
+// A bare date means midnight in Ulaanbaatar, not UTC.
+const sinceArg = arg("--since");
+const since =
+	sinceArg === undefined
+		? ubMidnightYesterday()
+		: new Date(/^\d{4}-\d{2}-\d{2}$/.test(sinceArg) ? `${sinceArg}T00:00:00+08:00` : sinceArg);
+if (Number.isNaN(since.getTime())) {
+	console.error(`Bad --since: ${sinceArg}`);
+	process.exit(1);
+}
 
 const threadListSchema = v.array(v.object({ last_at: v.number(), thread_id: v.string() }));
 
@@ -63,6 +72,10 @@ const threads = v.parse(
 	threadListSchema,
 	await get(`/admin/conversations?since=${since.getTime()}`),
 );
+// adminList caps at 1000 newest threads; a full page means older ones were cut.
+if (threads.length >= 1000) {
+	console.error("Thread list hit the 1000 cap: older threads in this range are missing.");
+}
 let written = 0;
 for (const t of threads) {
 	const transcript = await get(
