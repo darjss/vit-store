@@ -3,6 +3,7 @@ import * as v from "valibot";
 import type { Admin } from "./admin/admin";
 import { telegramUpdateSchema } from "./admin/telegram";
 import type { Env } from "./env";
+import { errorFields, logError } from "./log";
 
 const bearerOk = (request: Request, env: Env): boolean =>
 	request.headers.get("authorization") === `Bearer ${env.ADMIN_TOKEN ?? ""}` &&
@@ -39,7 +40,7 @@ const telegramWebhook = async (request: Request, env: Env): Promise<Response> =>
 	} catch (error) {
 		// Admission failures (e.g. photo staging) surface as non-2xx so
 		// Telegram retries instead of the update being dropped.
-		console.error("[telegram.webhook]", error);
+		logError({ error: errorFields(error), event: "error", where: "telegram_webhook" });
 		return new Response("error", { status: 500 });
 	}
 	return Response.json({ ok: true });
@@ -119,4 +120,5 @@ export default {
 export { Admin } from "./admin/admin";
 export { Conversation } from "./conversation";
 export { Ingress } from "./ingress";
+export { PaymentWatch } from "./payment-watch";
 export { ChatSdkStateAgent } from "agents/chat-sdk";

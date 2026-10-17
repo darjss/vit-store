@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import { accountIds } from "./env";
+import { log, logError } from "./log";
 import type { Env } from "./env";
 
 // Events older than this are dropped: Zernio retries a failed webhook inside a
@@ -150,7 +151,14 @@ export const admit = async (request: Request, env: Env, rawBody: string): Promis
 	}
 	const parsed = v.safeParse(zernioMessageEventSchema, payload);
 	if (!parsed.success) {
-		console.error("[zernio.unparsed]", parsed.issues);
+		logError({
+			event: "inbound_drop",
+			issues: parsed.issues
+				.map((i) => i.message)
+				.join("; ")
+				.slice(0, 300),
+			reason: "unparsed",
+		});
 		return { ok: false, response: new Response("ok", { status: 200 }) };
 	}
 	const event = parsed.output;
@@ -166,7 +174,7 @@ export const admit = async (request: Request, env: Env, rawBody: string): Promis
 
 	const ageMs = Date.now() - Date.parse(event.timestamp);
 	if (!Number.isFinite(ageMs) || ageMs > STALE_EVENT_WINDOW_MS) {
-		console.log(`[zernio.stale] event=${event.id} timestamp=${event.timestamp}`);
+		log({ age_ms: ageMs, event: "inbound_drop", event_id: event.id, reason: "stale" });
 		return { ok: false, response: new Response("ok", { status: 200 }) };
 	}
 
@@ -175,7 +183,7 @@ export const admit = async (request: Request, env: Env, rawBody: string): Promis
 	// "zernio:<acc>:undefined" and the reply would never land.
 	const conversationId = event.message.conversationId;
 	if (conversationId === undefined) {
-		console.log(`[zernio.no_conversation_id] event=${event.id}`);
+		log({ event: "inbound_drop", event_id: event.id, reason: "no_conversation_id" });
 		return { ok: false, response: new Response("ok", { status: 200 }) };
 	}
 	const threadId = `zernio:${event.account.id}:${conversationId}`;

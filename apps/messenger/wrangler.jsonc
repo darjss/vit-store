@@ -44,6 +44,15 @@
 			"preview_bucket_name": "vit-store-bucket-prod",
 		},
 	],
+	// One PaymentWatch instance per payment (id `pay_<paymentNumber>`); the
+	// instance's durable sleeps replace the old DO-alarm watcher.
+	"workflows": [
+		{
+			"name": "vit-store-messenger-payment-watch",
+			"binding": "PAYMENT_WATCH",
+			"class_name": "PaymentWatch",
+		},
+	],
 	"durable_objects": {
 		"bindings": [
 			{ "name": "Ingress", "class_name": "Ingress" },

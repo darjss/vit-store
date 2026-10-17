@@ -16,6 +16,7 @@ export interface Env extends Cloudflare.Env {
 	MODEL?: string;
 	OPENAI_API_KEY: string;
 	OPENAI_BASE_URL?: string;
+	PAYMENT_WATCH: Workflow;
 	PAYMENT_WATCH_SECONDS?: string;
 	PAYMENT_WATCH_SLOW_SECONDS?: string;
 	PHOTO_HOSTS?: string;
