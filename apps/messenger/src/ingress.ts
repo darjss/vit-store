@@ -6,6 +6,7 @@ import { admit } from "./admit";
 import type { Conversation } from "./conversation";
 import { type InboundItem, normalizeInboundItem } from "./conversation";
 import type { Env } from "./env";
+import { log } from "./log";
 import { zernioBaseUrl } from "./env";
 import { typing } from "./zernio";
 
@@ -90,7 +91,20 @@ export class Ingress extends Agent<Env> {
 		const conversation = await this.conversation(threadId);
 		// Durable commit point: the event is in `inbox` (pending) before Chat
 		// SDK sees it, so a crash mid-turn can resume instead of losing it.
-		await conversation.noteInbound({ eventId: event.id, payload: event });
+		const { inserted } = await conversation.noteInbound({ eventId: event.id, payload: event });
+		const attachments = event.message.attachments ?? [];
+		const tap =
+			event.metadata?.postbackPayload !== undefined ||
+			event.metadata?.quickReplyPayload !== undefined;
+		log({
+			ad_id: event.metadata?.referral?.ad_id,
+			event: "inbound",
+			event_id: event.id,
+			inserted,
+			kind: tap ? "tap" : attachments.some((a) => a.type === "image") ? "photo" : "text",
+			text_len: event.message.text?.length ?? 0,
+			thread: threadId,
+		});
 
 		this.ctx.waitUntil(typing(this.env, conversationId, event.account.id));
 

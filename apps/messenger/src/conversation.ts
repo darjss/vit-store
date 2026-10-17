@@ -42,7 +42,7 @@ import {
 	TRANSFER_PROMPT,
 } from "./copy";
 import type { Env } from "./env";
-import { errorFields, turnFailedLog, turnLog } from "./log";
+import { errorFields, log, logError, turnFailedLog, turnLog } from "./log";
 import { createModel, modelName, providerOptions } from "./model";
 import { fetchImageParts } from "./photos";
 import { stateNote, SYSTEM_PROMPT } from "./prompt";
@@ -127,8 +127,8 @@ const REPROCESS_MAX_AGE_MS = 10 * 60_000;
 // reclaim. Outbound sends still can't double-post — outbox keys gate them.
 const CLAIM_STALE_MS = 90_000;
 const FALLBACK_TEXT = "Шалгаад хэлье.";
-const prefillLog = (outcome: string): void =>
-	console.log(JSON.stringify({ event: "history_prefill", outcome }));
+const prefillLog = (outcome: string, thread: string): void =>
+	log({ event: "history_prefill", outcome, thread });
 const PAUSE_MS = 12 * 60 * 60_000;
 const PAYMENT_DEADLINE_MS = 2 * 60 * 60_000;
 // After the payment deadline the watcher keeps polling: a late QPay or
@@ -146,6 +146,12 @@ type TurnOutcome = {
 	reply?: ReplyResult;
 	superseded?: boolean;
 };
+
+// Result of one paymentTick RPC: `done` ends the PaymentWatch workflow
+// instance; otherwise it sleeps `nextInSeconds` and ticks again.
+export type PaymentTickResult =
+	| { action: "failed" | "gone" | "paid_sent" | "window_end"; done: true }
+	| { action: "handoff" | "wait"; done: false; nextInSeconds: number };
 
 type InboxRow = {
 	at: number;
@@ -289,15 +295,6 @@ export class Conversation extends Agent<Env> {
 		if (pending.length > 0) {
 			this.ctx.waitUntil(this.processItems(pending));
 		}
-		// A watcher job consumed mid-crash would never re-arm on its own.
-		// After a restart every still-watched payment gets exactly one tick.
-		const watched = this.sql<{ payment_number: string }>`
-			SELECT payment_number FROM payments
-			WHERE notified = 0 AND status IN ('pending', 'claimed')
-				AND created_at > ${Date.now() - PAYMENT_WATCH_END_MS}`;
-		for (const p of watched) {
-			this.ctx.waitUntil(this.armWatcher(p.payment_number));
-		}
 	}
 
 	// Admission -> durable commit point, before Chat SDK sees the event.
@@ -324,13 +321,24 @@ export class Conversation extends Agent<Env> {
 			INSERT INTO inbox (event_id, seq, payload, status, at)
 			VALUES (${eventId}, ${seq}, ${JSON.stringify(payload)}, 'pending', ${Date.now()})`;
 		this.setMeta("latest_seq", String(seq));
+		// Chat SDK may never call process() (dropped, deduped, or a dead
+		// adapter): the recovery schedule is the row's only guaranteed wake-up.
+		await this.armRecovery();
 		return { inserted: true };
 	}
 
 	async process(items: Array<InboundItem>): Promise<void> {
 		const parsed = v.safeParse(inboundItemsSchema, items);
 		if (!parsed.success) {
-			console.error("[conversation.process] bad items", parsed.issues);
+			logError({
+				event: "error",
+				issues: parsed.issues
+					.map((i) => i.message)
+					.join("; ")
+					.slice(0, 300),
+				thread: this.name ?? "",
+				where: "process_items",
+			});
 			return;
 		}
 		const rows: Array<InboxRow> = [];
@@ -343,22 +351,34 @@ export class Conversation extends Agent<Env> {
 		await this.processItems(rows);
 	}
 
-	// Payment watcher. Scheduled on order creation, reschedules itself while the
-	// payment stays pending: every `watchSeconds` until the 2h deadline, then a
-	// slower tick until 24h after creation, then it stops. Survives DO evictions
-	// through the agents alarm table.
-	async checkPayment(payload: { paymentNumber: string }): Promise<void> {
-		const parsed = v.safeParse(checkPaymentSchema, payload);
-		if (!parsed.success) {
-			return;
-		}
-		const { paymentNumber } = parsed.output;
+	// One payment-watch tick, RPC'd by the PaymentWatch workflow instance for
+	// this payment (retried steps and durable sleeps live there). `done` ends
+	// the instance; otherwise it sleeps `nextInSeconds` and ticks again — fast
+	// until the 2h deadline, slow until 24h after creation.
+	async paymentTick(paymentNumber: string): Promise<PaymentTickResult> {
+		const parsed = v.safeParse(checkPaymentSchema, { paymentNumber });
+		const thread = this.name ?? "";
 		const row = this.paymentByNumber(paymentNumber);
-		if (row === undefined || row.notified === 1) {
-			return;
+		if (!parsed.success || row === undefined || row.notified === 1) {
+			log({
+				action: "gone",
+				claimed: row?.claimed ?? 0,
+				event: "payment",
+				payment_number: paymentNumber,
+				thread,
+			});
+			return { action: "gone", done: true };
 		}
 		if (Date.now() > row.created_at + PAYMENT_WATCH_END_MS) {
-			return;
+			log({
+				action: "window_end",
+				claimed: row.claimed,
+				event: "payment",
+				payment_number: paymentNumber,
+				status: row.status,
+				thread,
+			});
+			return { action: "window_end", done: true };
 		}
 		let status = "error";
 		try {
@@ -371,35 +391,96 @@ export class Conversation extends Agent<Env> {
 			);
 			status = res.status;
 		} catch {
-			// status stays "error"; the next tick retries.
+			// status stays "error"; the workflow's next tick retries.
 		}
-		console.log(JSON.stringify({ event: "payment_check", paymentNumber, status }));
 		if (status === "success") {
-			void this.sql`UPDATE payments SET status = 'success' WHERE payment_number = ${paymentNumber}`;
-			// notified flips only after the paid message actually went out, so a
-			// failed send is retried on the next tick instead of lost.
-			try {
-				await this.sendPart(`pay_${paymentNumber}:paid`, {
-					message: formatPaid(row.countryside === 1),
-				});
-				void this.sql`UPDATE payments SET notified = 1 WHERE payment_number = ${paymentNumber}`;
-			} catch {
-				await this.armWatcher(paymentNumber);
-			}
-			return;
+			await this.paymentPaid(row, paymentNumber, status, thread);
+			return { action: "paid_sent", done: true };
 		}
 		if (status === PAYMENT_TERMINAL_FAIL) {
 			void this.sql`UPDATE payments SET status = 'failed' WHERE payment_number = ${paymentNumber}`;
-			return;
+			log({
+				action: "failed",
+				claimed: row.claimed,
+				event: "payment",
+				payment_number: paymentNumber,
+				status,
+				thread,
+			});
+			return { action: "failed", done: true };
 		}
-		if (row.claimed === 1 && row.handed_off === 0) {
-			const recon = await this.reconciliationStatus(row);
-			if (recon !== undefined && RECON_FAIL_STATES.has(recon)) {
-				void this.sql`UPDATE payments SET handed_off = 1 WHERE payment_number = ${paymentNumber}`;
-				await this.handoffToAdmin("payment_unmatched", `pay_${paymentNumber}:handoff`);
-			}
+		const { handedOff, recon } = await this.paymentHandoff(row, paymentNumber);
+		const action = handedOff ? "handoff" : "wait";
+		log({
+			action,
+			claimed: row.claimed,
+			event: "payment",
+			payment_number: paymentNumber,
+			recon,
+			status,
+			thread,
+		});
+		return {
+			action,
+			done: false,
+			nextInSeconds: Date.now() >= row.deadline ? this.slowWatchSeconds() : this.watchSeconds(),
+		};
+	}
+
+	// Paid tick: flip the row, send the paid message, mark notified. The
+	// notified flag flips only after the send lands: a failure rethrows so the
+	// workflow step retries instead of losing the paid notification.
+	private async paymentPaid(
+		row: PaymentDbRow,
+		paymentNumber: string,
+		status: string,
+		thread: string,
+	): Promise<void> {
+		void this.sql`UPDATE payments SET status = 'success' WHERE payment_number = ${paymentNumber}`;
+		try {
+			await this.sendPart(`pay_${paymentNumber}:paid`, {
+				message: formatPaid(row.countryside === 1),
+			});
+			void this.sql`UPDATE payments SET notified = 1 WHERE payment_number = ${paymentNumber}`;
+		} catch (error) {
+			logError({
+				action: "paid_send_failed",
+				claimed: row.claimed,
+				error: errorFields(error),
+				event: "payment",
+				payment_number: paymentNumber,
+				status,
+				thread,
+			});
+			throw error;
 		}
-		await this.armWatcher(paymentNumber);
+		log({
+			action: "paid_sent",
+			claimed: row.claimed,
+			event: "payment",
+			payment_number: paymentNumber,
+			status,
+			thread,
+		});
+	}
+
+	// A claimed transfer whose reconciliation died gets one handoff; the watch
+	// keeps running afterwards so a late QPay or reconciled transfer is still
+	// announced.
+	private async paymentHandoff(
+		row: PaymentDbRow,
+		paymentNumber: string,
+	): Promise<{ handedOff: boolean; recon?: string }> {
+		if (row.claimed !== 1 || row.handed_off !== 0) {
+			return { handedOff: false };
+		}
+		const recon = await this.reconciliationStatus(row);
+		if (recon === undefined || !RECON_FAIL_STATES.has(recon)) {
+			return { handedOff: false, recon };
+		}
+		void this.sql`UPDATE payments SET handed_off = 1 WHERE payment_number = ${paymentNumber}`;
+		await this.handoffToAdmin("payment_unmatched", `pay_${paymentNumber}:handoff`);
+		return { handedOff: true, recon };
 	}
 
 	private watchSeconds(): number {
@@ -412,22 +493,25 @@ export class Conversation extends Agent<Env> {
 		return Number.isFinite(raw) && raw > 0 ? raw : 900;
 	}
 
-	// The currently-executing schedule still shows in getSchedules while the
-	// callback runs, so "skip if one exists" can never arm a tick. Cancel every
-	// pending checkPayment for this payment, then arm the next one: the
-	// invariant is exactly one pending schedule per payment.
-	private async armWatcher(paymentNumber: string): Promise<void> {
-		const pendingSchedules = this.getSchedules<{ paymentNumber: string }>().filter(
-			(s) => s.callback === "checkPayment" && s.payload?.paymentNumber === paymentNumber,
-		);
-		for (const s of pendingSchedules) {
-			await this.cancelSchedule(s.id);
+	// Starting the watch must never fail the order: a tracked instance is
+	// skipped, and a failed create only logs — a missing watch is healed the
+	// next time ensurePaymentWatch is called for the payment (resent confirm,
+	// transfer claim).
+	private async ensurePaymentWatch(paymentNumber: string): Promise<void> {
+		const id = `pay_${paymentNumber}`;
+		if (this.getWorkflow(id) !== undefined) {
+			return;
 		}
-		const row = this.paymentByNumber(paymentNumber);
-		const slow = row !== undefined && Date.now() >= row.deadline;
-		await this.schedule(slow ? this.slowWatchSeconds() : this.watchSeconds(), "checkPayment", {
-			paymentNumber,
-		});
+		try {
+			await this.runWorkflow("PAYMENT_WATCH", { paymentNumber }, { id });
+		} catch (error) {
+			logError({
+				error: errorFields(error),
+				event: "error",
+				thread: this.name ?? "",
+				where: "payment_watch_start",
+			});
+		}
 	}
 
 	private async reconciliationStatus(row: PaymentDbRow): Promise<string | undefined> {
@@ -586,16 +670,16 @@ export class Conversation extends Agent<Env> {
 					);
 					if (customer.address) {
 						this.saveDelivery({ address: customer.address, phone });
-						prefillLog("found");
+						prefillLog("found", this.name);
 						return;
 					}
 				} catch {
 					// NOT_FOUND, timeout, anything else: try the next candidate.
 				}
 			}
-			prefillLog("none");
+			prefillLog("none", this.name);
 		} catch {
-			prefillLog("error");
+			prefillLog("error", this.name);
 		}
 	}
 
@@ -752,6 +836,7 @@ export class Conversation extends Agent<Env> {
 	async recoverInbox(): Promise<void> {
 		const rows = this.pendingRows();
 		if (rows.length > 0) {
+			log({ event: "recover", rows: rows.length, thread: this.name ?? "" });
 			await this.processItems(rows);
 		}
 		// A tick can fire while another processItems is still mid-turn: every
@@ -828,7 +913,6 @@ export class Conversation extends Agent<Env> {
 			try {
 				await this.runClaimed(claimed);
 			} catch (error) {
-				console.error("[conversation.processItems]", error);
 				// Claimed rows carry the pre-flush turn_id (flush() tags them
 				// later), so re-read it before the reset wipes 'processing'.
 				const turnIds = new Set<string>();
@@ -1034,9 +1118,10 @@ export class Conversation extends Agent<Env> {
 	private async claimTransfer(key: string, paymentNumber: string): Promise<boolean> {
 		const row = this.paymentByNumber(paymentNumber);
 		if (row === undefined || row.status !== "pending") {
-			console.log(JSON.stringify({ event: "tap", kind: "transfer_done", outcome: "no_pending" }));
+			this.tapLog("transfer_done", "no_pending", { payment_number: paymentNumber });
 			return false;
 		}
+		await this.ensurePaymentWatch(paymentNumber);
 		const store = storeClient(this.env);
 		const ref = { checkoutToken: row.checkout_token ?? undefined, paymentNumber };
 		await store.payment.claimTransferPaid.mutate(ref, { signal: withTimeout() });
@@ -1045,7 +1130,14 @@ export class Conversation extends Agent<Env> {
 		await store.payment.selectTransfer.mutate(ref, { signal: withTimeout() }).catch(() => {});
 		void this.sql`UPDATE payments SET claimed = 1 WHERE payment_number = ${paymentNumber}`;
 		await this.sendPart(`${key}:claim`, { message: CLAIM_ACK });
-		console.log(JSON.stringify({ event: "tap", kind: "transfer_done", outcome: "claimed" }));
+		this.tapLog("transfer_done", "claimed", { payment_number: paymentNumber });
+		log({
+			action: "claimed",
+			claimed: 1,
+			event: "payment",
+			payment_number: paymentNumber,
+			thread: this.name ?? "",
+		});
 		return true;
 	}
 
@@ -1092,7 +1184,7 @@ export class Conversation extends Agent<Env> {
 			await this.orderProductTap(row, productId);
 			return;
 		}
-		console.log(JSON.stringify({ event: "tap", kind: payload, outcome: "unknown" }));
+		this.tapLog(payload, "unknown");
 	}
 
 	private async sendPart(key: string, body: Omit<ZernioSendBody, "accountId">): Promise<void> {
@@ -1111,8 +1203,14 @@ export class Conversation extends Agent<Env> {
 		void this.sql`INSERT OR IGNORE INTO outbox (key, sent_at) VALUES (${key}, ${Date.now()})`;
 	}
 
-	private tapLog(kind: string, outcome: string): void {
-		console.log(JSON.stringify({ event: "tap", kind, outcome }));
+	private tapLog(kind: string, outcome: string, extra?: { payment_number?: string }): void {
+		log({
+			event: "tap",
+			kind,
+			outcome,
+			payment_number: extra?.payment_number,
+			thread: this.name ?? "",
+		});
 	}
 
 	private async sendCartView(key: string): Promise<void> {
@@ -1307,6 +1405,7 @@ export class Conversation extends Agent<Env> {
 	private async confirmTap(key: string, revision: number): Promise<void> {
 		const existing = this.paymentByRevision(revision);
 		if (existing !== undefined) {
+			await this.ensurePaymentWatch(existing.payment_number);
 			await this.sendOrderCreated(existing, `${key}:order`);
 			this.tapLog("order_confirm", "resent");
 			return;
@@ -1379,11 +1478,27 @@ export class Conversation extends Agent<Env> {
 			if (row === undefined) {
 				throw new Error("payment_row_missing");
 			}
-			await this.armWatcher(res.paymentNumber);
+			await this.ensurePaymentWatch(res.paymentNumber);
 			await this.sendOrderCreated(row, `${key}:order`);
-			this.tapLog("order_confirm", "created");
+			log({
+				countryside: checkout.countryside === 1,
+				event: "order",
+				items: lines.length,
+				order_number: res.orderNumber,
+				outcome: "created",
+				payment_number: res.paymentNumber,
+				thread: this.name ?? "",
+				total: res.total,
+			});
 		} catch (error) {
-			this.tapLog("order_confirm", error instanceof Error ? `error:${error.message}` : "error");
+			logError({
+				countryside: checkout.countryside === 1,
+				error: errorFields(error),
+				event: "order",
+				items: lines.length,
+				outcome: "error",
+				thread: this.name ?? "",
+			});
 			await this.sendPart(`${key}:tap`, { message: ERROR });
 		}
 	}
@@ -1438,18 +1553,50 @@ export class Conversation extends Agent<Env> {
 
 	// ─── Handoff ────────────────────────────────────────────────────────────
 
+	// Sends and the alert come before the pause: a crash between them replays
+	// the handoff (outbox keys dedupe what landed). Pausing first would
+	// instead drop the replayed turn at dispatchTurn's isPaused() and the
+	// admin alert would be lost.
 	private async handoffToAdmin(reason: string, sendKey: string): Promise<void> {
-		this.setMeta("paused_until", String(Date.now() + PAUSE_MS));
 		await this.sendPart(sendKey, { message: HANDOFF });
-		const result = await sendTelegramAlert(this.env, {
+		const alertKey = `${sendKey}:alert`;
+		let alert: "already_sent" | "failed" | "not_configured" | "sent";
+		let alertStatus: number | undefined;
+		if (this.outboxHas(alertKey)) {
+			alert = "already_sent";
+		} else {
+			// A thrown fetch error is a transport failure, not "unconfigured":
+			// not_configured means the env has no token/chat ids at all.
+			const result = await sendTelegramAlert(this.env, {
+				reason,
+				recentTexts: this.recentCustomerTexts(),
+				threadId: this.name ?? "",
+			}).catch(() => undefined);
+			if (result === undefined) {
+				alert = "failed";
+			} else if (!result.ok) {
+				// No status means the env has no token/chat ids at all.
+				alert = result.status === undefined ? "not_configured" : "failed";
+				alertStatus = result.status;
+			} else {
+				void this
+					.sql`INSERT OR IGNORE INTO outbox (key, sent_at) VALUES (${alertKey}, ${Date.now()})`;
+				alert = "sent";
+			}
+		}
+		this.setMeta("paused_until", String(Date.now() + PAUSE_MS));
+		const fields = {
+			alert,
+			alert_status: alertStatus,
+			event: "handoff" as const,
+			key: sendKey,
 			reason,
-			recentTexts: this.recentCustomerTexts(),
-			threadId: this.name ?? "",
-		}).catch(() => ({ ok: false, status: undefined }));
-		if (!result.ok) {
-			console.error(
-				JSON.stringify({ event: "telegram_alert_failed", status: result.status ?? null }),
-			);
+			thread: this.name ?? "",
+		};
+		if (alert === "failed") {
+			logError(fields);
+		} else {
+			log(fields);
 		}
 	}
 
@@ -1764,21 +1911,18 @@ export class Conversation extends Agent<Env> {
 		turnId: string;
 	}): Promise<void> {
 		const { env, reply, turnId } = opts;
-		try {
-			await renderTurn({
-				accountId: this.accountId(),
-				conversationId: this.conversationId(),
-				env,
-				hasSent: (key: string) => this.outboxHas(key),
-				markSent: (key: string) =>
-					void this.sql`INSERT OR IGNORE INTO outbox (key, sent_at) VALUES (${key}, ${Date.now()})`,
-				reply: reply ?? { text: FALLBACK_TEXT },
-				turnId,
-			});
-		} catch (error) {
-			console.error("[render.failed]", error);
-			throw error;
-		}
+		// A render/send failure propagates to processItems, whose error turn
+		// log carries the error fields — nothing extra to record here.
+		await renderTurn({
+			accountId: this.accountId(),
+			conversationId: this.conversationId(),
+			env,
+			hasSent: (key: string) => this.outboxHas(key),
+			markSent: (key: string) =>
+				void this.sql`INSERT OR IGNORE INTO outbox (key, sent_at) VALUES (${key}, ${Date.now()})`,
+			reply: reply ?? { text: FALLBACK_TEXT },
+			turnId,
+		});
 	}
 
 	private extractReply(result: {

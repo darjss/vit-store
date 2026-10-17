@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import type { Env } from "./env";
 import { zernioBaseUrl } from "./env";
+import { errorFields, log, logError } from "./log";
 
 export type ZernioSendBody = {
 	accountId: string;
@@ -207,75 +208,99 @@ export const send = async (
 	body: ZernioSendBody,
 	key: string,
 ): Promise<string | null> => {
-	console.log(
-		JSON.stringify({
-			conversation: conversationId,
-			event: "send",
-			key,
-			text: body.message?.slice(0, 700),
-		}),
-	);
-
 	const url = `${zernioBaseUrl(env)}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages`;
 	const firstAttemptAt = Date.now();
 	const reconcile = async (): Promise<string | null | undefined> => {
 		const delivered = await wasDelivered(env, conversationId, body, firstAttemptAt);
 		return delivered.found ? delivered.id : undefined;
 	};
+	const eventFields = (attempts: number) => ({
+		attempts,
+		conversation: conversationId,
+		key,
+		ms: Date.now() - firstAttemptAt,
+		text: body.message?.slice(0, 700),
+		thread: `zernio:${body.accountId}:${conversationId}`,
+	});
 
 	let status = 0;
 	let errorText = "";
 	let conflicts = 0;
-	for (let attempt = 0; attempt < MAX_SEND_ATTEMPTS; attempt++) {
-		const last = attempt === MAX_SEND_ATTEMPTS - 1;
-		const r = await attemptSend(env, url, body, key);
-		if (r.kind === "ok") {
-			return r.messageId;
-		}
-		if (r.kind === "conflict") {
-			if (conflicts++ < MAX_CONFLICT_WAITS) {
-				attempt -= 1;
-				await sleep(r.delayMs);
-				continue;
+	let attempts = 0;
+	try {
+		for (let attempt = 0; attempt < MAX_SEND_ATTEMPTS; attempt++) {
+			attempts += 1;
+			const last = attempt === MAX_SEND_ATTEMPTS - 1;
+			const r = await attemptSend(env, url, body, key);
+			if (r.kind === "ok") {
+				log({
+					...eventFields(attempts),
+					event: "send",
+					message_id: r.messageId,
+					outcome: "sent",
+				});
+				return r.messageId;
 			}
-			status = r.status;
-			errorText = r.errorText;
-			break;
-		}
-		if (r.kind === "ratelimit") {
-			status = r.status;
-			errorText = r.errorText;
-			if (!last) {
-				await sleep(r.delayMs);
-				continue;
-			}
-			break;
-		}
-		if (r.kind === "reconcile") {
-			const delivered = await reconcile();
-			if (delivered !== undefined) {
-				return delivered;
-			}
-			if ("error" in r) {
-				if (last) {
-					throw r.error;
+			if (r.kind === "conflict") {
+				if (conflicts++ < MAX_CONFLICT_WAITS) {
+					attempt -= 1;
+					await sleep(r.delayMs);
+					continue;
 				}
-				await sleep(1000);
-				continue;
+				status = r.status;
+				errorText = r.errorText;
+				break;
+			}
+			if (r.kind === "ratelimit") {
+				status = r.status;
+				errorText = r.errorText;
+				if (!last) {
+					await sleep(r.delayMs);
+					continue;
+				}
+				break;
+			}
+			if (r.kind === "reconcile") {
+				const delivered = await reconcile();
+				if (delivered !== undefined) {
+					log({
+						...eventFields(attempts),
+						event: "send",
+						message_id: delivered,
+						outcome: "reconciled",
+					});
+					return delivered;
+				}
+				if ("error" in r) {
+					if (last) {
+						throw r.error;
+					}
+					await sleep(1000);
+					continue;
+				}
+				status = r.status;
+				errorText = r.errorText;
+				if (!last) {
+					await sleep(1000);
+					continue;
+				}
+				break;
 			}
 			status = r.status;
 			errorText = r.errorText;
-			if (!last) {
-				await sleep(1000);
-				continue;
-			}
 			break;
 		}
-		status = r.status;
-		errorText = r.errorText;
-		break;
+		throw new Error(`Zernio send failed: ${status} ${errorText}`);
+	} catch (error) {
+		logError({
+			...eventFields(attempts),
+			error: errorFields(error),
+			event: "send",
+			outcome: "failed",
+			status: status === 0 ? undefined : status,
+		});
+		throw error;
 	}
-	throw new Error(`Zernio send failed: ${status} ${errorText}`);
 };
 
 // Best-effort typing indicator (Zernio has no "typing off"; it clears on the

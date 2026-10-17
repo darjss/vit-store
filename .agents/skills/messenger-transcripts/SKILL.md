@@ -47,8 +47,29 @@ nu -c 'open <file> | get messages | where ($it.content.content | describe) =~ "^
 
 ## Logs
 
-Workers Logs, shipped to Axiom, carry one JSON line per event, all with `thread` or `conversation` plus `turn_id` or `key` for joining back to the transcript:
+Every Messenger log line is one JSON object with an `event` field (types in `apps/messenger/src/log.ts`). Conversation lines carry `thread`, so they join back to the transcript. Failures are logged with `console.error`, so in Axiom they show `severity_text == "error"`.
 
-- `event: "turn"`: one per customer model turn, with `outcome`, `attempt`, `reply_text`, `tool_calls`, tokens and `step_ms`. `outcome: "error"` lines carry `turn_ids`, `event_ids` and `error`.
-- `event: "send"`: every outbound Zernio send with its outbox `key`.
-- `event: "admin_turn"`: one per admin bot run, `outcome: "error"` on failure.
+- `inbound`: one per admitted Zernio event (`event_id`, `kind`: text/photo/tap, `inserted`, `ad_id`). `inbound_drop` is logged when a message is dropped (`stale`, `unparsed`, `no_conversation_id`). Messages from other pages are dropped silently.
+- `turn`: one per model turn, with `turn_id`, `outcome`, `attempt`, `reply_text`, `tool_calls`, tokens and `step_ms`. `outcome: "error"` lines carry `turn_ids`, `event_ids` and `error`.
+- `send`: one per outbound Zernio send, with the outbox `key`, `outcome` (`sent`, `reconciled`, `failed`), `attempts`, `ms` and `status`.
+- `tap`, `order` (`order_number`, `payment_number`, `total`), and `payment` (`action`: `claimed`, `wait`, `handoff`, `paid_sent`, `paid_send_failed`, `failed`, `window_end`, `gone`). There is one `payment` line per watcher tick.
+- `handoff`: `reason`, `key`, and `alert` (`sent`, `already_sent`, `failed`, `not_configured`). `recover` means the inbox alarm picked up rows. `error` has a `where` field for anything else.
+- `admin_turn`: one per admin bot run, with `outcome: "error"` on failure.
+
+Query in the Axiom `vit-logs` dataset. The body is a JSON string, so parse it first:
+
+```apl
+['vit-logs']
+| where ['resource.cloudflare.script_name'] == 'vit-store-messenger'
+| extend b = parse_json(body)
+| where tostring(b.event) == 'payment' and tostring(b.thread) == '<thread>'
+| project _time, severity_text, action = tostring(b.action), status = tostring(b.status), recon = tostring(b.recon)
+```
+
+To get everything for one id (thread, payment number, order number), use `['vit-logs'] | search "<id>"`. This covers the store API's own logs too.
+
+The payment watcher is a Cloudflare Workflow with one instance per payment, `pay_<paymentNumber>`. Every tick is a step with its result stored:
+
+```bash
+bunx wrangler workflows instances describe vit-store-messenger-payment-watch pay_<paymentNumber>
+```
