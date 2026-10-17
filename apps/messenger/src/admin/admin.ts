@@ -2,6 +2,7 @@ import { generateText, stepCountIs, type ModelMessage, type ToolSet } from "ai";
 import { Agent } from "agents";
 import * as v from "valibot";
 import type { Env } from "../env";
+import { errorFields } from "../log";
 import { createModel, modelName } from "../model";
 import { handleTelegramCallback } from "./callbacks";
 import { serializeCodemodeJson } from "./codemode-boundary";
@@ -29,6 +30,21 @@ const HISTORY_TURNS = 15;
 type MessageRow = {
 	content: string;
 	role: string;
+};
+
+// `content` is a parsed ModelMessage but typed unknown: Rpc.Provider
+// deep-instantiates every public method's return, and the ModelMessage union
+// blows the TS2589 depth limit. The wire value is unchanged.
+type AdminTranscript = {
+	chat: string;
+	messages: Array<{
+		content: unknown;
+		created_at: number;
+		id: string;
+		role: string;
+		turn_id: string;
+	}>;
+	turns: Array<{ at: number; status: string; update_id: number }>;
 };
 
 // Durable-queue payload for a model turn; must stay plain JSON.
@@ -156,17 +172,30 @@ export class Admin extends Agent<Env> {
 		void this.sql`
 			INSERT INTO admin_turns (update_id, status, at)
 			VALUES (${payload.updateId}, 'started', ${Date.now()})`;
-		await runWithTyping(
-			this.env,
-			payload.chatId,
-			() =>
-				this.runTurn({
-					imageKeys: payload.imageKeys,
-					text: payload.text,
-					updateId: payload.updateId,
+		try {
+			await runWithTyping(
+				this.env,
+				payload.chatId,
+				() =>
+					this.runTurn({
+						imageKeys: payload.imageKeys,
+						text: payload.text,
+						updateId: payload.updateId,
+					}),
+				payload.typingAction,
+			);
+		} catch (error) {
+			console.log(
+				JSON.stringify({
+					conversation: this.name,
+					error: errorFields(error),
+					event: "admin_turn",
+					outcome: "error",
+					turn_id: `tg_${payload.updateId}`,
 				}),
-			payload.typingAction,
-		);
+			);
+			throw error;
+		}
 		void this.sql`
 			UPDATE admin_turns SET status = 'done' WHERE update_id = ${payload.updateId}`;
 	}
@@ -191,6 +220,29 @@ export class Admin extends Agent<Env> {
 		return staged.status === "staged" ? [staged.key] : [];
 	}
 
+	adminTranscript(): AdminTranscript {
+		const rows = this.sql<{
+			content: string;
+			created_at: number;
+			id: string;
+			role: string;
+			turn_id: string;
+		}>`
+			SELECT id, turn_id, role, content, created_at FROM messages ORDER BY created_at ASC`;
+		return {
+			chat: this.name,
+			messages: rows.map((row) => ({
+				content: this.parseMessage(row.content),
+				created_at: row.created_at,
+				id: row.id,
+				role: row.role,
+				turn_id: row.turn_id,
+			})),
+			turns: this.sql<{ at: number; status: string; update_id: number }>`
+				SELECT update_id, status, at FROM admin_turns ORDER BY at ASC`,
+		};
+	}
+
 	// Whole-turn history: last N turns, tool calls paired with results.
 	private historyByTurns(count: number): Array<ModelMessage> {
 		const rows = this.sql<MessageRow>`
@@ -200,9 +252,13 @@ export class Admin extends Agent<Env> {
 				GROUP BY turn_id ORDER BY MAX(created_at) DESC LIMIT ${count}
 			)
 			ORDER BY created_at ASC`;
+		return rows.map((row) => this.parseMessage(row.content));
+	}
+
+	private parseMessage(content: string): ModelMessage {
 		// SAFETY: `content` is written only by saveMessages below, which stores
 		// JSON.stringify(ModelMessage).
-		return rows.map((row) => JSON.parse(row.content) as ModelMessage);
+		return JSON.parse(content) as ModelMessage;
 	}
 
 	private saveMessages(
@@ -330,8 +386,12 @@ export class Admin extends Agent<Env> {
 				model: modelName(this.env),
 				posted: posted.did,
 				steps: result.steps.length,
+				tool_calls: result.steps.flatMap((s) =>
+					s.toolCalls.map((c) => ({ input: c.input, name: c.toolName })),
+				),
 				tools: result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName)),
 				total_ms: Date.now() - start,
+				turn_id: turnId,
 			}),
 		);
 	}

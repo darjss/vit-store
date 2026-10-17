@@ -1,5 +1,6 @@
 import { getAgentByName } from "agents";
 import * as v from "valibot";
+import type { Admin } from "./admin/admin";
 import { telegramUpdateSchema } from "./admin/telegram";
 import type { Env } from "./env";
 
@@ -50,26 +51,45 @@ const adminRoute = async (request: Request, env: Env, url: URL): Promise<Respons
 	}
 	// Thread ids are "zernio:<account>:<conversation>" — the route tail is
 	// URL-encoded at the client, decoded here.
-	const match = /^\/admin\/conversations(?:\/([^/]+)(\/resume)?)?$/.exec(url.pathname);
+	const match = /^\/admin\/conversations(?:\/([^/]+)(\/resume|\/transcript)?)?$/.exec(url.pathname);
 	if (match === null) {
 		return new Response("not found", { status: 404 });
 	}
-	const [, encoded, resume] = match;
+	const [, encoded, tail] = match;
 	if (encoded === undefined) {
 		if (request.method !== "GET") {
 			return new Response("not found", { status: 404 });
 		}
+		const raw = Number(url.searchParams.get("since") ?? "0");
 		const ingress = await getAgentByName(env.Ingress, "default");
-		return Response.json(await ingress.adminList());
+		return Response.json(await ingress.adminList(Number.isFinite(raw) ? raw : 0));
 	}
 	const conversation = await getAgentByName(env.Conversation, decodeURIComponent(encoded));
-	if (resume === "/resume" && request.method === "POST") {
+	if (tail === "/resume" && request.method === "POST") {
 		return Response.json(await conversation.adminResume());
 	}
-	if (resume === undefined && request.method === "GET") {
+	if (tail === "/transcript" && request.method === "GET") {
+		return Response.json(await conversation.adminTranscript());
+	}
+	if (tail === undefined && request.method === "GET") {
 		return Response.json(await conversation.adminSnapshot());
 	}
 	return new Response("not found", { status: 404 });
+};
+
+const adminTelegramTranscript = async (
+	request: Request,
+	env: Env,
+	chatId: string,
+): Promise<Response> => {
+	if (!bearerOk(request, env)) {
+		return new Response("unauthorized", { status: 401 });
+	}
+	if (!/^-?\d+$/.test(chatId)) {
+		return new Response("not found", { status: 404 });
+	}
+	const admin = await getAgentByName<Env, Admin>(env.Admin, `telegram:${chatId}`);
+	return Response.json(await admin.adminTranscript());
 };
 
 export default {
@@ -87,6 +107,10 @@ export default {
 		}
 		if (url.pathname.startsWith("/admin/conversations")) {
 			return adminRoute(request, env, url);
+		}
+		const telegramTranscript = /^\/admin\/telegram\/([^/]+)\/transcript$/.exec(url.pathname);
+		if (request.method === "GET" && telegramTranscript !== null) {
+			return adminTelegramTranscript(request, env, telegramTranscript[1] ?? "");
 		}
 		return new Response("not found", { status: 404 });
 	},
