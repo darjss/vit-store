@@ -42,7 +42,7 @@ import {
 	TRANSFER_PROMPT,
 } from "./copy";
 import type { Env } from "./env";
-import { turnLog } from "./log";
+import { errorFields, turnFailedLog, turnLog } from "./log";
 import { createModel, modelName, providerOptions } from "./model";
 import { fetchImageParts } from "./photos";
 import { stateNote, SYSTEM_PROMPT } from "./prompt";
@@ -633,6 +633,61 @@ export class Conversation extends Agent<Env> {
 		return { resumed: true };
 	}
 
+	// The agent-readable transcript: full ModelMessages (tool calls and
+	// results stay paired), raw inbox payloads, saved turn outcomes and every
+	// send, all in chronological order.
+	adminTranscript() {
+		const inbox = this.sql<InboxRow>`
+			SELECT event_id, seq, status, at, claimed_at, attempts, turn_id, payload FROM inbox
+			ORDER BY seq ASC`.map((row) => {
+			const parsed = v.safeParse(zernioMessageEventSchema, JSON.parse(row.payload));
+			return {
+				at: row.at,
+				attempts: row.attempts,
+				claimed_at: row.claimed_at,
+				event_id: row.event_id,
+				payload: parsed.success ? parsed.output : row.payload,
+				seq: row.seq,
+				status: row.status,
+				turn_id: row.turn_id,
+			};
+		});
+		const messages = this.sql<{
+			content: string;
+			created_at: number;
+			id: string;
+			role: string;
+			turn_id: string;
+		}>`
+			SELECT id, turn_id, role, content, created_at FROM messages ORDER BY created_at ASC`.map(
+			(row) => ({
+				content: this.parseMessage(row.content),
+				created_at: row.created_at,
+				id: row.id,
+				role: row.role,
+				turn_id: row.turn_id,
+			}),
+		);
+		const turns = this.sql<{ created_at: number; reply: string; turn_id: string }>`
+			SELECT turn_id, reply, created_at FROM turns ORDER BY created_at ASC`.map((row) => ({
+			created_at: row.created_at,
+			outcome: this.parseTurnOutcome(row.reply),
+			turn_id: row.turn_id,
+		}));
+		return {
+			cart: this.cartLines(),
+			checkout: this.checkout(),
+			inbox,
+			messages,
+			meta: this.sql<{ key: string; value: string }>`SELECT key, value FROM meta ORDER BY key ASC`,
+			outbox: this.sql<{ key: string; sent_at: number }>`
+				SELECT key, sent_at FROM outbox ORDER BY sent_at ASC`,
+			payments: this.sql<PaymentDbRow>`SELECT * FROM payments ORDER BY created_at ASC`,
+			thread: this.name,
+			turns,
+		};
+	}
+
 	private messageText(content: string): string {
 		const message = this.parseMessage(content);
 		if (!Array.isArray(message.content)) {
@@ -774,6 +829,23 @@ export class Conversation extends Agent<Env> {
 				await this.runClaimed(claimed);
 			} catch (error) {
 				console.error("[conversation.processItems]", error);
+				// Claimed rows carry the pre-flush turn_id (flush() tags them
+				// later), so re-read it before the reset wipes 'processing'.
+				const turnIds = new Set<string>();
+				for (const row of claimed) {
+					const current = this.sql<{ turn_id: string | null }>`
+						SELECT turn_id FROM inbox WHERE event_id = ${row.event_id}`[0];
+					if (current !== undefined && current.turn_id !== null) {
+						turnIds.add(current.turn_id);
+					}
+				}
+				turnFailedLog({
+					attempts: Math.max(...claimed.map((r) => r.attempts)),
+					error: errorFields(error),
+					event_ids: claimed.map((r) => r.event_id),
+					thread: this.name ?? "",
+					turn_ids: [...turnIds],
+				});
 				// Rows still 'processing' go back to pending; the recovery
 				// schedule retries them. 'applied' rows keep their status
 				// (mutation done, resend pending) and are claimable as-is.
@@ -1391,37 +1463,15 @@ export class Conversation extends Agent<Env> {
 	}): Promise<void> {
 		const { items, rows, seqAtStart, turnId } = opts;
 		const started = Date.now();
+		const thread = this.name ?? "";
+		const attempt = Math.max(...rows.map((r) => r.attempts));
 
 		// A saved outcome means this turn already ran the model; replay the
 		// sends (outbox keys dedupe the ones that landed) instead of mixing a
 		// second model answer into the same turn.
 		const saved = this.turnOutcome(turnId);
 		if (saved !== undefined) {
-			const outcome = await this.dispatchTurn({
-				handoffReason: saved.handoff,
-				reply: saved.reply,
-				superseded: saved.superseded ?? false,
-				turnId,
-			});
-			this.finishTurn(rows);
-			turnLog({
-				ad_id: this.getMeta("ad_id"),
-				conversation: this.conversationId(),
-				handoff: saved.handoff !== undefined,
-				inputs: items.length,
-				model: modelName(this.env),
-				outcome,
-				photos: 0,
-				product_ids: saved.reply?.productIds ?? [],
-				replayed: true,
-				step_ms: [],
-				steps: 0,
-				tokens_cached: 0,
-				tokens_in: 0,
-				tokens_out: 0,
-				tools: [],
-				total_ms: Date.now() - started,
-			});
+			await this.replayTurn({ attempt, items, rows, saved, started, thread, turnId });
 			return;
 		}
 
@@ -1437,6 +1487,7 @@ export class Conversation extends Agent<Env> {
 			await this.sendPart(`${turnId}:text`, { message: IMAGE_UNREADABLE });
 			this.finishTurn(rows);
 			turnLog({
+				attempt,
 				conversation: this.conversationId(),
 				handoff: false,
 				inputs: items.length,
@@ -1444,13 +1495,17 @@ export class Conversation extends Agent<Env> {
 				outcome: "image_unreadable",
 				photos: 0,
 				product_ids: [],
+				reply_text: IMAGE_UNREADABLE,
 				step_ms: [],
 				steps: 0,
+				thread,
 				tokens_cached: 0,
 				tokens_in: 0,
 				tokens_out: 0,
+				tool_calls: [],
 				tools: [],
 				total_ms: Date.now() - started,
+				turn_id: turnId,
 			});
 			return;
 		}
@@ -1506,6 +1561,7 @@ export class Conversation extends Agent<Env> {
 		turnLog({
 			action: reply?.action,
 			ad_id: this.getMeta("ad_id"),
+			attempt,
 			conversation: this.conversationId(),
 			handoff: handoffReason !== undefined,
 			inputs: items.length,
@@ -1513,13 +1569,64 @@ export class Conversation extends Agent<Env> {
 			outcome,
 			photos: photoCount,
 			product_ids: reply?.productIds ?? [],
+			reply_text: reply?.text,
 			step_ms: stepMs,
 			steps: result.steps.length,
+			thread,
 			tokens_cached: result.usage.cachedInputTokens ?? 0,
 			tokens_in: result.usage.inputTokens ?? 0,
 			tokens_out: result.usage.outputTokens ?? 0,
+			tool_calls: result.steps.flatMap((s) =>
+				s.toolCalls.map((c) => ({ input: c.input, name: c.toolName })),
+			),
 			tools: result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName)),
 			total_ms: Date.now() - started,
+			turn_id: turnId,
+		});
+	}
+
+	// Replays a turn whose validated outcome is already in `turns`: dispatch
+	// the saved reply/handoff (outbox keys dedupe sends that landed) and log
+	// the replay instead of running the model a second time.
+	private async replayTurn(opts: {
+		attempt: number;
+		items: Array<InboundItem>;
+		rows: Array<InboxRow>;
+		saved: TurnOutcome;
+		started: number;
+		thread: string;
+		turnId: string;
+	}): Promise<void> {
+		const { attempt, items, rows, saved, started, thread, turnId } = opts;
+		const outcome = await this.dispatchTurn({
+			handoffReason: saved.handoff,
+			reply: saved.reply,
+			superseded: saved.superseded ?? false,
+			turnId,
+		});
+		this.finishTurn(rows);
+		turnLog({
+			ad_id: this.getMeta("ad_id"),
+			attempt,
+			conversation: this.conversationId(),
+			handoff: saved.handoff !== undefined,
+			inputs: items.length,
+			model: modelName(this.env),
+			outcome,
+			photos: 0,
+			product_ids: saved.reply?.productIds ?? [],
+			replayed: true,
+			reply_text: saved.reply?.text,
+			step_ms: [],
+			steps: 0,
+			thread,
+			tokens_cached: 0,
+			tokens_in: 0,
+			tokens_out: 0,
+			tool_calls: [],
+			tools: [],
+			total_ms: Date.now() - started,
+			turn_id: turnId,
 		});
 	}
 
@@ -1534,12 +1641,13 @@ export class Conversation extends Agent<Env> {
 	private turnOutcome(turnId: string): TurnOutcome | undefined {
 		const row = this.sql<{ reply: string }>`
 			SELECT reply FROM turns WHERE turn_id = ${turnId}`[0];
-		if (row === undefined) {
-			return undefined;
-		}
+		return row === undefined ? undefined : this.parseTurnOutcome(row.reply);
+	}
+
+	private parseTurnOutcome(reply: string): TurnOutcome {
 		// SAFETY: `reply` is written only by saveTurnOutcome below, which stores
 		// JSON.stringify(TurnOutcome).
-		return JSON.parse(row.reply) as TurnOutcome;
+		return JSON.parse(reply) as TurnOutcome;
 	}
 
 	private saveTurnOutcome(turnId: string, outcome: TurnOutcome): void {

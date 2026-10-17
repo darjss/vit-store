@@ -207,9 +207,14 @@ export const send = async (
 	body: ZernioSendBody,
 	key: string,
 ): Promise<string | null> => {
-	if (body.message) {
-		console.log(`[bot.say] ${body.message.replaceAll("\n", " ⏎ ").slice(0, 700)}`);
-	}
+	console.log(
+		JSON.stringify({
+			conversation: conversationId,
+			event: "send",
+			key,
+			text: body.message?.slice(0, 700),
+		}),
+	);
 
 	const url = `${zernioBaseUrl(env)}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages`;
 	const firstAttemptAt = Date.now();

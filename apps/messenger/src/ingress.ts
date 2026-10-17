@@ -108,9 +108,10 @@ export class Ingress extends Agent<Env> {
 		});
 	}
 
-	adminList() {
+	adminList(since = 0) {
 		return this.sql<{ last_at: number; thread_id: string }>`
-			SELECT thread_id, last_at FROM threads ORDER BY last_at DESC LIMIT 100`;
+			SELECT thread_id, last_at FROM threads
+			WHERE last_at >= ${since} ORDER BY last_at DESC LIMIT 1000`;
 	}
 
 	private conversation(threadId: string) {
