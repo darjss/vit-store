@@ -24,7 +24,7 @@ Each conversation is one Durable Object in `apps/messenger`. Its transcript hold
      "https://messenger.amerikvitamin.mn/admin/conversations/$(printf %s "$THREAD" | jq -sRr @uri)/transcript"
    ```
 
-   Thread ids look like `zernio:<accountId>:<conversationId>`. List recent ones with `GET /admin/conversations?since=<epoch ms>`. Admin bot chats use `GET /admin/telegram/<chatId>/transcript`, and the admin chat id is `TELEGRAM_ADMIN_CHAT_ID` in `.env.prod`.
+   Thread ids look like `zernio:<accountId>:<conversationId>`. List recent ones with `GET /admin/conversations?since=<epoch ms>`. Admin bot chats use `GET /admin/telegram/<chatId>/transcript`, and the admin chat ids are the comma-separated `TELEGRAM_ADMIN_CHAT_ID` in `.env.prod`, one `--telegram` flag each.
 3. **Read.** Done when every turn you were asked about is traced from its inbox row through its messages to its sends, with the failing step named.
 
 ## Reading a transcript
