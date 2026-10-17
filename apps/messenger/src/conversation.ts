@@ -151,7 +151,7 @@ type TurnOutcome = {
 // instance; otherwise it sleeps `nextInSeconds` and ticks again.
 export type PaymentTickResult =
 	| { action: "failed" | "gone" | "paid_sent" | "window_end"; done: true }
-	| { action: "handoff" | "wait"; done: false; nextInSeconds: number };
+	| { action: "handoff" | "paid_send_failed" | "wait"; done: false; nextInSeconds: number };
 
 type InboxRow = {
 	at: number;
@@ -394,7 +394,14 @@ export class Conversation extends Agent<Env> {
 			// status stays "error"; the workflow's next tick retries.
 		}
 		if (status === "success") {
-			await this.paymentPaid(row, paymentNumber, status, thread);
+			const sent = await this.paymentPaid(row, paymentNumber, status, thread);
+			if (!sent) {
+				return {
+					action: "paid_send_failed",
+					done: false,
+					nextInSeconds: this.nextWatchSeconds(row),
+				};
+			}
 			return { action: "paid_sent", done: true };
 		}
 		if (status === PAYMENT_TERMINAL_FAIL) {
@@ -423,19 +430,26 @@ export class Conversation extends Agent<Env> {
 		return {
 			action,
 			done: false,
-			nextInSeconds: Date.now() >= row.deadline ? this.slowWatchSeconds() : this.watchSeconds(),
+			nextInSeconds: this.nextWatchSeconds(row),
 		};
 	}
 
+	private nextWatchSeconds(row: PaymentDbRow): number {
+		return Date.now() >= row.deadline ? this.slowWatchSeconds() : this.watchSeconds();
+	}
+
 	// Paid tick: flip the row, send the paid message, mark notified. The
-	// notified flag flips only after the send lands: a failure rethrows so the
-	// workflow step retries instead of losing the paid notification.
+	// notified flag flips only after the send lands: a failed send logs
+	// paid_send_failed and the tick keeps running — the next tick re-queries
+	// the store, sees success again, and retries (outbox key dedupes). A
+	// thrown step error would exhaust the workflow's retries and lose the
+	// paid notification for good.
 	private async paymentPaid(
 		row: PaymentDbRow,
 		paymentNumber: string,
 		status: string,
 		thread: string,
-	): Promise<void> {
+	): Promise<boolean> {
 		void this.sql`UPDATE payments SET status = 'success' WHERE payment_number = ${paymentNumber}`;
 		try {
 			await this.sendPart(`pay_${paymentNumber}:paid`, {
@@ -452,7 +466,7 @@ export class Conversation extends Agent<Env> {
 				status,
 				thread,
 			});
-			throw error;
+			return false;
 		}
 		log({
 			action: "paid_sent",
@@ -462,6 +476,7 @@ export class Conversation extends Agent<Env> {
 			status,
 			thread,
 		});
+		return true;
 	}
 
 	// A claimed transfer whose reconciliation died gets one handoff; the watch
@@ -478,8 +493,10 @@ export class Conversation extends Agent<Env> {
 		if (recon === undefined || !RECON_FAIL_STATES.has(recon)) {
 			return { handedOff: false, recon };
 		}
-		void this.sql`UPDATE payments SET handed_off = 1 WHERE payment_number = ${paymentNumber}`;
+		// handed_off flips only after the handoff ran: a thrown customer send
+		// must let the retried tick redo the handoff (outbox keys dedupe).
 		await this.handoffToAdmin("payment_unmatched", `pay_${paymentNumber}:handoff`);
+		void this.sql`UPDATE payments SET handed_off = 1 WHERE payment_number = ${paymentNumber}`;
 		return { handedOff: true, recon };
 	}
 
