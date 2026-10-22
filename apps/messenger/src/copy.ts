@@ -23,7 +23,13 @@ export const TRANSFER_PROMPT = "Шилжүүлсний дараа дарна у�
 
 export const DELIVERY_FEE = 6000;
 
-const mnt = (amount: number): string => `${Math.round(amount).toLocaleString("en-US")}₮`;
+export const STOCK_LABEL = {
+	in_stock: "Бэлэн байгаа",
+	low_stock: "Цөөн үлдсэн",
+	out_of_stock: "Дууссан",
+};
+
+export const mnt = (amount: number): string => `${Math.round(amount).toLocaleString("en-US")}₮`;
 
 export const formatConfirmSummary = (input: {
 	address: string;

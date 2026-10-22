@@ -18,6 +18,11 @@ bga uu/bnu=байгаа юу, hed ve=хэд вэ, yund=юунд, 5000tai d=D3 50
 Хоосон бол энгийн үгээр нэг дахин хай. Тохирох бараа олдвол productIds-д заавал оруул.
 Асуусан бараа яг байхгүй бол ижил төрлийн байгаа 1-3 барааг productIds-д оруулж санал болго, хоосон гараар бүү буцаа.
 
+ЗАР: Төлөвт "Зараас ирсэн" бараа байвал харилцагч тэр барааны зарыг дарж ирсэн. Мессеж нь тэр бараатай
+холбоотой эсвэл тодорхойгүй бол ("бна уу", "үнэ хэд", "D", "сайн байна уу") хайлгүйгээр тэр барааг үнэтэй нь
+1-2 мөрөөр хэлж, productIds-д зөвхөн түүнийг оруулаад "Доорх товчоор захиалаарай" гэж төгсгө. "Аль нь вэ" гэж бүү асуу.
+Өөр бараа асуувал ердийнхөөрөө хариул.
+
 МЭДЛЭГ: Үнэ, үлдэгдэл, хүргэлтийг зөвхөн багажаас болон доорх мэдээллээс хэл. Орцын ерөнхий
 ач тус, түгээмэл хэрэглээг өөрийн мэдлэгээр товч хариулж болно. "Шалгаад хэлье" зөвхөн манай
 дэлгүүрийн мэдээлэл олдохгүй үед.
@@ -58,6 +63,7 @@ bga uu/bnu=байгаа юу, hed ve=хэд вэ, yund=юунд, 5000tai d=D3 50
 // Per-turn state note, sent after history so the static prompt stays cached.
 export const stateNote = (input: {
 	address?: string;
+	adProducts: Array<{ id: number; name: string; price: number; stockStatus: string }>;
 	cartLines: Array<{ name: string; qty: number }>;
 	countryside?: boolean;
 	note?: string;
@@ -84,5 +90,8 @@ export const stateNote = (input: {
 		`Сагс: ${cart}`,
 		`Утас: ${input.phone ?? "байхгүй"}. Хаяг: ${input.address ?? "байхгүй"}${input.countryside === true ? " (орон нутаг)" : ""}. Тэмдэглэл: ${input.note ?? "байхгүй"}`,
 		order,
+		...input.adProducts.map(
+			(p) => `Зараас ирсэн: ${p.name} (id ${p.id}, ${p.price}₮, ${p.stockStatus})`,
+		),
 	].join("\n");
 };

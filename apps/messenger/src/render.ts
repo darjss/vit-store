@@ -1,3 +1,4 @@
+import { mnt, STOCK_LABEL } from "./copy";
 import { send } from "./zernio";
 import { storeClient, withTimeout } from "./store";
 import type { Env } from "./env";
@@ -47,7 +48,7 @@ export const renderTurn = async (opts: {
 								},
 							],
 							imageUrl: p.image || undefined,
-							subtitle: `${p.price}₮ · ${p.stockStatus}`,
+							subtitle: `${mnt(p.price)} · ${STOCK_LABEL[p.stockStatus]}`,
 							title: p.name.slice(0, 80),
 						})),
 						type: "generic" as const,
