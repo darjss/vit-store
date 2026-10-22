@@ -50,7 +50,7 @@ import { renderTurn } from "./render";
 import { botClient, storeClient, withTimeout } from "./store";
 import { sendTelegramAlert } from "./telegram";
 import { createTools, replyInputSchema, type CheckoutState, type ReplyResult } from "./tools";
-import { listMessages, send, type ZernioSendBody } from "./zernio";
+import { adProductIds, listMessages, send, type ZernioSendBody } from "./zernio";
 
 // A chat message handed from Ingress (mapped off the Chat SDK Message) or
 // rebuilt from a persisted inbox payload on recovery. `raw` is the Zernio
@@ -1676,7 +1676,7 @@ export class Conversation extends Agent<Env> {
 
 		const messages: Array<ModelMessage> = [
 			...this.historyByTurns(HISTORY_TURNS),
-			this.stateMessage(),
+			this.stateMessage(await this.adProducts()),
 			userMessage,
 		];
 
@@ -1856,12 +1856,50 @@ export class Conversation extends Agent<Env> {
 		};
 	}
 
-	private stateMessage(): ModelMessage {
+	// Products named by the ad that opened this chat. The ad's ids are looked up
+	// once and cached in meta ("" when the ad names none); product details are
+	// read fresh each turn so price and stock stay current. Any failure just
+	// means a normal reply.
+	private async adProducts() {
+		const adId = this.getMeta("ad_id");
+		if (adId === undefined) {
+			return [];
+		}
+		try {
+			let cached = this.getMeta("ad_product_ids");
+			if (cached === undefined) {
+				cached = (await adProductIds(this.env, adId)).join(",");
+				this.setMeta("ad_product_ids", cached);
+			}
+			const ids = cached
+				.split(",")
+				.filter((id) => id.length > 0)
+				.map(Number);
+			if (ids.length === 0) {
+				return [];
+			}
+			return await storeClient(this.env).product.getProductsByIdsForAssistant.query(
+				{ ids },
+				{ signal: withTimeout() },
+			);
+		} catch (error) {
+			logError({
+				error: errorFields(error),
+				event: "error",
+				thread: this.name ?? "",
+				where: "ad_products",
+			});
+			return [];
+		}
+	}
+
+	private stateMessage(adProducts: Parameters<typeof stateNote>[0]["adProducts"]): ModelMessage {
 		const checkout = this.checkout();
 		const payment = this.latestPayment();
 		return {
 			content: stateNote({
 				address: checkout.address,
+				adProducts,
 				cartLines: this.cartLines().map((l) => ({ name: l.name, qty: l.qty })),
 				countryside: checkout.countryside,
 				note: checkout.note,

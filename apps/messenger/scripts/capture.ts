@@ -5,11 +5,14 @@
 // /v1/inbox/conversations/<id>/messages can find them after a failed send.
 // CAPTURE_FAIL_ONCE=<substring>: the first POST whose body contains it is
 // recorded (so reconcile can see it) but answered with 500.
+// ZERNIO_API_KEY set: GET /api/v1/ads/tree (the ad-name lookup) is read from
+// real Zernio. It is read-only; everything else stays local.
 const LOG = "/tmp/messenger-capture.jsonl";
 import { appendFile } from "node:fs/promises";
 import * as v from "valibot";
 
 const failOnce = process.env.CAPTURE_FAIL_ONCE ?? "";
+const zernioKey = process.env.ZERNIO_API_KEY;
 let failed = false;
 
 type Sent = {
@@ -113,6 +116,13 @@ Bun.serve({
 		}
 		if (request.method === "POST" && url.pathname === "/__seed") {
 			return seedMessage(body);
+		}
+		if (request.method === "GET" && url.pathname === "/api/v1/ads/tree" && zernioKey) {
+			const upstream = await fetch(`https://zernio.com${url.pathname}${url.search}`, {
+				headers: { authorization: `Bearer ${zernioKey}` },
+			});
+			// Bun already decoded the body; drop the upstream content-encoding.
+			return Response.json(await upstream.json(), { status: upstream.status });
 		}
 
 		await recordRequest(request, url, body);

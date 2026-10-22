@@ -326,3 +326,39 @@ export const typing = async (
 		// ignore
 	}
 };
+
+const adTreeSchema = v.looseObject({
+	campaigns: v.array(
+		v.looseObject({
+			adSets: v.array(
+				v.looseObject({
+					ads: v.array(v.looseObject({ name: v.string(), platformAdId: v.string() })),
+				}),
+			),
+		}),
+	),
+});
+
+// Ads name the products they advertise with `#p<id>` tags ("x-receipt #p6994"),
+// so a chat opened from an ad can lead with that product. The tree search
+// takes an exact platform ad id.
+export const adProductIds = async (env: Env, adId: string) => {
+	const response = await fetch(
+		`${zernioBaseUrl(env)}/v1/ads/tree?search=${encodeURIComponent(adId)}`,
+		{
+			headers: { authorization: `Bearer ${env.ZERNIO_API_KEY}` },
+			// The customer is waiting on this turn.
+			signal: AbortSignal.timeout(5000),
+		},
+	);
+	if (!response.ok) {
+		throw new Error(`Zernio ad lookup failed: ${response.status}`);
+	}
+	const tree = v.parse(adTreeSchema, await response.json());
+	const name =
+		tree.campaigns
+			.flatMap((c) => c.adSets)
+			.flatMap((s) => s.ads)
+			.find((ad) => ad.platformAdId === adId)?.name ?? "";
+	return [...name.matchAll(/#p(\d+)/g)].map((m) => Number(m[1]));
+};

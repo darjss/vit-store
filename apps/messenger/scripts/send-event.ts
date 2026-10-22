@@ -2,6 +2,7 @@
 // Usage: bun scripts/send-event.ts "zinc 120toig tgd" [--event-id id]
 //   [--age-seconds n] [--conversation id] [--account id] [--bad-signature]
 //   [--event type] [--direction incoming|outgoing] [--url http://...]
+//   [--ad-id <platform ad id>] (first message of a chat opened from that ad)
 const DEV_VARS = new URL("../.dev.vars", import.meta.url).pathname;
 
 const devVar = async (key: string): Promise<string> => {
@@ -25,6 +26,7 @@ const has = (flag: string): boolean => process.argv.includes(flag);
 
 const FLAGS_WITH_VALUE = new Set([
 	"--account",
+	"--ad-id",
 	"--age-seconds",
 	"--conversation",
 	"--direction",
@@ -49,6 +51,7 @@ for (let i = 2; i < process.argv.length; i++) {
 const image = arg("--image");
 const postback = arg("--postback");
 const quickReply = arg("--quick-reply");
+const adId = arg("--ad-id");
 const isTap = postback !== undefined || quickReply !== undefined;
 const text = positional[0] ?? (isTap ? "" : "sain bnu");
 
@@ -83,7 +86,9 @@ const envelope = {
 		? { postbackPayload: postback }
 		: quickReply
 			? { quickReplyPayload: quickReply }
-			: null,
+			: adId
+				? { referral: { ad_id: adId, source: "ADS", type: "OPEN_THREAD" } }
+				: null,
 	timestamp,
 };
 
