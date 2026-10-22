@@ -1878,10 +1878,12 @@ export class Conversation extends Agent<Env> {
 			if (ids.length === 0) {
 				return [];
 			}
-			return await storeClient(this.env).product.getProductsByIdsForAssistant.query(
+			const products = await storeClient(this.env).product.getProductsByIdsForAssistant.query(
 				{ ids },
 				{ signal: withTimeout() },
 			);
+			// A sold-out ad product falls back to the normal search for alternatives.
+			return products.filter((p) => p.stockStatus !== "out_of_stock");
 		} catch (error) {
 			logError({
 				error: errorFields(error),
