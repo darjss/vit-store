@@ -15,6 +15,7 @@ export type ZernioSendBody = {
 			subtitle?: string;
 			title: string;
 		}>;
+		imageAspectRatio?: "horizontal" | "square";
 		type: "generic";
 	};
 };
