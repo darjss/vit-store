@@ -13,6 +13,7 @@ export type SearchHit = {
 	expiry?: string;
 	id: number;
 	name: string;
+	potency?: string;
 	price: number;
 	stock?: string;
 	summary?: string;
@@ -76,6 +77,7 @@ const toHit = (p: {
 	expirationDate?: string | null;
 	id: number;
 	name: string;
+	potency?: string | null;
 	price: number;
 	stockStatus?: string | null;
 }): SearchHit => ({
@@ -88,6 +90,7 @@ const toHit = (p: {
 	expiry: ustr(p.expirationDate)?.slice(0, 10),
 	id: p.id,
 	name: p.name,
+	potency: ustr(p.potency),
 	price: p.price,
 	stock: ustr(p.stockStatus),
 	summary: ustr(p.description)?.slice(0, 160),
@@ -204,13 +207,22 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 	}),
 
 	product_details: tool({
-		description: "Барааны дэлгэрэнгүй (id-аар, хамгийн ихдээ 5).",
+		description:
+			"Барааны бүрэн мэдээлэл: бүтэн тайлбар, найрлага, тун, ангилал (id-аар, хамгийн ихдээ 5).",
 		execute: async ({ ids }) => {
 			const products = await storeClient(env).product.getProductsByIdsForAdvice.query(
 				{ ids },
 				{ signal: withTimeout() },
 			);
-			return products.map(toHit);
+			// Full record, unlike search hits: the answer to "which oil" or
+			// "what's in it" often sits past the search summary's cut.
+			return products.map((p) => ({
+				...toHit(p),
+				category: ustr(p.category),
+				description: ustr(p.description),
+				ingredients: p.ingredients.length > 0 ? p.ingredients : undefined,
+				summary: undefined,
+			}));
 		},
 		inputSchema: valibotSchema(
 			v.object({
@@ -252,6 +264,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 					expirationDate: detail?.expirationDate,
 					id: h.id,
 					name: detail?.name ?? h.name,
+					potency: detail?.potency,
 					price: detail?.price ?? h.price,
 					stockStatus: h.stockStatus,
 				});
