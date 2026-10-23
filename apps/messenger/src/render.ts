@@ -4,6 +4,11 @@ import { storeClient, withTimeout } from "./store";
 import type { Env } from "./env";
 import type { ReplyResult } from "./tools";
 
+// Most product photos are tall bottles and Messenger crops card images to
+// fill, so Cloudflare pads them onto a white square first.
+const squareImage = (url: string) =>
+	`https://cdn.amerikvitamin.mn/cdn-cgi/image/width=600,height=600,fit=pad,background=white,format=jpeg/${url}`;
+
 // Renders a model turn into Zernio sends. Every part key is deterministic
 // (${turn}:text, ${turn}:cards) and recorded in `outbox` only after a
 // successful send, so a retried or re-processed turn skips parts that already
@@ -25,7 +30,9 @@ export const renderTurn = async (opts: {
 		markSent(textKey);
 	}
 
-	const ids = reply.productIds ?? [];
+	// show_cart and confirm_order send the cart view right after, so cards
+	// there would show a second, possibly different, product list.
+	const ids = reply.action === undefined ? (reply.productIds ?? []) : [];
 	const cardsKey = `${turnId}:cards`;
 	if (ids.length > 0 && !hasSent(cardsKey)) {
 		const products = await storeClient(env).product.getProductsByIdsForAssistant.query(
@@ -47,10 +54,11 @@ export const renderTurn = async (opts: {
 									type: "postback" as const,
 								},
 							],
-							imageUrl: p.image || undefined,
+							imageUrl: p.image ? squareImage(p.image) : undefined,
 							subtitle: `${mnt(p.price)} · ${STOCK_LABEL[p.stockStatus]}`,
 							title: p.name.slice(0, 80),
 						})),
+						imageAspectRatio: "square",
 						type: "generic" as const,
 					},
 				},
