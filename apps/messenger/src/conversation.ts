@@ -45,7 +45,7 @@ import type { Env } from "./env";
 import { errorFields, log, logError, turnFailedLog, turnLog } from "./log";
 import { createModel, modelName, providerOptions } from "./model";
 import { fetchImageParts } from "./photos";
-import { stateNote, SYSTEM_PROMPT } from "./prompt";
+import { stateNote, systemPrompt } from "./prompt";
 import { renderTurn } from "./render";
 import { botClient, storeClient, withTimeout } from "./store";
 import { sendTelegramAlert } from "./telegram";
@@ -1674,9 +1674,10 @@ export class Conversation extends Agent<Env> {
 			return;
 		}
 
+		const adProducts = await this.adProducts();
 		const messages: Array<ModelMessage> = [
 			...this.historyByTurns(HISTORY_TURNS),
-			this.stateMessage(await this.adProducts()),
+			this.stateMessage(adProducts),
 			userMessage,
 		];
 
@@ -1701,7 +1702,7 @@ export class Conversation extends Agent<Env> {
 					: undefined,
 			providerOptions,
 			stopWhen: [hasToolCall("reply"), hasToolCall("handoff"), stepCountIs(MAX_STEPS)],
-			system: SYSTEM_PROMPT,
+			system: systemPrompt(adProducts.length > 0),
 			toolChoice: "required",
 			tools,
 		});
