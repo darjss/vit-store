@@ -242,15 +242,10 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 		description: "Дэлгүүрийн каталогиос бараа хайх. Хайлтын үгийг англиар бич.",
 		execute: async ({ query }) => {
 			const store = storeClient(env);
-			// Sold-out products never reach the model, so it can't offer them.
-			const hits = (
-				await store.product.searchProductsForAssistant.query(
-					{ limit: 12, query },
-					{ signal: withTimeout() },
-				)
-			)
-				.filter((h) => h.stockStatus !== "out_of_stock")
-				.slice(0, 6);
+			const hits = await store.product.searchProductsForAssistant.query(
+				{ limit: 6, query },
+				{ signal: withTimeout() },
+			);
 			if (hits.length === 0) {
 				return [];
 			}
