@@ -164,20 +164,19 @@ export const phonesInText = (text: string): Array<string> =>
 		(m) => `${m[1]}${m[2]}`,
 	);
 
-// Recognises a free-text transfer claim ("хийсэн" / "hiisen"). Only meaningful
-// while a pending payment exists; the caller gates on that.
+// Past-tense "transferred / did / paid" in Cyrillic and Latin: шилжүүлсэн,
+// шилжүүлчихлээ, хийлээ, төлсөн, shiljuulchlee, hiichihlee, tulluu. Future
+// and wish forms (шилжүүлэх, shiljuulmeer, төлөө) don't match.
+const TRANSFER_DONE = [
+	/(шилжүүл|хий|төл)(с[эөо]н|л[эө]{2}|ч(их)?(л[эө]{2}|с[эөо]н))/,
+	/(shilj(uu|vv|u|v)l|hii|tul|tol)(s[eou]n|l(ee|uu|oo)|ch(ih?)?(l(ee|uu|oo)|s[eoa]n))/,
+];
+
+// Recognises a free-text transfer claim. Only meaningful while a pending
+// payment exists; the caller gates on that.
 export const isTransferDoneText = (text: string | undefined): boolean => {
-	if (!text) {
-		return false;
-	}
-	const normalized = text.trim().toLowerCase();
-	return (
-		normalized.length > 0 &&
-		(normalized.includes("хийсэн") ||
-			normalized.includes("hiisen") ||
-			normalized.includes("шилжүүлсэн") ||
-			normalized.includes("shiljuulsen"))
-	);
+	const normalized = text?.trim().toLowerCase() ?? "";
+	return TRANSFER_DONE.some((re) => re.test(normalized));
 };
 
 // The QPay-only page authorises with paymentNumber (path) + checkoutToken (ct).
