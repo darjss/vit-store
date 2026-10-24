@@ -1037,6 +1037,7 @@ export class Conversation extends Agent<Env> {
 			// concurrent pause stops later taps from mutating anything.
 			const action = this.classifyRow(row, this.isPaused());
 			if (action.kind === "model") {
+				await this.recheckTransfer();
 				items.push(action.item);
 				modelRows.push(row);
 				continue;
@@ -1130,6 +1131,22 @@ export class Conversation extends Agent<Env> {
 			return "ambiguous";
 		}
 		return { paymentNumber: pending.payment_number };
+	}
+
+	// The store polls Khaan for 5 minutes after the bank details go out, and
+	// customers often pay later. Any message after that, however it's worded,
+	// restarts the poll. While a poll runs this is a no-op.
+	private async recheckTransfer(): Promise<void> {
+		const row = this.pendingPaymentRows().find((p) => p.transfer_shown === 1);
+		if (row === undefined) {
+			return;
+		}
+		await storeClient(this.env)
+			.payment.selectTransfer.mutate(
+				{ checkoutToken: row.checkout_token ?? undefined, paymentNumber: row.payment_number },
+				{ signal: withTimeout() },
+			)
+			.catch(() => {});
 	}
 
 	private async claimTransfer(key: string, paymentNumber: string): Promise<boolean> {
