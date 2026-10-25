@@ -12,6 +12,7 @@ export type SearchHit = {
 	dailyIntake?: string;
 	expiry?: string;
 	id: number;
+	ingredients?: Array<string>;
 	name: string;
 	potency?: string;
 	price: number;
@@ -76,6 +77,7 @@ const toHit = (p: {
 	description?: string | null;
 	expirationDate?: string | null;
 	id: number;
+	ingredients?: Array<string>;
 	name: string;
 	potency?: string | null;
 	price: number;
@@ -89,6 +91,8 @@ const toHit = (p: {
 			: String(p.dailyIntake),
 	expiry: ustr(p.expirationDate)?.slice(0, 10),
 	id: p.id,
+	// Short label lists; "which oil" and "what's in it" answers live here.
+	ingredients: p.ingredients?.length ? p.ingredients : undefined,
 	name: p.name,
 	potency: ustr(p.potency),
 	price: p.price,
@@ -220,7 +224,6 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 				...toHit(p),
 				category: ustr(p.category),
 				description: ustr(p.description),
-				ingredients: p.ingredients.length > 0 ? p.ingredients : undefined,
 				summary: undefined,
 			}));
 		},
@@ -263,6 +266,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 					description: detail?.description,
 					expirationDate: detail?.expirationDate,
 					id: h.id,
+					ingredients: detail?.ingredients,
 					name: detail?.name ?? h.name,
 					potency: detail?.potency,
 					price: detail?.price ?? h.price,
