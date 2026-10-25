@@ -47,13 +47,17 @@ export const renderTurn = async (opts: {
 					accountId,
 					template: {
 						elements: products.slice(0, 10).map((p) => ({
-							buttons: [
-								{
-									payload: `order_product:${p.id}`,
-									title: "Захиалах",
-									type: "postback" as const,
-								},
-							],
+							// A sold-out card shows "Дууссан" and nothing to tap.
+							buttons:
+								p.stockStatus === "out_of_stock"
+									? undefined
+									: [
+											{
+												payload: `order_product:${p.id}`,
+												title: "Захиалах",
+												type: "postback" as const,
+											},
+										],
 							imageUrl: p.image ? squareImage(p.image) : undefined,
 							subtitle: `${mnt(p.price)} · ${STOCK_LABEL[p.stockStatus]}`,
 							title: p.name.slice(0, 80),
