@@ -992,6 +992,7 @@ export class Conversation extends Agent<Env> {
 		};
 
 		let handedOff = false;
+		let rechecked = false;
 		for (let i = 0; i < claimed.length; i++) {
 			const row = claimed[i];
 			if (row === undefined) {
@@ -1037,6 +1038,11 @@ export class Conversation extends Agent<Env> {
 			// concurrent pause stops later taps from mutating anything.
 			const action = this.classifyRow(row, this.isPaused());
 			if (action.kind === "model") {
+				// Once per batch, off the reply path.
+				if (!rechecked) {
+					rechecked = true;
+					this.ctx.waitUntil(this.recheckTransfer());
+				}
 				items.push(action.item);
 				modelRows.push(row);
 				continue;
@@ -1130,6 +1136,29 @@ export class Conversation extends Agent<Env> {
 			return "ambiguous";
 		}
 		return { paymentNumber: pending.payment_number };
+	}
+
+	// The store polls Khaan for 5 minutes after the bank details go out, and
+	// customers often pay later. Any message after that, however it's worded,
+	// restarts the poll. While a poll runs this is a no-op. A customer who
+	// went back to QPay keeps QPay: selectTransfer would switch them over.
+	private async recheckTransfer(): Promise<void> {
+		const row = this.pendingPaymentRows().find((p) => p.transfer_shown === 1);
+		if (row === undefined) {
+			return;
+		}
+		const store = storeClient(this.env);
+		const ref = {
+			checkoutToken: row.checkout_token ?? undefined,
+			paymentNumber: row.payment_number,
+		};
+		const live = await store.payment.getPaymentStatus
+			.query(ref, { signal: withTimeout() })
+			.catch(() => undefined);
+		if (live?.provider !== "transfer" || live.status === "success" || live.status === "failed") {
+			return;
+		}
+		await store.payment.selectTransfer.mutate(ref, { signal: withTimeout() }).catch(() => {});
 	}
 
 	private async claimTransfer(key: string, paymentNumber: string): Promise<boolean> {
