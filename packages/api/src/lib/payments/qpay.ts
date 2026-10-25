@@ -67,10 +67,10 @@ const paymentRowSchema = v.object({
 	trx_fee: v.string(),
 });
 
-const paymentResponseSchema = v.object({
+export const paymentResponseSchema = v.object({
 	count: v.number(),
-	paid_amount: v.number(),
-	rows: v.array(paymentRowSchema),
+	paid_amount: v.optional(v.number(), 0),
+	rows: v.optional(v.array(paymentRowSchema), []),
 });
 
 const QPAY_ACCESS_TOKEN_KEY = "qpay_access_token";
