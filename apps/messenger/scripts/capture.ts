@@ -21,6 +21,7 @@ type Sent = {
 	direction: "incoming" | "outgoing";
 	id: string;
 	message?: string;
+	sentVia?: null | string;
 };
 const sent = new Map<string, Array<Sent>>();
 
@@ -36,6 +37,7 @@ const listMessages = (convoId: string): Response => {
 			direction: m.direction,
 			id: m.id,
 			message: m.message,
+			sentVia: m.sentVia,
 		}));
 	return Response.json({
 		messages,
@@ -54,15 +56,24 @@ const recordSend = (convoId: string, body: string, messageId: string): void => {
 		direction: "outgoing",
 		id: messageId,
 		message: parsed.success ? parsed.output.message : undefined,
+		sentVia: "api",
 	});
 	sent.set(convoId, list);
 };
 
 // Test hook: POST /__seed {conversationId, message} plants a prior incoming
-// message that the conversation history GET returns.
+// message that the conversation history GET returns. With
+// {direction: "outgoing", sentVia: null} it plants a page-inbox reply typed by
+// a person; agoSeconds (default 60) sets how old it is.
 const seedMessage = (body: string): Response => {
 	const seed = v.safeParse(
-		v.object({ conversationId: v.string(), message: v.string() }),
+		v.object({
+			agoSeconds: v.optional(v.number()),
+			conversationId: v.string(),
+			direction: v.optional(v.picklist(["incoming", "outgoing"])),
+			message: v.string(),
+			sentVia: v.optional(v.nullable(v.string())),
+		}),
 		JSON.parse(body || "{}"),
 	);
 	if (!seed.success) {
@@ -71,10 +82,11 @@ const seedMessage = (body: string): Response => {
 	const list = sent.get(seed.output.conversationId) ?? [];
 	list.push({
 		conversationId: seed.output.conversationId,
-		createdAt: new Date(Date.now() - 60_000).toISOString(),
-		direction: "incoming",
+		createdAt: new Date(Date.now() - (seed.output.agoSeconds ?? 60) * 1000).toISOString(),
+		direction: seed.output.direction ?? "incoming",
 		id: `seed_${crypto.randomUUID().slice(0, 8)}`,
 		message: seed.output.message,
+		sentVia: seed.output.sentVia,
 	});
 	sent.set(seed.output.conversationId, list);
 	return Response.json({ ok: true });

@@ -130,6 +130,7 @@ const FALLBACK_TEXT = "Шалгаад хэлье.";
 const prefillLog = (outcome: string, thread: string): void =>
 	log({ event: "history_prefill", outcome, thread });
 const PAUSE_MS = 12 * 60 * 60_000;
+const HUMAN_SETTLE_MS = 15_000;
 const PAYMENT_DEADLINE_MS = 2 * 60 * 60_000;
 // After the payment deadline the watcher keeps polling: a late QPay or
 // reconciled transfer still gets announced, just less often.
@@ -243,6 +244,8 @@ export class Conversation extends Agent<Env> {
 				created_at INTEGER NOT NULL
 			)`;
 		void this.sql`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`;
+		// Products whose card went out in this chat: the only ones cart_set may add.
+		void this.sql`CREATE TABLE IF NOT EXISTS shown (product_id INTEGER PRIMARY KEY)`;
 		void this.sql`
 			CREATE TABLE IF NOT EXISTS cart (
 				product_id INTEGER PRIMARY KEY,
@@ -560,6 +563,14 @@ export class Conversation extends Agent<Env> {
 			this.bumpRevision();
 			return;
 		}
+		// The model may only add what the customer saw as a card or already
+		// has in the cart (pilot: a bare "Za" put an unseen product in the cart).
+		const known = this.sql<{ product_id: number }>`
+			SELECT product_id FROM shown WHERE product_id = ${productId}
+			UNION SELECT product_id FROM cart WHERE product_id = ${productId}`;
+		if (known.length === 0) {
+			throw new Error("product_not_shown: show its card with reply productIds and let them choose");
+		}
 		const products = await storeClient(this.env).product.getProductsByIdsForAssistant.query(
 			{ ids: [productId] },
 			{ signal: withTimeout() },
@@ -731,6 +742,8 @@ export class Conversation extends Agent<Env> {
 
 	adminResume() {
 		void this.sql`DELETE FROM meta WHERE key = 'paused_until'`;
+		// Human messages before this point no longer pause the bot.
+		this.setMeta("resumed_at", String(Date.now()));
 		return { resumed: true };
 	}
 
@@ -970,6 +983,7 @@ export class Conversation extends Agent<Env> {
 	private async runClaimed(claimed: Array<InboxRow>): Promise<void> {
 		const cutoff = Date.now() - REPROCESS_MAX_AGE_MS;
 		const seqAtStart = this.latestSeq();
+		await this.pauseIfHumanReplied();
 
 		// Strict arrival order: a tap or claim must not jump ahead of earlier
 		// text. Pending model-bound items flush into their own deterministic
@@ -1068,6 +1082,51 @@ export class Conversation extends Agent<Env> {
 			await this.claimTransfer(row.event_id, action.paymentNumber);
 		} else if (action.kind === "ambiguous") {
 			await this.handoffToAdmin("payment_ambiguous", `${row.event_id}:ambiguous`);
+		}
+	}
+
+	// A person typing in the page inbox takes the chat over: the bot pauses
+	// for PAUSE_MS from their last message, same as a handoff (pilot: the
+	// owner and the bot answered the same customer over each other). Our own
+	// sends carry sentVia "api". Meta's echo can reach Zernio before it
+	// attributes our send, so a message younger than HUMAN_SETTLE_MS waits
+	// for the next batch. Best-effort: a failed lookup never blocks the turn.
+	private async pauseIfHumanReplied(): Promise<void> {
+		if (this.isPaused()) {
+			return;
+		}
+		const now = Date.now();
+		try {
+			const messages = await listMessages(
+				this.env,
+				this.conversationId(),
+				this.accountId(),
+				20,
+				AbortSignal.timeout(3000),
+			);
+			// Read after the await: a resume during the lookup must still count.
+			const resumedAt = Number(this.getMeta("resumed_at") ?? "0");
+			// Newest first: the first match is the latest human message.
+			const humanAt = messages
+				.filter((m) => m.direction === "outgoing" && (m.sentVia === null || m.sentVia === "human"))
+				.map((m) => Date.parse(m.createdAt ?? ""))
+				.find((at) => now - at > HUMAN_SETTLE_MS && at > resumedAt);
+			if (humanAt === undefined || humanAt + PAUSE_MS <= now) {
+				return;
+			}
+			this.setMeta("paused_until", String(humanAt + PAUSE_MS));
+			log({
+				event: "human_pause",
+				human_at: new Date(humanAt).toISOString(),
+				thread: this.name ?? "",
+			});
+		} catch (error) {
+			logError({
+				error: errorFields(error),
+				event: "error",
+				thread: this.name ?? "",
+				where: "human_pause",
+			});
 		}
 	}
 
@@ -1359,16 +1418,20 @@ export class Conversation extends Agent<Env> {
 				await this.sendPart(`${key}:tap`, { message: ERROR });
 				return;
 			}
-			// Mutation + revision + 'applied' in one synchronous block.
-			const existing = this.sql<CartRow>`SELECT qty FROM cart WHERE product_id = ${productId}`[0];
-			const qty = Math.min((existing?.qty ?? 0) + 1, 99);
+			// A card tap means "this one": it replaces the cart instead of adding
+			// to it (pilot: a second tap merged two D3 listings into a 251k cart).
+			// Re-tapping the same card keeps its quantity. Mutation + revision +
+			// 'applied' in one synchronous block.
+			void this.sql`DELETE FROM cart WHERE product_id != ${productId}`;
 			void this.sql`
-				INSERT INTO cart (product_id, qty, name, price) VALUES (${productId}, ${qty}, ${product.name}, ${product.price})
-				ON CONFLICT(product_id) DO UPDATE SET qty = ${qty}`;
+				INSERT INTO cart (product_id, qty, name, price) VALUES (${productId}, 1, ${product.name}, ${product.price})
+				ON CONFLICT(product_id) DO NOTHING`;
 			this.bumpRevision();
 			this.markApplied(key);
 		}
-		await this.sendCartView(`${key}:tap`);
+		// Straight to delivery or the order summary: the cart screen in between
+		// lost customers who tapped Захиалах and then saw a basket to confirm.
+		await this.sendConfirmOrNeed(`${key}:tap`);
 		this.tapLog("order_product", "added");
 	}
 
@@ -1711,7 +1774,7 @@ export class Conversation extends Agent<Env> {
 		];
 
 		const env = this.env;
-		const tools = createTools(env, this) satisfies ToolSet;
+		const tools = createTools(env, this, adProducts) satisfies ToolSet;
 		const stepMs: Array<number> = [];
 		let lastStepAt = Date.now();
 		const result = await generateText({
@@ -2000,7 +2063,7 @@ export class Conversation extends Agent<Env> {
 		const { env, reply, turnId } = opts;
 		// A render/send failure propagates to processItems, whose error turn
 		// log carries the error fields — nothing extra to record here.
-		await renderTurn({
+		const shown = await renderTurn({
 			accountId: this.accountId(),
 			conversationId: this.conversationId(),
 			env,
@@ -2010,6 +2073,9 @@ export class Conversation extends Agent<Env> {
 			reply: reply ?? { text: FALLBACK_TEXT },
 			turnId,
 		});
+		for (const id of shown) {
+			void this.sql`INSERT OR IGNORE INTO shown (product_id) VALUES (${id})`;
+		}
 	}
 
 	private extractReply(result: {

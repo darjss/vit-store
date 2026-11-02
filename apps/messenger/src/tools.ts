@@ -125,7 +125,30 @@ const corroborateAddress = (address: string, texts: Array<string>): boolean => {
 	return significantWords(address).every((w) => haystack.includes(w));
 };
 
-export const createTools = (env: Env, deps: ToolDeps) => ({
+// Products of the ad that opened this chat, in stock.
+export type AdProduct = { id: number; name: string; price: number; stockStatus: string };
+
+// The catalogue lists some products twice under different ids and prices
+// ("D3 + K2" 110k and "D3 & K2" 135k): the names differ only in punctuation.
+const listingKey = (name: string) => name.toLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
+
+// In an ad chat the ad product leads any search it matches, and its
+// lookalike listings drop out (pilot: the 135k twin got tapped instead).
+const leadWithAdProducts = (hits: Array<SearchHit>, adProducts: Array<AdProduct>) => {
+	const matched = adProducts.filter((ad) =>
+		hits.some((h) => listingKey(h.name) === listingKey(ad.name)),
+	);
+	if (matched.length === 0) {
+		return hits;
+	}
+	const keys = new Set(matched.map((ad) => listingKey(ad.name)));
+	return [
+		...matched.map((ad) => hits.find((h) => h.id === ad.id) ?? toHit(ad)),
+		...hits.filter((h) => !keys.has(listingKey(h.name))),
+	];
+};
+
+export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduct>) => ({
 	cart_set: tool({
 		description:
 			"Сагсанд бараа нэмэх эсвэл тоо хэмжээг өөрчлөх. quantity=0 бол устгана. Snapshot-г өөрөө авна.",
@@ -257,7 +280,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 				{ signal: withTimeout() },
 			);
 			const byId = new Map(details.map((d) => [d.id, d]));
-			return hits.map((h) => {
+			const found = hits.map((h) => {
 				const detail = byId.get(h.id);
 				return toHit({
 					amount: detail?.amount,
@@ -273,6 +296,7 @@ export const createTools = (env: Env, deps: ToolDeps) => ({
 					stockStatus: h.stockStatus,
 				});
 			});
+			return leadWithAdProducts(found, adProducts);
 		},
 		inputSchema: valibotSchema(
 			v.object({ query: v.pipe(v.string(), v.minLength(1), v.maxLength(200)) }),

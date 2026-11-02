@@ -21,7 +21,7 @@ export const renderTurn = async (opts: {
 	markSent: (key: string) => void;
 	reply: ReplyResult;
 	turnId: string;
-}): Promise<void> => {
+}) => {
 	const { accountId, conversationId, env, hasSent, markSent, reply, turnId } = opts;
 
 	const textKey = `${turnId}:text`;
@@ -71,4 +71,6 @@ export const renderTurn = async (opts: {
 			markSent(cardsKey);
 		}
 	}
+	// Ids whose cards are on screen, for the caller's cart_set gate.
+	return hasSent(cardsKey) ? ids.slice(0, 10) : [];
 };

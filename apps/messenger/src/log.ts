@@ -60,6 +60,7 @@ export type LogEvent =
 			thread: string;
 	  }
 	| { event: "history_prefill"; outcome: string; thread: string }
+	| { event: "human_pause"; human_at: string; thread: string }
 	| {
 			ad_id?: string;
 			event: "inbound";
