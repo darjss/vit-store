@@ -40,6 +40,9 @@ const listedMessageSchema = v.looseObject({
 				direction: v.optional(v.string()),
 				id: v.optional(v.string()),
 				message: v.optional(v.string()),
+				// "api" for our sends; null for Meta's own apps (a person typing
+				// in the page inbox), "human" for the Zernio dashboard.
+				sentVia: v.optional(v.nullable(v.string())),
 			}),
 		),
 	),
