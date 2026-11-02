@@ -1096,7 +1096,6 @@ export class Conversation extends Agent<Env> {
 			return;
 		}
 		const now = Date.now();
-		const resumedAt = Number(this.getMeta("resumed_at") ?? "0");
 		try {
 			const messages = await listMessages(
 				this.env,
@@ -1105,6 +1104,8 @@ export class Conversation extends Agent<Env> {
 				20,
 				AbortSignal.timeout(3000),
 			);
+			// Read after the await: a resume during the lookup must still count.
+			const resumedAt = Number(this.getMeta("resumed_at") ?? "0");
 			// Newest first: the first match is the latest human message.
 			const humanAt = messages
 				.filter((m) => m.direction === "outgoing" && (m.sentVia === null || m.sentVia === "human"))
