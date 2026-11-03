@@ -36,6 +36,11 @@ export const parseOrderPayload = (payload: string): number | undefined => {
 	return Number.isSafeInteger(id) ? id : undefined;
 };
 
+// Welcome-screen ice-breaker buttons, set on the page through Zernio.
+const ICE_PAYLOADS = ["ice:order", "ice:price", "ice:delivery"] as const;
+export type IcePayload = (typeof ICE_PAYLOADS)[number];
+export const parseIcePayload = (payload: string) => ICE_PAYLOADS.find((p) => p === payload);
+
 const ORDER_CONFIRM_RE = /^order_confirm:(\d+)$/;
 export const parseOrderConfirmPayload = (payload: string): number | undefined => {
 	const match = ORDER_CONFIRM_RE.exec(payload);

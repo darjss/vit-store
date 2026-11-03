@@ -10,6 +10,11 @@ export const CART_EMPTY = 'Сагс хоосон байна. Бараагаа с
 export const CART_CHANGED = "Сагс өөрчлөгдсөн байна. Шинэ мэдээллээ шалгаарай.";
 export const NEEDS_DELIVERY = "Утас, хаягаа бичээрэй.";
 
+// Welcome-screen buttons (owner-approved 2026-11-03).
+export const ASK_PRODUCT = "Ямар бараа сонирхож байна вэ? Нэрийг нь бичээрэй.";
+export const DELIVERY_INFO =
+	"Улаанбаатарт хүргэлт 6,000₮. Төлбөр орсны дараа өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ. Орон нутаг руу автобус, таксинд тавьж явуулна.";
+
 export const CLAIM_ACK = "Баярлалаа 🙏 Шилжүүлгийг шалгаад баталгаажуулна.";
 export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
 export const HANDOFF = "Админ удахгүй хариулна 🙏";

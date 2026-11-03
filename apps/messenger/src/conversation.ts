@@ -16,6 +16,7 @@ import {
 	isTransferDoneText,
 	parseCartPayload,
 	parseDeliveryChangePayload,
+	parseIcePayload,
 	parseOrderConfirmPayload,
 	parseOrderPayload,
 	parsePayTransferPayload,
@@ -23,13 +24,16 @@ import {
 	phonesInText,
 	buildQpayPageUrl,
 	type CartLine,
+	type IcePayload,
 } from "./cart";
 import {
 	ALREADY_PAID,
+	ASK_PRODUCT,
 	CART_CHANGED,
 	CART_EMPTY,
 	CLAIM_ACK,
 	CONFIRM_PROMPT,
+	DELIVERY_INFO,
 	ERROR,
 	formatBankDetails,
 	formatConfirmSummary,
@@ -46,7 +50,7 @@ import { errorFields, log, logError, turnFailedLog, turnLog } from "./log";
 import { createModel, modelName, providerOptions } from "./model";
 import { fetchImageParts } from "./photos";
 import { stateNote, systemPrompt } from "./prompt";
-import { renderTurn } from "./render";
+import { renderTurn, sendCards } from "./render";
 import { botClient, storeClient, withTimeout } from "./store";
 import { sendTelegramAlert } from "./telegram";
 import { createTools, replyInputSchema, type CheckoutState, type ReplyResult } from "./tools";
@@ -1289,7 +1293,50 @@ export class Conversation extends Agent<Env> {
 			await this.orderProductTap(row, productId);
 			return;
 		}
+		const ice = parseIcePayload(payload);
+		if (ice !== undefined) {
+			await this.iceTap(row, ice);
+			return;
+		}
 		this.tapLog(payload, "unknown");
+	}
+
+	// Welcome-screen buttons get fixed answers, never the model. In a chat
+	// opened from an ad, "Захиалъя" orders the ad product like a card tap and
+	// "Үнэ хэд вэ?" sends its card (price, stock, Захиалах). Without an ad
+	// product both ask which product.
+	private async iceTap(row: InboxRow, ice: IcePayload): Promise<void> {
+		const key = `${row.event_id}:tap`;
+		if (ice === "ice:delivery") {
+			await this.sendPart(key, { message: DELIVERY_INFO });
+			this.tapLog(ice, "sent");
+			return;
+		}
+		const ids = (await this.adProducts()).map((p) => p.id);
+		const [only] = ids;
+		if (ice === "ice:order" && only !== undefined && ids.length === 1) {
+			await this.orderProductTap(row, only);
+			return;
+		}
+		if (ids.length === 0) {
+			await this.sendPart(key, { message: ASK_PRODUCT });
+			this.tapLog(ice, "no_ad_product");
+			return;
+		}
+		if (!this.outboxHas(key)) {
+			await sendCards({
+				accountId: this.accountId(),
+				conversationId: this.conversationId(),
+				env: this.env,
+				ids,
+				key,
+			});
+			void this.sql`INSERT OR IGNORE INTO outbox (key, sent_at) VALUES (${key}, ${Date.now()})`;
+			for (const id of ids) {
+				void this.sql`INSERT OR IGNORE INTO shown (product_id) VALUES (${id})`;
+			}
+		}
+		this.tapLog(ice, "cards");
 	}
 
 	private async sendPart(key: string, body: Omit<ZernioSendBody, "accountId">): Promise<void> {
