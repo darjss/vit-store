@@ -82,13 +82,16 @@ const envelope = {
 		sentAt: timestamp,
 		text: direction === "incoming" ? text : `[outgoing] ${text}`,
 	},
-	metadata: postback
-		? { postbackPayload: postback }
-		: quickReply
-			? { quickReplyPayload: quickReply }
-			: adId
-				? { referral: { ad_id: adId, source: "ADS", type: "OPEN_THREAD" } }
-				: null,
+	// --ad-id rides along with a tap too: a welcome-screen button tapped in a
+	// chat opened from an ad.
+	metadata:
+		postback || quickReply || adId
+			? {
+					postbackPayload: postback,
+					quickReplyPayload: quickReply,
+					referral: adId ? { ad_id: adId, source: "ADS", type: "OPEN_THREAD" } : undefined,
+				}
+			: null,
 	timestamp,
 };
 
