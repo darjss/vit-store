@@ -1312,6 +1312,12 @@ export class Conversation extends Agent<Env> {
 			this.tapLog(ice, "sent");
 			return;
 		}
+		// An applied order tap already filled the cart: replay its checkout
+		// sends without looking the ad products up again.
+		if (row.status === "applied") {
+			await this.sendConfirmOrNeed(key);
+			return;
+		}
 		const ids = (await this.adProducts()).map((p) => p.id);
 		const [only] = ids;
 		if (ice === "ice:order" && only !== undefined && ids.length === 1) {
@@ -1323,16 +1329,18 @@ export class Conversation extends Agent<Env> {
 			this.tapLog(ice, "no_ad_product");
 			return;
 		}
-		if (!this.outboxHas(key)) {
-			await sendCards({
+		if (
+			!this.outboxHas(key) &&
+			(await sendCards({
 				accountId: this.accountId(),
 				conversationId: this.conversationId(),
 				env: this.env,
 				ids,
 				key,
-			});
+			}))
+		) {
 			void this.sql`INSERT OR IGNORE INTO outbox (key, sent_at) VALUES (${key}, ${Date.now()})`;
-			for (const id of ids) {
+			for (const id of ids.slice(0, 10)) {
 				void this.sql`INSERT OR IGNORE INTO shown (product_id) VALUES (${id})`;
 			}
 		}
