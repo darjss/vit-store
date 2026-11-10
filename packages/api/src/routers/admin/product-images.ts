@@ -2,13 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { DEFAULT_PRODUCT_IMAGE_PREFIX, uploadImageUrls } from "~/lib/product-image-upload";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
-
-const uploadImagesFromUrlResponseSchema = v.object({
-	images: v.array(v.object({ url: v.string() })),
-	status: v.string(),
-	time: v.number(),
-});
 
 export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P) {
 	return router({
@@ -190,42 +185,26 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
 				}),
 			)
 			.mutation(async ({ ctx, input }) => {
-				const imageUploadToken = ctx.c.env.IMAGE_UPLOAD_TOKEN;
-				if (!imageUploadToken) {
+				const results = await uploadImageUrls(
+					ctx.c.env,
+					ctx.log,
+					DEFAULT_PRODUCT_IMAGE_PREFIX,
+					input.images.map((image) => image.url),
+				);
+				const failed = results.filter((result) => !result.ok);
+				if (failed.length > 0) {
+					// All or nothing, so a remote URL never lands in the table and the primary flag stays put.
 					throw new TRPCError({
-						code: "PRECONDITION_FAILED",
-						message: "IMAGE_UPLOAD_TOKEN is required for server image uploads",
+						code: "BAD_REQUEST",
+						message: `Could not copy ${failed.length} of ${results.length} images to the CDN, nothing saved: ${failed
+							.map((result) => `${result.sourceUrl} (${result.error})`)
+							.join("; ")}`,
 					});
 				}
+				const imagesToInsert = results.flatMap((result, index) =>
+					result.ok ? [{ ...input.images[index], url: result.url }] : [],
+				);
 				try {
-					const imageUrls = input.images.map((image) => ({ url: image.url }));
-					const response = await fetch(`${process.env.BACKEND_URL}/upload/images/urls`, {
-						body: JSON.stringify(imageUrls),
-						headers: {
-							"Content-Type": "application/json",
-							"X-Image-Upload-Token": imageUploadToken,
-						},
-						method: "POST",
-					});
-					if (!response.ok) {
-						const errorText = await response.text();
-						ctx.log.error("uploadImagesFromUrl", {
-							errorText,
-							event: "uploadImagesFromUrl",
-							status: response.status,
-							statusText: response.statusText,
-						});
-						throw new TRPCError({
-							cause: errorText,
-							code: "INTERNAL_SERVER_ERROR",
-							message: `Image upload failed: ${response.status} ${response.statusText} ${errorText}`,
-						});
-					}
-					const uploadedImages = v.parse(uploadImagesFromUrlResponseSchema, await response.json());
-					const imagesToInsert = uploadedImages.images.map((uploadedImage, index) => ({
-						...input.images[index],
-						url: uploadedImage.url,
-					}));
 					await productImageQueries.admin.createImages(imagesToInsert);
 					await purgeCatalogCache(ctx, [
 						...new Set(imagesToInsert.map((image) => image.productId)),
