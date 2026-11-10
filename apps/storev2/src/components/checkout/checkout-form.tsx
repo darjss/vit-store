@@ -103,6 +103,10 @@ const CheckoutForm = (props: {
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async (values: newOrderType) => {
+				// Identify before the order: the server's order_created uses the same
+				// phone-hash distinct id, and a later identify can be lost when the
+				// page navigates to payment.
+				await identifyUser(values.phoneNumber).catch(() => {});
 				return await api.order.addOrder.mutate({ ...values });
 			},
 			onError: () => {
@@ -113,7 +117,7 @@ const CheckoutForm = (props: {
 					variant: "error",
 				});
 			},
-			onSuccess: async (data, variables) => {
+			onSuccess: async (data) => {
 				const paymentNumber = data?.paymentNumber;
 				if (!paymentNumber) {
 					showToast({
@@ -125,7 +129,6 @@ const CheckoutForm = (props: {
 					return;
 				}
 
-				identifyUser(variables.phoneNumber);
 				showToast({
 					description: "Захиалга амжилттай үүслээ",
 					duration: 5000,

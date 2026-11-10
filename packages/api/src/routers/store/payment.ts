@@ -42,7 +42,7 @@ async function createOrReuseQpayInvoice(
 	trackQpayInvoiceCreatedServerSide({
 		paymentNumber,
 		phone: payment.order.customerPhone?.toString() ?? paymentNumber,
-	}).catch(() => {});
+	});
 	return qpayResponse;
 }
 
@@ -75,7 +75,6 @@ export const payment = router({
 				const result = await confirmPaymentAndNotify({
 					paymentNumber: input.paymentNumber,
 					provider: "qpay",
-					referrer: ctx.c.req.header("referer") ?? undefined,
 					source: "qpay_checkout",
 				});
 				if (!result.confirmed) {
@@ -177,8 +176,7 @@ export const payment = router({
 						errorMessage: error instanceof Error ? error.message : "Failed to create QPay invoice",
 						paymentNumber: input.paymentNumber,
 						phone: paymentInfo?.order.customerPhone?.toString() ?? input.paymentNumber,
-						referrer: ctx.c.req.header("referer") ?? undefined,
-					}).catch(() => {});
+					});
 				} catch {
 					// Analytics failure should not break the error response
 				}
