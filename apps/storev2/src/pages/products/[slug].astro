@@ -268,8 +268,8 @@ const breadcrumbSchema = {
 				slug: product.slug,
 			}}
 		/>
-</Layout>
 
+<!-- Inside Layout so ClientRouter swaps it in; after </html> it was dropped on client-side navigation. -->
 <script
 	id="product-view-tracker"
 	hidden
@@ -311,3 +311,4 @@ const breadcrumbSchema = {
 		});
 	});
 </script>
+</Layout>
