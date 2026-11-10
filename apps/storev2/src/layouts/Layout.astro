@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toast";
 import Footer from "@/layouts/Footer.astro";
 import Header from "@/layouts/Header.astro";
 import MobileNavbar from "@/layouts/MobileNavbar.astro";
+import MetaPixel from "../components/meta-pixel.astro";
 import PostHog from "../components/posthog.astro";
 
 import "@fontsource-variable/onest";
@@ -44,6 +45,7 @@ const { canonical, description, image, imageAlt, nofollow, noindex, title } = As
         />
         <ClientRouter />
         <PostHog />
+        <MetaPixel />
     </head>
     <body>
         {/* Fallback pageview capture for Astro view transitions (SPA navigation).

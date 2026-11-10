@@ -279,6 +279,8 @@ const breadcrumbSchema = {
 	data-product-slug={slug}
 ></script>
 <script>
+	import { trackPixel } from "@/lib/meta-pixel";
+
 	// Track product view on page load (supports view transitions)
 	let _productViewTracked = false;
 	function trackProductView() {
@@ -296,4 +298,16 @@ const breadcrumbSchema = {
 	
 	// Track on initial load and view transitions
 	document.addEventListener("astro:page-load", trackProductView);
+
+	// Every product page view, including client-side navigation between products.
+	document.addEventListener("astro:page-load", () => {
+		const el = document.getElementById("product-view-tracker");
+		if (!el?.dataset.productId) {return;}
+		trackPixel("ViewContent", {
+			content_ids: [el.dataset.productId],
+			content_type: "product",
+			currency: "MNT",
+			value: Number(el.dataset.productPrice),
+		});
+	});
 </script>

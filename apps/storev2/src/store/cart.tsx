@@ -4,6 +4,7 @@ import { createEffect, createMemo, createRoot, createSignal, type Accessor } fro
 import { createStore } from "solid-js/store";
 import { onMount } from "solid-js";
 import { trackAddToCart, trackCartOpened, trackRemoveFromCart } from "@/lib/analytics";
+import { trackPixel } from "@/lib/meta-pixel";
 import { isServer } from "@/lib/runtime";
 import { safeStorage } from "@/lib/safe-storage";
 
@@ -87,6 +88,13 @@ export const cart = createRoot(() => {
 				product_id: product.productId,
 				product_name: product.name,
 				quantity: product.quantity,
+			});
+			trackPixel("AddToCart", {
+				content_ids: [String(product.productId)],
+				content_type: "product",
+				contents: [{ id: String(product.productId), quantity: product.quantity }],
+				currency: "MNT",
+				value: product.price * product.quantity,
 			});
 
 			if (options?.openDrawer !== false) {

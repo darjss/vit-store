@@ -1,0 +1,34 @@
+---
+// Meta Pixel for website ads. Off in local dev unless PUBLIC_META_PIXEL_DEV=true.
+// Event helpers no-op when window.fbq is missing, so this gate covers them too.
+const enabled = import.meta.env.PROD || import.meta.env.PUBLIC_META_PIXEL_DEV === "true";
+---
+
+{enabled && (
+	<script is:inline>
+		// Meta's base code, unminified. A top-level function in a classic script
+		// is window.fbq. Head scripts run once per session under ClientRouter, and
+		// Meta's own pushState tracking is off, so each navigation sends exactly
+		// one PageView, from astro:after-swap.
+		function fbq(...args) {
+			if (fbq.callMethod) {
+				fbq.callMethod(...args);
+			} else {
+				fbq.queue.push(args);
+			}
+		}
+		window._fbq = fbq;
+		fbq.push = fbq;
+		fbq.loaded = true;
+		fbq.version = "2.0";
+		fbq.queue = [];
+		fbq.disablePushState = true;
+		const fbevents = document.createElement("script");
+		fbevents.async = true;
+		fbevents.src = "https://connect.facebook.net/en_US/fbevents.js";
+		document.head.append(fbevents);
+		fbq("init", "2056263798358526");
+		fbq("track", "PageView");
+		document.addEventListener("astro:after-swap", () => fbq("track", "PageView"));
+	</script>
+)}
