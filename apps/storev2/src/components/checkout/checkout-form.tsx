@@ -19,6 +19,7 @@ import { Motion, Presence } from "solid-motionone";
 import { minLength, object, pipe, string } from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
+import { trackPixel } from "@/lib/meta-pixel";
 import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
 import { paymentUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
@@ -81,6 +82,13 @@ const CheckoutForm = (props: {
 				cart.count(),
 				cart.items().map((item) => item.productId),
 			);
+			trackPixel("InitiateCheckout", {
+				content_ids: cart.items().map((item) => String(item.productId)),
+				content_type: "product",
+				currency: "MNT",
+				num_items: cart.count(),
+				value: cart.total(),
+			});
 		})();
 	});
 

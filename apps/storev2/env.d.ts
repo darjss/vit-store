@@ -12,6 +12,7 @@ type Runtime = import("@astrojs/cloudflare").Runtime<CloudflareEnv>;
 
 import type { AnalyticsProperties } from "@/lib/analytics-props";
 import type { ThrownErrorWire } from "@/lib/error-wire";
+import type { MetaPixelOptions, MetaPixelParams } from "@/lib/meta-pixel";
 
 interface PostHog {
 	capture: (event: string, properties?: AnalyticsProperties) => void;
@@ -23,10 +24,19 @@ interface PostHog {
 
 declare global {
 	type Env = CloudflareEnv;
+	interface ImportMetaEnv {
+		readonly PUBLIC_META_PIXEL_DEV?: string;
+	}
 	namespace App {
 		type Locals = Runtime;
 	}
 	interface Window {
+		fbq?: (
+			command: "track",
+			event: string,
+			params: MetaPixelParams,
+			options?: MetaPixelOptions,
+		) => void;
 		posthog?: PostHog;
 	}
 }

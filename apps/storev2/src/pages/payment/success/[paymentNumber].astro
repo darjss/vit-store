@@ -1,5 +1,6 @@
 ---
 import ClearCart from "@/components/payment/clear-cart";
+import MetaPurchase from "@/components/payment/meta-purchase";
 import { env } from "cloudflare:workers";
 import Celebration from "@/components/ui/celebration";
 import Layout from "@/layouts/Layout.astro";
@@ -31,6 +32,12 @@ if (payment.status !== "success") {
 
 <Layout>
     <ClearCart client:load />
+    <MetaPurchase
+        client:load
+        paymentNumber={paymentNumber}
+        products={payment.order.products}
+        total={payment.total}
+    />
     <Celebration
         client:load
         eventKey={paymentSuccessCelebrationKey(paymentNumber)}
