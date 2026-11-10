@@ -1,15 +1,19 @@
 import { timingSafeEqual } from "@vit/api";
+import {
+	MAX_IMAGE_SIZE,
+	productImageKeyPrefix,
+	putToCdn,
+	putWebp,
+	storeProductImage,
+	uploadImageUrls,
+} from "@vit/api/lib/product-image-upload";
 import { imageUrlArraySchema } from "@vit/shared";
 import { requireAdminSession } from "../lib/admin-session";
 import type { ServerHonoEnv } from "../lib/logging";
-import type { Context } from "hono";
+import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
-import { nanoid } from "nanoid";
 import * as v from "valibot";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
-type UploadContext = Context<ServerHonoEnv>;
-const CDN_BASE_URL = "https://cdn.amerikvitamin.mn";
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;
 
 function readImageFile(formData: FormData): File | null {
@@ -17,122 +21,13 @@ function readImageFile(formData: FormData): File | null {
 	return v.is(v.instance(File), image) ? image : null;
 }
 
-function readOptionalString(entry: File | string | null): string | null {
-	if (entry === null) {
-		return null;
-	}
-	const parsed = v.safeParse(v.string(), entry);
+function readRequiredString(entry: File | string | null): string | null {
+	const parsed = v.safeParse(v.pipe(v.string(), v.minLength(1)), entry);
 	return parsed.success ? parsed.output : null;
 }
 
-function readRequiredString(entry: File | string | null): string | null {
-	const parsed = readOptionalString(entry);
-	return parsed && parsed.length > 0 ? parsed : null;
-}
-
-function extensionFromContentType(contentType: string): string {
-	if (contentType.includes("png")) {
-		return "png";
-	}
-	if (contentType.includes("gif")) {
-		return "gif";
-	}
-	if (contentType.includes("webp")) {
-		return "webp";
-	}
-	return "jpg";
-}
-function sanitizePrefix(prefix: string | undefined): string {
-	if (!prefix) {
-		return "products/catalog";
-	}
-	return prefix
-		.trim()
-		.replaceAll(/\.{2,}/g, "")
-		.replaceAll(/[^a-zA-Z0-9/_-]/g, "-")
-		.replaceAll(/\/+/g, "/")
-		.replaceAll(/^\/+|\/+$/g, "")
-		.slice(0, 120);
-}
-
-async function uploadImageFromRemoteUrl(
-	c: UploadContext,
-	log: UploadContext["var"]["log"],
-	uploadPrefix: string,
-	url: string,
-	isPrimary: boolean,
-) {
-	const imageResponse = await fetch(url, {
-		headers: {
-			Accept: "image/*",
-			"User-Agent":
-				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-		},
-	});
-	if (!imageResponse.ok) {
-		log.warn("upload.url_fetch_failed", { status: imageResponse.status, url });
-		return { url };
-	}
-	const contentType = imageResponse.headers.get("content-type");
-	if (!contentType?.startsWith("image/")) {
-		log.warn("upload.url_invalid_type", { contentType, url });
-		return { url };
-	}
-	const generatedId = nanoid();
-	const rawExt = extensionFromContentType(contentType);
-	let carouselKey = `${uploadPrefix}/${generatedId}.webp`;
-	const imageArrayBuffer = await imageResponse.arrayBuffer();
-	const imageBlob = new Blob([imageArrayBuffer], { type: contentType });
-	let wrotePrimaryWithTransform = false;
-	try {
-		const carouselImageResult = c.env.images
-			.input(imageBlob.stream())
-			.transform({ fit: "contain", height: 600, width: 800 })
-			.output({ format: "image/webp" });
-		const carouselImage = await carouselImageResult;
-		const carouselResponse = carouselImage.response();
-		const carouselArrayBuffer = await carouselResponse.arrayBuffer();
-		await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
-			httpMetadata: {
-				cacheControl: "public, max-age=31536000, immutable",
-				contentType: "image/webp",
-			},
-		});
-		wrotePrimaryWithTransform = true;
-	} catch (transformError) {
-		log.warn("upload.images_transform_unavailable", {
-			error: transformError instanceof Error ? transformError.message : "unknown",
-			url,
-		});
-		carouselKey = `${uploadPrefix}/${generatedId}.${rawExt}`;
-		await c.env.r2Bucket.put(carouselKey, imageArrayBuffer, {
-			httpMetadata: { cacheControl: "public, max-age=31536000, immutable", contentType },
-		});
-	}
-	const carouselUrl = `${CDN_BASE_URL}/${carouselKey}`;
-	if (isPrimary && wrotePrimaryWithTransform) {
-		const thumbnailKey = `${uploadPrefix}/${generatedId}-thumbnail.webp`;
-		const thumbnailBlob = new Blob([imageArrayBuffer], { type: contentType });
-		const thumbnailImageResult = c.env.images
-			.input(thumbnailBlob.stream())
-			.transform({ fit: "contain", height: 300, width: 400 })
-			.output({ format: "image/webp" });
-		const thumbnailImage = await thumbnailImageResult;
-		const thumbnailResponse = thumbnailImage.response();
-		const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
-		await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
-			httpMetadata: {
-				cacheControl: "public, max-age=31536000, immutable",
-				contentType: "image/webp",
-			},
-		});
-	}
-	return { url: carouselUrl };
-}
-
-app.use("/products", requireAdminSession);
-app.use("/brands", requireAdminSession);
-app.use("/images/urls", async (c, next) => {
+/** Scripts send `X-Image-Upload-Token`; the admin UI sends its session cookie. */
+const requireUploadTokenOrAdmin: MiddlewareHandler<ServerHonoEnv> = async (c, next) => {
 	const expected = c.env.IMAGE_UPLOAD_TOKEN;
 	const provided = c.req.header("X-Image-Upload-Token");
 	if (expected && provided && (await timingSafeEqual(expected, provided))) {
@@ -140,16 +35,18 @@ app.use("/images/urls", async (c, next) => {
 		return next();
 	}
 	return requireAdminSession(c, next);
-});
+};
+
+app.use("/products", requireUploadTokenOrAdmin);
+app.use("/images/urls", requireUploadTokenOrAdmin);
+app.use("/brands", requireAdminSession);
 app.post("/products", async (c) => {
 	const log = c.get("log");
-	log.set({ operation: "upload.products", user_type: "admin" });
+	log.set({ operation: "upload.products" });
 	const startTime = Date.now();
 	try {
 		const formData = await c.req.formData();
 		const image = readImageFile(formData);
-		const productName = readOptionalString(formData.get("productName"));
-		const isPrimary = formData.get("isPrimary") === "true";
 		if (!image) {
 			log.warn("upload.validation_failed", { reason: "no_image" });
 			return c.json({ message: "Image is required" }, 400);
@@ -168,73 +65,13 @@ app.post("/products", async (c) => {
 			});
 			return c.json({ message: "Image size is too large" }, 400);
 		}
-		const generatedId = nanoid();
-		let keyPrefix = "";
-		if (productName) {
-			const sanitizedProductName = productName
-				.toLowerCase()
-				.replaceAll(/\s+/g, "-")
-				.replaceAll(/[^a-z0-9-]/g, "");
-			keyPrefix = `products/${sanitizedProductName}/`;
-		}
-		const carouselKey = `${keyPrefix}${generatedId}.webp`;
-		const thumbnailKey = `${keyPrefix}${generatedId}-thumbnail.webp`;
-		const imageStream = image.stream();
-		const carouselImageResult = c.env.images
-			.input(imageStream)
-			.transform({
-				fit: "contain",
-				height: 600,
-				width: 800,
-			})
-			.output({ format: "image/webp" });
-		const carouselImage = await carouselImageResult;
-		const carouselResponse = carouselImage.response();
-		const carouselArrayBuffer = await carouselResponse.arrayBuffer();
-		await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
-			httpMetadata: {
-				cacheControl: "public, max-age=31536000, immutable",
-				contentType: "image/webp",
-			},
-		});
-		const carouselUrl = `https://cdn.amerikvitamin.mn/${carouselKey}`;
-		let thumbnailUrl: string | undefined;
-		if (isPrimary) {
-			const thumbnailImageStream = image.stream();
-			const thumbnailImageResult = c.env.images
-				.input(thumbnailImageStream)
-				.transform({
-					fit: "contain",
-					height: 300,
-					width: 400,
-				})
-				.output({ format: "image/webp" });
-			const thumbnailImage = await thumbnailImageResult;
-			const thumbnailResponse = thumbnailImage.response();
-			const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
-			await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
-				httpMetadata: {
-					cacheControl: "public, max-age=31536000, immutable",
-					contentType: "image/webp",
-				},
-			});
-			thumbnailUrl = `${CDN_BASE_URL}/${thumbnailKey}`;
-		}
-		const durationMs = Date.now() - startTime;
-		log.info("upload.success", {
-			durationMs,
-			isPrimary,
-			key: carouselKey,
-		});
-		const base = {
-			key: carouselKey,
-			message: "Uploaded successfully",
-			url: carouselUrl,
-		} satisfies { key: string; message: string; url: string };
-		if (thumbnailUrl !== undefined) {
-			return c.json({ ...base, thumbnailUrl });
-		}
-		return c.json(base);
+		const { key, url } = await storeProductImage(
+			c.env,
+			productImageKeyPrefix(c.req.query("prefix")),
+			image.stream(),
+		);
+		log.info("upload.success", { durationMs: Date.now() - startTime, key });
+		return c.json({ key, message: "Uploaded successfully", url });
 	} catch (error) {
 		log.error(error instanceof Error ? error : new Error(String(error)), {
 			event: "upload.failed",
@@ -258,49 +95,22 @@ app.post("/brands", async (c) => {
 			.toLowerCase()
 			.replaceAll(/\s+/g, "-")
 			.replaceAll(/[^a-z0-9-]/g, "");
-		if (isSvg) {
-			const svgArrayBuffer = await image.arrayBuffer();
-			await c.env.r2Bucket.put(`brands/${sanitizedBrandName}.svg`, svgArrayBuffer, {
-				httpMetadata: {
-					cacheControl: "public, max-age=31536000, immutable",
-					contentType: "image/svg+xml",
-				},
-			});
-			log.info("upload.brand_success", {
-				brandName: sanitizedBrandName,
-				format: "svg",
-			});
-			return c.json({
-				message: "Brand image uploaded successfully",
-				url: `${CDN_BASE_URL}/brands/${sanitizedBrandName}.svg`,
-			});
-		}
-		const imageStream = image.stream();
-		const imageResult = c.env.images
-			.input(imageStream)
-			.transform({
-				fit: "contain",
-				height: 800,
-				width: 800,
-			})
-			.output({ format: "image/webp" });
-		const brandImage = await imageResult;
-		const brandImageResponse = brandImage.response();
-		const brandImageArrayBuffer = await brandImageResponse.arrayBuffer();
-		await c.env.r2Bucket.put(`brands/${sanitizedBrandName}.webp`, brandImageArrayBuffer, {
-			httpMetadata: {
-				cacheControl: "public, max-age=31536000, immutable",
-				contentType: "image/webp",
-			},
-		});
+		const url = isSvg
+			? await putToCdn(
+					c.env,
+					`brands/${sanitizedBrandName}.svg`,
+					await image.arrayBuffer(),
+					"image/svg+xml",
+				)
+			: await putWebp(c.env, `brands/${sanitizedBrandName}.webp`, image.stream(), {
+					height: 800,
+					width: 800,
+				});
 		log.info("upload.brand_success", {
 			brandName: sanitizedBrandName,
-			format: "webp",
+			format: isSvg ? "svg" : "webp",
 		});
-		return c.json({
-			message: "Brand image uploaded successfully",
-			url: `${CDN_BASE_URL}/brands/${sanitizedBrandName}.webp`,
-		});
+		return c.json({ message: "Brand image uploaded successfully", url });
 	} catch (error) {
 		log.error(error instanceof Error ? error : new Error(String(error)), {
 			event: "upload.brand_failed",
@@ -312,63 +122,37 @@ app.post("/images/urls", async (c) => {
 	const log = c.get("log");
 	log.set({ operation: "upload.urls" });
 	const startTime = Date.now();
+	let json: unknown;
 	try {
-		const uploadPrefix = sanitizePrefix(c.req.query("prefix"));
-		let json: unknown;
-		try {
-			json = await c.req.json();
-		} catch {
-			log.warn("upload.urls_validation_failed", { reason: "invalid_json" });
-			return c.json({ message: "Array of image URLs required" }, 400);
-		}
-		const parsed = v.safeParse(imageUrlArraySchema, json);
-		if (!parsed.success) {
-			log.warn("upload.urls_validation_failed", { reason: "invalid_body" });
-			return c.json({ message: "Array of image URLs required" }, 400);
-		}
-		const body = parsed.output;
-		if (body.length === 0) {
-			log.warn("upload.urls_validation_failed", { reason: "empty_array" });
-			return c.json({ message: "Array of image URLs required" }, 400);
-		}
-		if (body.length > MAX_URL_IMAGES) {
-			log.warn("upload.urls_validation_failed", {
-				count: body.length,
-				reason: "too_many",
-			});
-			return c.json({ message: `Maximum ${MAX_URL_IMAGES} images allowed` }, 400);
-		}
-		const uploadedImages: Array<{
-			url: string;
-		}> = [];
-		for (let i = 0; i < body.length; i++) {
-			const { url } = body[i];
-			try {
-				uploadedImages.push(await uploadImageFromRemoteUrl(c, log, uploadPrefix, url, i === 0));
-			} catch (imageError) {
-				log.error(imageError instanceof Error ? imageError : new Error(String(imageError)), {
-					event: "upload.url_processing_failed",
-					url,
-				});
-				uploadedImages.push({ url });
-			}
-		}
-		const elapsed = Date.now() - startTime;
-		log.info("upload.urls_batch_complete", {
-			durationMs: elapsed,
-			total: body.length,
-			uploaded: uploadedImages.length,
-		});
-		return c.json({
-			images: uploadedImages,
-			status: "OK",
-			time: elapsed,
-		});
-	} catch (error) {
-		log.error(error instanceof Error ? error : new Error(String(error)), {
-			event: "upload.urls_batch_failed",
-		});
-		return c.json({ message: "Failed to upload images from URLs", status: "ERROR" }, 500);
+		json = await c.req.json();
+	} catch {
+		log.warn("upload.urls_validation_failed", { reason: "invalid_json" });
+		return c.json({ message: "Array of image URLs required" }, 400);
 	}
+	const parsed = v.safeParse(imageUrlArraySchema, json);
+	if (!parsed.success || parsed.output.length === 0) {
+		log.warn("upload.urls_validation_failed", { reason: "invalid_body" });
+		return c.json({ message: "Array of image URLs required" }, 400);
+	}
+	if (parsed.output.length > MAX_URL_IMAGES) {
+		log.warn("upload.urls_validation_failed", {
+			count: parsed.output.length,
+			reason: "too_many",
+		});
+		return c.json({ message: `Maximum ${MAX_URL_IMAGES} images allowed` }, 400);
+	}
+	const images = await uploadImageUrls(
+		c.env,
+		log,
+		productImageKeyPrefix(c.req.query("prefix")),
+		parsed.output.map((image) => image.url),
+	);
+	const elapsed = Date.now() - startTime;
+	log.info("upload.urls_batch_complete", {
+		durationMs: elapsed,
+		failed: images.filter((image) => !image.ok).length,
+		total: images.length,
+	});
+	return c.json({ images, time: elapsed });
 });
 export default app;

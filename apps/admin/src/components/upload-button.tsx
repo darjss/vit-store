@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import type { ImageUrlArray } from "@vit/shared";
-import { nanoid } from "nanoid";
 import { useRef } from "react";
 import { toast } from "sonner";
 import { parseUploadResponse } from "@/lib/upload-response";
@@ -8,23 +7,9 @@ import { UploadIcon } from "./icons";
 import SubmitButton from "./submit-button";
 import { Input } from "./ui/input";
 
-const deriveExtension = (image: File): string => {
-	const mimeSub = image.type.split("/")[1];
-	if (mimeSub) {
-		return mimeSub;
-	}
-	const nameMatch = image.name.match(/\.([a-zA-Z0-9]+)$/);
-	if (nameMatch) {
-		return nameMatch[1].toLowerCase();
-	}
-	return "jpg";
-};
-
 const uploadImage = async (image: File, category: string) => {
-	const key = `${category}/${nanoid()}.${deriveExtension(image)}`;
 	const formData = new FormData();
 	formData.append("image", image);
-	formData.append("key", key);
 	const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/upload/${category}s`, {
 		body: formData,
 		credentials: "include",
