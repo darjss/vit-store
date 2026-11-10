@@ -25,6 +25,8 @@ import { getAverageCostOfProduct } from "~/queries/payments";
 import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
 import { scheduleRestockDispatches } from "~/lib/restock";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { trackOrderCreatedServerSide } from "~/lib/integrations/posthog";
+import { trackAdminConfirmedPayment } from "~/lib/payments/transfer-confirmation";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -112,6 +114,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					ctx,
 					stockTransitions.map((transition) => transition.productId),
 				);
+				trackOrderCreatedServerSide({
+					lines: input.products,
+					orderNumber,
+					paymentNumber,
+					phone: input.customerPhone,
+					source: "admin",
+					total: orderTotal,
+				});
+				if (input.paymentStatus === "success") {
+					await trackAdminConfirmedPayment(paymentNumber);
+				}
 				ctx.log.info("payment.created", {
 					amount: orderTotal,
 					orderId,
@@ -534,7 +547,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				// (deducts on creation with paymentStatus==="success") and
 				// confirmPaymentAndApplyStock (deducts on transition to success).
 				// Pending orders never touch stock.
-				const restockCandidates = await db().transaction(async (tx) => {
+				const updated = await db().transaction(async (tx) => {
 					const stockTransitions: Array<StockTransition> = [];
 					const applyRequiredStockTransition = async (productId: number, delta: number) => {
 						const transition = await applyStockTransition(tx, {
@@ -641,8 +654,15 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						payment_transitioned: transitionedToSuccess,
 						total: orderTotal,
 					});
-					return stockTransitions;
+					return {
+						paidPaymentNumber: transitionedToSuccess ? prevPayment?.paymentNumber : undefined,
+						stockTransitions,
+					};
 				});
+				const { paidPaymentNumber, stockTransitions: restockCandidates } = updated;
+				if (paidPaymentNumber) {
+					await trackAdminConfirmedPayment(paidPaymentNumber);
+				}
 				const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
 				await purgeCatalogCache(ctx, changedProductIds);
 				scheduleRestockDispatches(ctx, restockCandidates);

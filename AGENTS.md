@@ -14,6 +14,10 @@ Use the default five-label vocabulary: `needs-triage`, `needs-info`, `ready-for-
 
 Single-context layout: root `CONTEXT.md` plus root `docs/adr/`. See `docs/agents/domain.md`.
 
+### PostHog funnels
+
+Funnel, conversion, revenue and attribution questions: read `docs/agents/posthog-funnels.md` first. It has the event spine, the Executor query path and the known data gaps.
+
 ### vit-playground
 
 Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes live in the sibling repo [`darjss/vit-playground`](https://github.com/darjss/vit-playground) at `../vit-playground` (or `~/dev/vit-playground`). Keep `vit-store` for app source, ADRs, `docs/problems/`, and `plans/`.

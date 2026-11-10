@@ -383,7 +383,7 @@ async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
 	trackQpayInvoiceCreatedServerSide({
 		paymentNumber,
 		phone: payment.order.customerPhone?.toString() ?? paymentNumber,
-	}).catch(() => {});
+	});
 }
 
 /** Facebook iOS webviews often fail bank-app handoff, so those Payments start on transfer. Everyone else starts on QPay. Chosen once at insert. */
@@ -433,16 +433,20 @@ export const order = router({
 				);
 			}
 
-			// Fire-and-forget server-side PostHog tracking
-			if (!reused) {
+			if (paymentNumber && !reused) {
 				trackOrderCreatedServerSide({
-					itemCount: normalizedProducts.length,
+					lines: normalizedProducts.map((line) => ({
+						price: productById.get(line.productId)?.price ?? 0,
+						productId: line.productId,
+						quantity: line.quantity,
+					})),
 					orderNumber: resolvedOrderNumber,
-					paymentNumber: paymentNumber ?? undefined,
+					paymentNumber,
 					phone: input.phoneNumber,
-					referrer: ctx.c.req.header("referer") ?? undefined,
+					// The Messenger bot's store client sends this header (apps/messenger/src/store.ts).
+					source: ctx.c.req.header("x-vit-client") === "messenger" ? "messenger" : "web",
 					total,
-				}).catch(() => {});
+				});
 			}
 
 			const checkoutToken = paymentNumber

@@ -5,10 +5,7 @@ import {
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/admin-notifications";
-import {
-	trackOrderPlacedServerSide,
-	trackPaymentConfirmedServerSide,
-} from "~/lib/integrations/posthog";
+import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
 import { KhaanTransactionAlreadyConsumedError } from "~/lib/payments/consumed-transaction";
 import { paymentQueries } from "~/queries/payments";
 
@@ -43,7 +40,6 @@ type ConfirmPaymentInput = {
 	consumedKhaanTransactions?: Array<{ fingerprint: string }>;
 	paymentNumber: string;
 	provider: ConfirmPaymentProvider;
-	referrer?: string;
 	source: ConfirmPaymentSource;
 };
 
@@ -54,11 +50,24 @@ export type ConfirmPaymentResult =
 			reason: "already_confirmed_or_not_pending" | "khaan_transaction_already_consumed";
 	  };
 
+/**
+ * Admin paths that write a successful Payment directly (order create, order
+ * edit, manual payment create) bypass confirmPaymentAndNotify, so they report
+ * it here. Reads the row back so the event matches the other confirm paths.
+ */
+export async function trackAdminConfirmedPayment(paymentNumber: string) {
+	const payment = await paymentQueries.store
+		.getPaymentInfoByNumber(paymentNumber)
+		.catch(() => null);
+	if (payment) {
+		trackPaymentConfirmedServerSide(payment, "admin");
+	}
+}
+
 export async function confirmPaymentAndNotify({
 	consumedKhaanTransactions,
 	paymentNumber,
 	provider,
-	referrer,
 	source,
 }: ConfirmPaymentInput): Promise<ConfirmPaymentResult> {
 	const q = paymentQueries.store;
@@ -132,25 +141,7 @@ export async function confirmPaymentAndNotify({
 		}
 	}
 
-	trackPaymentConfirmedServerSide({
-		orderNumber: paymentInfo.order.orderNumber,
-		paymentNumber,
-		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
-		products: paymentInfo.order.orderDetails.map((detail) => ({
-			productId: detail.product.id,
-			quantity: detail.quantity,
-		})),
-		provider,
-		referrer,
-		revenue: paymentInfo.order.total,
-	}).catch(() => {});
-	trackOrderPlacedServerSide({
-		orderNumber: paymentInfo.order.orderNumber,
-		paymentNumber,
-		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
-		provider,
-		total: paymentInfo.order.total,
-	}).catch(() => {});
+	trackPaymentConfirmedServerSide(paymentInfo, source);
 
 	return {
 		confirmed: true,

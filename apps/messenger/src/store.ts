@@ -26,7 +26,14 @@ export const storeClient = (env: Env): TRPCClient<StoreRouter> => {
 	let client = clients.get(env);
 	if (client === undefined) {
 		client = createTRPCClient<StoreRouter>({
-			links: [httpLink({ transformer: SuperJSON, url: storeApiUrl(env) })],
+			links: [
+				httpLink({
+					// Tags the store's `order_created` analytics event with source "messenger".
+					headers: { "X-Vit-Client": "messenger" },
+					transformer: SuperJSON,
+					url: storeApiUrl(env),
+				}),
+			],
 		});
 		clients.set(env, client);
 	}

@@ -1,5 +1,6 @@
-import { env } from "cloudflare:workers";
-import { PostHog } from "posthog-node";
+import { env, waitUntil } from "cloudflare:workers";
+import { type EventMessage, PostHog } from "posthog-node";
+import type { ConfirmPaymentSource } from "~/lib/payments/transfer-confirmation";
 
 let client: PostHog | null = null;
 
@@ -20,177 +21,120 @@ async function hashPhone(phone: string): Promise<string> {
 	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-interface TrackOrderCreatedProps {
-	currency?: string;
-	itemCount: number;
-	orderNumber: string;
-	paymentNumber?: string;
-	phone: string;
-	referrer?: string;
-	total: number;
-	utmCampaign?: string;
-	utmMedium?: string;
-	utmSource?: string;
-}
-
-export async function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
-	try {
-		const distinctId = await hashPhone(props.phone);
-		const posthog = getClient();
-		await posthog.captureImmediate({
-			distinctId,
-			event: "order_created",
-			properties: {
-				$referrer: props.referrer,
-				$revenue: props.total,
-				currency: props.currency ?? "MNT",
-				item_count: props.itemCount,
-				order_number: props.orderNumber,
-				payment_number: props.paymentNumber,
-				utm_campaign: props.utmCampaign,
-				utm_medium: props.utmMedium,
-				utm_source: props.utmSource,
-			},
+/**
+ * The distinct id is the SHA-256 of the phone, the same id the storefront
+ * passes to `posthog.identify`, so server events land on the browser person.
+ * A Worker cancels fetches still running when its response is sent, so the
+ * send is handed to `waitUntil`. Analytics never throws into the caller.
+ */
+function capture(phone: string, event: string, properties: EventMessage["properties"]) {
+	const send = async () => {
+		await getClient().captureImmediate({
+			distinctId: await hashPhone(phone),
+			event,
+			properties,
 		});
-	} catch {
-		// Silently fail — analytics should never break the order flow
-	}
+	};
+	waitUntil(send().catch(() => {}));
 }
 
-interface TrackOrderPlacedProps {
-	currency?: string;
+/** Where an Order was entered: storefront checkout, the Messenger bot, or the admin (dashboard or Telegram bot). */
+export type OrderSource = "web" | "messenger" | "admin";
+
+type OrderLine = { price: number; productId: number; quantity: number };
+
+/** `content_ids` matches the Meta Pixel's string product ids. */
+function lineProperties(lines: Array<OrderLine>) {
+	return {
+		content_ids: lines.map((line) => String(line.productId)),
+		currency: "MNT",
+		num_items: lines.reduce((sum, line) => sum + line.quantity, 0),
+		product_ids: lines.map((line) => line.productId),
+		products: lines.map((line) => ({
+			price: line.price,
+			product_id: line.productId,
+			quantity: line.quantity,
+		})),
+	};
+}
+
+type TrackOrderCreatedProps = {
+	lines: Array<OrderLine>;
 	orderNumber: string;
 	paymentNumber: string;
 	phone: string;
-	provider: "qpay" | "transfer";
+	source: OrderSource;
 	total: number;
+};
+
+/** Order intent. Carries `order_value`, never `$revenue`: only a confirmed payment is revenue. */
+export function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
+	capture(props.phone, "order_created", {
+		...lineProperties(props.lines),
+		order_number: props.orderNumber,
+		order_value: props.total,
+		payment_number: props.paymentNumber,
+		source: props.source,
+	});
 }
 
-export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
-	try {
-		const distinctId = await hashPhone(props.phone);
-		const posthog = getClient();
-		await posthog.captureImmediate({
-			distinctId,
-			event: "order_placed",
-			properties: {
-				$revenue: props.total,
-				currency: props.currency ?? "MNT",
-				order_number: props.orderNumber,
-				payment_number: props.paymentNumber,
-				provider: props.provider,
-			},
-		});
-	} catch {
-		// Silently fail — analytics should never break the flow
-	}
-}
-
-interface TrackPaymentConfirmedProps {
-	currency?: string;
-	orderNumber?: string;
+/** The shape `paymentQueries.store.getPaymentInfoByNumber` returns. */
+type ConfirmedPayment = {
+	order: {
+		customerPhone: number;
+		orderDetails: Array<{
+			price: number | null;
+			product: { id: number; price: number };
+			quantity: number;
+		}>;
+		orderNumber: string;
+		total: number;
+	};
 	paymentNumber: string;
-	phone: string;
-	products: Array<{ productId: number; quantity: number }>;
-	provider: "qpay" | "transfer";
-	referrer?: string;
-	revenue: number;
+	provider: string;
+};
+
+/** One event per successful Payment, from every confirm path. The only event with `$revenue`. */
+export function trackPaymentConfirmedServerSide(
+	payment: ConfirmedPayment,
+	confirmationSource: ConfirmPaymentSource,
+) {
+	capture(String(payment.order.customerPhone), "payment_confirmed", {
+		...lineProperties(
+			payment.order.orderDetails.map((detail) => ({
+				price: detail.price ?? detail.product.price,
+				productId: detail.product.id,
+				quantity: detail.quantity,
+			})),
+		),
+		$revenue: payment.order.total,
+		confirmation_source: confirmationSource,
+		order_number: payment.order.orderNumber,
+		payment_number: payment.paymentNumber,
+		provider: payment.provider,
+	});
 }
 
-export async function trackPaymentConfirmedServerSide(props: TrackPaymentConfirmedProps) {
-	try {
-		const distinctId = await hashPhone(props.phone);
-		const posthog = getClient();
-		await posthog.captureImmediate({
-			distinctId,
-			event: "payment_confirmed",
-			properties: {
-				$referrer: props.referrer,
-				$revenue: props.revenue,
-				currency: props.currency ?? "MNT",
-				order_number: props.orderNumber,
-				payment_number: props.paymentNumber,
-				product_ids: props.products.map(({ productId }) => productId),
-				products: props.products,
-				provider: props.provider,
-			},
-		});
-	} catch {
-		// Silently fail — analytics should never break the payment flow
-	}
-}
-
-interface TrackQpayInvoiceFailedProps {
+type TrackQpayInvoiceFailedProps = {
 	errorMessage: string;
 	paymentNumber: string;
 	phone: string;
-	referrer?: string;
+};
+
+export function trackQpayInvoiceFailedServerSide(props: TrackQpayInvoiceFailedProps) {
+	capture(props.phone, "qpay_invoice_failed", {
+		error_message: props.errorMessage,
+		payment_number: props.paymentNumber,
+	});
 }
 
-export async function trackQpayInvoiceFailedServerSide(props: TrackQpayInvoiceFailedProps) {
-	try {
-		const distinctId = await hashPhone(props.phone);
-		const posthog = getClient();
-		await posthog.captureImmediate({
-			distinctId,
-			event: "qpay_invoice_failed",
-			properties: {
-				$referrer: props.referrer,
-				error_message: props.errorMessage,
-				payment_number: props.paymentNumber,
-			},
-		});
-	} catch {
-		// Silently fail
-	}
-}
-
-interface TrackQpayInvoiceCreatedProps {
+type TrackQpayInvoiceCreatedProps = {
 	paymentNumber: string;
 	phone: string;
-}
+};
 
-export async function trackQpayInvoiceCreatedServerSide(props: TrackQpayInvoiceCreatedProps) {
-	try {
-		const distinctId = await hashPhone(props.phone);
-		const posthog = getClient();
-		await posthog.captureImmediate({
-			distinctId,
-			event: "qpay_invoice_created",
-			properties: {
-				payment_number: props.paymentNumber,
-			},
-		});
-	} catch {
-		// Silently fail
-	}
-}
-
-interface IdentifyUserProps {
-	phone: string;
-	referrer?: string;
-	utmCampaign?: string;
-	utmMedium?: string;
-	utmSource?: string;
-}
-
-export async function identifyUserServerSide(props: IdentifyUserProps) {
-	try {
-		const distinctId = await hashPhone(props.phone);
-		const posthog = getClient();
-		await posthog.identify({
-			distinctId,
-			properties: {
-				$set: {
-					$initial_referrer: props.referrer,
-					$initial_utm_campaign: props.utmCampaign,
-					$initial_utm_medium: props.utmMedium,
-					$initial_utm_source: props.utmSource,
-					phone_hash: distinctId,
-				},
-			},
-		});
-	} catch {
-		// Silently fail
-	}
+export function trackQpayInvoiceCreatedServerSide(props: TrackQpayInvoiceCreatedProps) {
+	capture(props.phone, "qpay_invoice_created", {
+		payment_number: props.paymentNumber,
+	});
 }

@@ -1,6 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
-import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import {
+	confirmPaymentAndNotify,
+	trackAdminConfirmedPayment,
+} from "@vit/api/lib/payments/transfer-confirmation";
 import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "~/lib/constants";
 import { getTransferReconciliationStub } from "~/lib/durable-objects";
@@ -97,13 +100,17 @@ export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
 			)
 			.mutation(async ({ ctx, input }) => {
 				try {
+					const paymentNumber = generatePaymentNumber();
 					const result = await paymentQueries.admin.createPayment({
 						amount: input.amount,
 						orderId: input.orderId,
-						paymentNumber: generatePaymentNumber(),
+						paymentNumber,
 						provider: input.provider,
 						status: input.status,
 					});
+					if (input.status === "success") {
+						await trackAdminConfirmedPayment(paymentNumber);
+					}
 					return result;
 				} catch (error) {
 					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
