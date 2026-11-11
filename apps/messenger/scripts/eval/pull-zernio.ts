@@ -98,8 +98,9 @@ for (let cursor: string | null = null, done = false; !done;) {
 }
 
 const download = async (url: string, file: string): Promise<boolean> => {
-	const res = await fetch(url);
-	if (!res.ok) {
+	// A dead CDN link skips that photo instead of ending the whole pull.
+	const res = await fetch(url).catch(() => undefined);
+	if (!res?.ok) {
 		return false;
 	}
 	await Bun.write(file, res);
