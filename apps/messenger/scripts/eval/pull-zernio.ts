@@ -1,6 +1,6 @@
 // Dumps recent Messenger conversations from the Zernio inbox API (no webhook)
 // into EVAL_DIR/zernio/<accountId>/, one JSON file per conversation, with
-// customer photos downloaded next to them (Facebook CDN URLs expire).
+// customer and admin photos downloaded next to them (Facebook CDN URLs expire).
 // Usage: bun --env-file=../../.env.prod scripts/eval/pull-zernio.ts \
 //   [--account <zernioAccountId>] [--since 2026-10-01T00:00:00+08:00]
 // Default --since is yesterday 00:00 Ulaanbaatar time.
@@ -122,12 +122,10 @@ for (const c of conversations) {
 	const messages: Array<DumpedMessage> = [];
 	for (const m of raw.toSorted((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))) {
 		const photos: Array<string> = [];
-		if (m.direction === "incoming") {
-			for (const [i, a] of (m.attachments ?? []).entries()) {
-				const file = join(photoDir, `${m.id.slice(-24)}_${i}.jpg`);
-				if (a.type === "image" && a.url && (await download(a.url, file))) {
-					photos.push(file);
-				}
+		for (const [i, a] of (m.attachments ?? []).entries()) {
+			const file = join(photoDir, `${m.id.slice(-24)}_${i}.jpg`);
+			if (a.type === "image" && a.url && (await download(a.url, file))) {
+				photos.push(file);
 			}
 		}
 		photoCount += photos.length;
