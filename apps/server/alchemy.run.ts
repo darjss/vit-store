@@ -13,6 +13,7 @@ import {
 	Worker,
 	WorkerRef,
 } from "alchemy/cloudflare";
+import { CloudflareStateStore } from "alchemy/state";
 import { createServerAlchemyEnv } from "../../env";
 import type { TransferReconciliationState } from "../../packages/api/src/lib/payments/transfer-reconciliation-status";
 
@@ -31,7 +32,11 @@ export interface TransferReconciliationRpc extends Rpc.DurableObjectBranded {
 	start(input: { paymentNumber: string }): Promise<TransferReconciliationState | null>;
 }
 
-const app = await alchemy("server");
+const app = await alchemy("server", {
+	stateStore: process.env.CI
+		? (scope) => new CloudflareStateStore(scope)
+		: undefined,
+});
 const stage = app.stage;
 
 const env = createServerAlchemyEnv(process.env);
