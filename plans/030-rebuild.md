@@ -1,6 +1,6 @@
 # Plan 030: rebuild vit-store
 
-Status: research running. Decided items are decided. Open items get settled by the research reports, then this file gets updated.
+Status: research done, foundation next. Items marked (open) wait on my answer.
 
 Every agent working on the rebuild reads this whole file first. If you hit something this file doesn't answer, ask me. Don't guess my intent from old docs, because most of them predate this plan.
 
@@ -26,8 +26,9 @@ The goal: mom packs boxes and decides what to buy. Software does everything else
 - oRPC v2. The API is an SDK. Agents get it as typed agent tools. No MCP for now.
 - valibot for schemas. No zod. Drizzle derives schemas from tables through `drizzle-orm/valibot`.
 - Types flow db to contract to UI. No OpenAPI codegen step.
-- Drizzle RC with a new db schema, and the new schema is amerik-vitamin's `shop` schema (`~/dev/amerik-vitamin/packages/db/src/schema.ts`). It was designed from vit-store's mistakes: uuid ids, a stock move log, order events, payments as a ledger, slug history, Better Auth tables, supplier orders, an outbox. Port it off Effect, fill the gaps vit-store needs, and migrate the data with its legacy import as the starting point. Its rules come along too: `docs/COMMERCE-RULES.md` and the "bugs to never repeat" list in `docs/LEGACY.md` over there. Don't carry old mistakes forward to stay compatible.
+- Drizzle RC with a new db schema. The rebuild owns the `shop` migrations after the fork, and the new schema is amerik-vitamin's `shop` schema (`~/dev/amerik-vitamin/packages/db/src/schema.ts`). It was designed from vit-store's mistakes: uuid ids, a stock move log, order events, payments as a ledger, slug history, Better Auth tables, supplier orders, an outbox. Port it off Effect, fill the gaps vit-store needs, and migrate the data with its legacy import as the starting point. Its rules come along too: `docs/COMMERCE-RULES.md` and the "bugs to never repeat" list in `docs/LEGACY.md` over there. Don't carry old mistakes forward to stay compatible.
 - Better Auth. Admins sign in with Google. No passkeys, no shared bot token, no KV sessions nobody can revoke. Agents get scoped API keys.
+- The `shop` schema gains three tables: restock requests, deliveries and product images.
 - Alchemy 2 beta. CI is the only thing that deploys. Every PR gets its own preview stage.
 - The new stack runs on staging for a while before it touches prod.
 - Axiom keeps logs and traces. Errors are typed.
@@ -36,19 +37,41 @@ The goal: mom packs boxes and decides what to buy. Software does everything else
 - CI gates. Type checks run on tsrs, not tsgo.
 - Delivery fee is 6,000.
 
-### Stack, open until research lands
+### Stack, picked from research
 
-- Headless UI library for Solid 2.
-- Which solid-primitives packages we use, and whether they work on Solid 2.
-- Animation library.
-- How frames and server components fit the storefront.
-- Image pipeline.
-- Local dev stack.
-- knip and the other gates and tools.
-- PostHog proxy and data warehouse setup.
-- Recommendations approach.
+Rule for all of these: use a good maintained library. I don't want a custom implementation of something a library already does well. One library per job, and the dead-code gate fails a second one.
 
-Rule for all of these: use a good maintained library. I don't want a custom implementation of something a library already does well.
+| Job | Pick | Notes |
+| --- | --- | --- |
+| Package manager | vp 1.6 on pnpm 12, `catalogMode: strict` | turbo and bun go |
+| Type check | tsrs inside `vp check` via `OXLINT_TSGOLINT_PATH` | |
+| Headless UI | native `<dialog>` and `popover` first, quoin-ui 0.6 where native has no answer | quoin is my Base UI port. Lazy load each widget. Kobalte's modal ignores Escape, Ark and Corvu don't run on Solid 2 |
+| Primitives | `@solid-primitives/*` `next` tags: media, storage, event-listener, intersection-observer, scheduled, timer, connectivity, clipboard | |
+| Animation | plain CSS plus `motion/mini`, View Transitions for page changes | compositor-only properties, `prefers-reduced-motion` respected |
+| Data fetching | Solid router `query` and `action` with the oRPC client | no TanStack Query |
+| Forms | Formisch `/v2` with valibot | |
+| Design lint | `@shadcn/lint` as an oxlint jsPlugin | all six rules fire on Solid `class=` |
+| Agent tools | `@orpc/ai-sdk` over the router | valibot inputs go through `toStandardJsonSchema` |
+| Auth | Better Auth 1.7, Google allowlist for admins, api-key plugin for agents, phone OTP for buyers | one instance per request because of Hyperdrive |
+| Database | Drizzle RC on `pg` through Hyperdrive | Neon branch per PR and for staging, the existing Postgres for prod |
+| Dead code | (open) fallow or knip | the repo already has `.fallowrc.json` |
+| Other gates | gitleaks, size-limit, Renovate | |
+| Images | Cloudflare image transformations, `@unpic/core` for srcset, upload originals at 1600 px | background cutout with `segment=foreground` |
+| Fonts | one variable family with ө, ү and ₮ | today's fonts miss those glyphs and cost 260 KB |
+| Frames | 30 minute spike on Workers, then server components for listing and product pages if it works | officially experimental |
+| Analytics | PostHog only, same-origin proxy on the storefront Worker | Cloudflare Basin can't feed PostHog. Revisit at millions of events |
+| Recommendations | a Postgres `product_related` table, rebuilt on a schedule, rendered on the server | co-purchase first, filled from category and brand so it's never empty |
+| Infra | (open) Alchemy 2 | its infra files are written in Effect syntax, which may break the no-Effect rule |
+
+### Rules from the audit
+
+Each of these becomes a lint rule or a CI gate, and each rule's message names the correct fix.
+
+- No `.catch(() => 0)` or any catch that turns an error into a default value. Errors stay errors all the way to the UI.
+- One cache layer, purged by the code that writes. Stock is always read live.
+- Typed oRPC errors, one `onError` that logs once, one db client per request.
+- Package exports are explicit. No `"./*"`.
+- No complexity disables, no lint-disable comments.
 
 ### How it looks and feels
 
@@ -68,6 +91,8 @@ Rule for all of these: use a good maintained library. I don't want a custom impl
 
 - PostHog gets used way more. All product and sales analytics live there.
 - PostHog runs through a proxy on our own domain so adblockers don't eat events.
+- Money events fire from the server. The PostHog person id is our customer id, never a phone hash, because an 8-digit phone hash reverses in seconds.
+- Revenue comes from the Postgres ledger synced into PostHog's warehouse. Events carry the funnel and attribution.
 - When I ask an agent about sales, it answers from PostHog. Agents shouldn't grind raw SQL to tell me what sold last week.
 
 ### How agents work here
@@ -84,9 +109,9 @@ Agent experience is the point of the whole rebuild. Every choice gets judged by 
 
 ## Order of work
 
-1. Research. Five reports, listed below.
-2. Foundation on staging: vp, Alchemy 2 stages, the new schema with a data migration, Better Auth, Axiom, CI gates, local dev.
-3. The API as an SDK, with the commerce bugs fixed in the new code: QPay checks the paid amount, stock moves correctly on cancel, refund, delete and restore, order status changes go through one transition table, saving a product never overwrites stock, average cost gets a numeric column.
+1. Research. Done, five reports listed below.
+2. Foundation on staging: repo protection and secret scanning, vp, Alchemy 2 stages, the new schema with a data migration, Better Auth, Axiom, CI gates, local dev.
+3. The API as an SDK, with the commerce bugs fixed in the new code: QPay checks the paid amount, stock moves correctly on cancel, refund, delete and restore, order status changes go through one transition table, saving a product never overwrites stock. Cost follows amerik's COMMERCE-RULES: the latest landed cost, stored as whole ₮.
 4. Storefront in Solid 2, order flow first.
 5. Admin in Solid 2.
 6. PostHog everywhere, plus agent tools for sales questions.
@@ -97,10 +122,11 @@ Agent experience is the point of the whole rebuild. Every choice gets judged by 
 - The storefront hard-line copy issues: the "албан ёсоор" wording, the certification badges and health-claim copy.
 - The old `/webhooks/messenger` route signature. Customer Messenger runs through Zernio and `apps/messenger` now (ADR 0011), so the old route is dead code to delete.
 - MCP.
+- Server-side carts. Abandoned checkouts live in PostHog.
 
 ## Research reports
 
-Each lands in `~/dev/scratchpad/vit-store/rebuild-research/` and then feeds this file.
+They live in `~/dev/scratchpad/vit-store/rebuild-research/`, outside the repo. This file holds the decisions. Read a report when you work in its area.
 
 | Report | Covers |
 | --- | --- |
