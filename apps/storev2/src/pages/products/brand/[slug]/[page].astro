@@ -7,7 +7,6 @@ import SortBar from "@/components/product/sort-bar.astro";
 import Layout from "@/layouts/Layout.astro";
 import { getBrandLogoUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
-import { WASH_BG, washFor } from "@/lib/wash";
 
 const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
@@ -61,7 +60,6 @@ if (page > pagination.totalPages) {
 }
 
 const baseUrl = `/products/brand/${slug}`;
-const washClass = WASH_BG[washFor(`brand-${brand.id}`)];
 
 const seoTitle = page === 1
 	? (brand.seoTitle || `${brand.name} - Витамин, нэмэлт тэжээл`)
@@ -123,7 +121,7 @@ Astro.cache.set({
 		</nav>
 
 		<!-- Header on brand-keyed wash tint -->
-		<header class={`enter-rise mb-3 flex items-center gap-3 rounded-2xl border border-border ${washClass} px-4 py-4 sm:mb-4 sm:px-6 sm:py-5`}>
+		<header class="enter-rise mb-3 flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-4 sm:mb-4 sm:px-6 sm:py-5">
 			{brandLogoUrl ? (
 				<img
 					src={brandLogoUrl}

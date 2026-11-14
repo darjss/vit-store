@@ -19,7 +19,6 @@ import { queryClient } from "@/lib/query";
 import { clearHistory, getRecentSearches, type SearchHistoryItem } from "@/lib/search-history";
 import { parseSearchTokens } from "@/lib/search-parse";
 import { api } from "@/lib/trpc";
-import { washBg } from "@/lib/wash";
 import SearchResultRow from "./search-result-row";
 import { getSearchTakeoverRequestState } from "./search-takeover-state";
 import { useSearchStorefront } from "./use-search-storefront";
@@ -84,9 +83,7 @@ const RecentGrid = (props: { onSelect: (term: string) => void }) => {
 								onClick={() => props.onSelect(item.term)}
 								type="button"
 							>
-								<span
-									class={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${washBg(item.term)}`}
-								>
+								<span class="bg-muted grid h-9 w-9 shrink-0 place-items-center rounded-lg">
 									<IconFolder class="text-foreground/70 h-5 w-5" />
 								</span>
 								<span class="min-w-0 truncate text-sm font-bold">{item.term}</span>
@@ -138,9 +135,7 @@ const JumpList = (props: { categories: Array<CategoryStock>; onNavigate: () => v
 						href={`/products?category=${category.id}`}
 						onClick={() => props.onNavigate()}
 					>
-						<span
-							class={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${washBg(category.id)}`}
-						>
+						<span class="bg-muted grid h-9 w-9 shrink-0 place-items-center rounded-lg">
 							<IconFolder class="text-foreground/70 h-5 w-5" />
 						</span>
 						<span class="min-w-0 flex-1 truncate text-sm font-bold">{category.name}</span>

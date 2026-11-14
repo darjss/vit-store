@@ -10,7 +10,6 @@ import { queryClient } from "@/lib/query";
 import { parse } from "valibot";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { washBg } from "@/lib/wash";
 import {
 	TuningIcon as IconEqualizer,
 	MinimalisticMagnifierIcon as IconSearch,
@@ -374,13 +373,7 @@ const ProductsList = (props: ProductsListProps) => {
 	return (
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 			<div>
-				{/* Compact Header on wash tint */}
-				<div
-					class={cn(
-						"border-border mb-3 flex flex-col gap-1 rounded-2xl border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
-						washBg("all-products"),
-					)}
-				>
+				<div class="border-border bg-card mb-3 flex flex-col gap-1 rounded-2xl border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5">
 					<h1 class="font-display text-lg leading-tight font-bold tracking-tight sm:text-xl lg:text-2xl">
 						{filters.pageTitle()}
 					</h1>

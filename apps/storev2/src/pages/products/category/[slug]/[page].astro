@@ -7,7 +7,6 @@ import Pagination from "@/components/product/pagination.astro";
 import SortBar from "@/components/product/sort-bar.astro";
 import { resolveCategorySeo } from "@/lib/category-seo";
 import { api } from "@/lib/trpc";
-import { WASH_BG, washFor } from "@/lib/wash";
 
 const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
@@ -55,7 +54,6 @@ if (page > pagination.totalPages) {
 }
 
 const baseUrl = `/products/category/${slug}`;
-const washClass = WASH_BG[washFor(category.id)];
 const pageUrl = `${SITE_URL}${baseUrl}/${page}/`;
 
 const { faqs, intro, seoDescription, seoTitle } = resolveCategorySeo({
@@ -151,7 +149,7 @@ Astro.cache.set({
 		</nav>
 
 		<!-- Header on category-keyed wash tint -->
-		<header class={`enter-rise mb-3 rounded-2xl border border-border ${washClass} px-4 py-4 sm:mb-4 sm:px-6 sm:py-5`}>
+		<header class="enter-rise mb-3 rounded-2xl border border-border bg-card px-4 py-4 sm:mb-4 sm:px-6 sm:py-5">
 			<h1 class="font-bold font-display text-xl tracking-tight sm:text-2xl lg:text-3xl">
 				{category.name}
 			</h1>

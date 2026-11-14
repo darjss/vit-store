@@ -8,7 +8,6 @@ import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { washBg } from "@/lib/wash";
 import { DeliveryIcon as IconTruck, ShieldCheckIcon as IconShield, PhoneIcon as IconPhone } from "@solar-icons/solid/linear";
 
 export const prerender = true;
@@ -162,7 +161,7 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
         {categoryTiles.map((cat) => (
           <a
             href={`/products/category/${cat.slug}/1/`}
-            class={`${washBg(cat.slug)} group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
+            class={`border border-border bg-card group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
           >
             <h3 class="text-sm font-bold leading-snug lg:text-base">{cat.name}</h3>
             <span class="text-xs font-semibold text-foreground/60">{cat.productCount} бүтээгдэхүүн</span>

@@ -3,7 +3,6 @@ import { deliveryFee } from "@vit/shared/constants";
 import { For, Match, Switch } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { washBg } from "@/lib/wash";
 import { cart, createCartState } from "@/store/cart";
 import Loading from "../loading";
 import CartActions from "./cart-actions";
@@ -34,10 +33,7 @@ const CartList = () => {
 								<div class="hidden md:flex md:items-center md:gap-6">
 									<div class="flex w-1/2 items-center gap-5">
 										<a
-											class={cn(
-												"block size-24 flex-shrink-0 overflow-hidden rounded-xl",
-												washBg(item.productId),
-											)}
+											class="block size-24 flex-shrink-0 overflow-hidden rounded-xl bg-white"
 											href={`/products/${item.slug}-${item.productId}/`}
 										>
 											<Image
@@ -75,10 +71,7 @@ const CartList = () => {
 								<div class="flex flex-col md:hidden">
 									<div class="mb-4 flex gap-4">
 										<a
-											class={cn(
-												"block size-24 flex-shrink-0 overflow-hidden rounded-xl",
-												washBg(item.productId),
-											)}
+											class="block size-24 flex-shrink-0 overflow-hidden rounded-xl bg-white"
 											href={`/products/${item.slug}-${item.productId}/`}
 										>
 											<Image

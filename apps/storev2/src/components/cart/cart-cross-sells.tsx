@@ -6,7 +6,6 @@ import CardAddButton from "@/components/product/card-add-button";
 import ProductImageFallback from "@/components/product/product-image-fallback";
 import { getProductImageProps } from "@/lib/image";
 import { api } from "@/lib/trpc";
-import { washBg } from "@/lib/wash";
 import { cart } from "@/store/cart";
 
 const CROSS_SELL_TIMEOUT_MS = 5000;
@@ -77,7 +76,7 @@ export default function CartCrossSells() {
 									return (
 										<div class="border-border bg-card shadow-soft-sm flex items-center gap-3 rounded-2xl border p-2.5">
 											<a
-												class={`block size-14 shrink-0 overflow-hidden rounded-xl ${washBg(product.id)}`}
+												class="block size-14 shrink-0 overflow-hidden rounded-xl bg-white"
 												href={productUrl}
 												onClick={() => cart.closeDrawer()}
 											>
