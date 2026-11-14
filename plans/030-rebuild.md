@@ -58,7 +58,7 @@ Rule for all of these: use a good maintained library. I don't want a custom impl
 | Other gates | gitleaks, size-limit, Renovate | |
 | Images | Cloudflare image transformations, `@unpic/core` for srcset, upload originals at 1600 px | background cutout with `segment=foreground` |
 | Fonts | one variable family with ө, ү and ₮ | today's fonts miss those glyphs and cost 260 KB |
-| Frames | 30 minute spike on Workers, then server components for listing and product pages if it works | officially experimental |
+| Frames | Port the DUND pattern to rc.21, then server components for listing and product pages | I already ran frames on Workers in July: `~/dev/store-kit`, branch `demo-solid-plugged`, `apps/demo-solid-store`. Read its review route and benchmark first. Check that the beta.26 bug where fresh frame slots lost captured context is fixed, and whether frame documents can be cached at the CDN yet |
 | Analytics | PostHog only, same-origin proxy on the storefront Worker | Cloudflare Basin can't feed PostHog. Revisit at millions of events |
 | Recommendations | a Postgres `product_related` table, rebuilt on a schedule, rendered on the server | co-purchase first, filled from category and brand so it's never empty |
 | Infra | (open) Alchemy 2 | its infra files are written in Effect syntax, which may break the no-Effect rule |
