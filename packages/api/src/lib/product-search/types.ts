@@ -7,7 +7,8 @@ export type ProductSearchRebuildReason =
 	| "product_stock_updated"
 	| "product_deleted"
 	| "brand_updated"
-	| "category_updated";
+	| "category_updated"
+	| "index_missing";
 
 export interface ProductSearchFilters {
 	brandId?: number;

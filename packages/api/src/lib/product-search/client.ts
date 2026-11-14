@@ -92,6 +92,18 @@ export const rebuildProductSearchIndex = async (
 export const getProductSearchStatus = (): Promise<ProductSearchStatus> =>
 	productSearch().getStatus();
 
+/**
+ * A deploy that bumps the index version starts with an empty index. The
+ * 5-minute cron calls this, so search fills itself without a manual sync.
+ */
+export const ensureProductSearchIndex = async () => {
+	if ((await getProductSearchStatus()).activeGeneration) {
+		return "ready";
+	}
+	await rebuildProductSearchIndex("index_missing");
+	return "rebuilt";
+};
+
 type RebuildContext = {
 	c: { executionCtx: ExecutionContext };
 	log: RequestLogger;

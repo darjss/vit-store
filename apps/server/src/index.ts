@@ -1,5 +1,6 @@
 import { trpcServer } from "@hono/trpc-server";
 import { adminRouter, botRouter, finalizeCatalogCacheHeaders, storeRouter } from "@vit/api";
+import { ensureProductSearchIndex } from "@vit/api/lib/product-search/client";
 import { createLogger } from "evlog";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -152,19 +153,21 @@ export default {
 			return;
 		}
 
-		const restock = runRestockNotifier(env);
-		const paymentNotifications = runPaymentNotificationOutbox();
-		const [restockResult, paymentNotificationResult] = await Promise.allSettled([
-			restock,
-			paymentNotifications,
+		const [restockResult, paymentNotificationResult, searchIndexResult] = await Promise.allSettled([
+			runRestockNotifier(env),
+			runPaymentNotificationOutbox(),
+			ensureProductSearchIndex(),
 		]);
 		const jobs = {
 			payment_notification_outbox: paymentNotificationResult.status,
+			product_search_index:
+				searchIndexResult.status === "fulfilled" ? searchIndexResult.value : "rejected",
 			restock_notifier: restockResult.status,
 		};
 		const failures = [
 			scheduledJobFailure("restock_notifier", restockResult),
 			scheduledJobFailure("payment_notification_outbox", paymentNotificationResult),
+			scheduledJobFailure("product_search_index", searchIndexResult),
 		].filter((failure) => failure !== undefined);
 
 		if (failures.length > 0) {
