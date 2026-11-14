@@ -35,16 +35,16 @@ const normalizeExpirationDate = (value?: string | null) => {
 const numericEditableProductFieldSet = new Set<string>([
 	"brandId",
 	"categoryId",
+	"compareAtPrice",
 	"dailyIntake",
-	"discount",
 	"price",
 	"stock",
 ]);
 type NumericEditableProductField =
 	| "brandId"
 	| "categoryId"
+	| "compareAtPrice"
 	| "dailyIntake"
-	| "discount"
 	| "price"
 	| "stock";
 
@@ -90,6 +90,10 @@ function resolveEditableProductFieldValue(input: {
 	if (input.field === "expirationDate") {
 		return normalizeExpirationDate(input.stringValue);
 	}
+	if (input.field === "compareAtPrice") {
+		// 0 clears the compare-at price, which ends the product's sale.
+		return requireNonNegativeNumberField(input.field, input.numberValue) || null;
+	}
 	if (isNumericEditableProductField(input.field)) {
 		return requireNonNegativeNumberField(input.field, input.numberValue);
 	}
@@ -133,7 +137,6 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
 							categoryId: input.categoryId,
 							dailyIntake: input.dailyIntake,
 							description: input.description,
-							discount: 0,
 							name: productName,
 							potency: input.potency,
 							price: input.price,

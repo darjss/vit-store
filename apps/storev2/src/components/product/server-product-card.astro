@@ -6,8 +6,8 @@ import { formatCurrency } from "@vit/shared";
 import { productStockState, projectProductCardDisplay } from "@vit/shared/domain/product";
 import CardAddButton from "@/components/product/card-add-button.tsx";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
+import { CardPrice, SaleSticker } from "@/components/product/sale-price.tsx";
 import { toProductImageUrl } from "@/lib/image";
-import { washBg } from "@/lib/wash";
 import { unverifiedInventoryCardPresentation } from "./inventory-card-state";
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
 		amount?: string | null;
 		brand: { name: string } | null;
 		categoryId?: number;
-		discount?: number | null;
+		compareAtPrice?: number | null;
 		id: number;
 		images: Array<{ url: string | null }>;
 		name: string;
@@ -36,12 +36,10 @@ const {
 	imageSize = "card",
 	product,
 } = Astro.props;
-const washClass = washBg(product.categoryId ?? "uncategorized");
 const imageUrl = product.images[0]?.url || "";
 const productUrl = `/products/${product.slug}-${product.id}`;
 const isOutOfStock = productStockState(product.stock) === "out";
 const initialInventory = unverifiedInventoryCardPresentation("checking");
-const hasSale = (product.discount ?? 0) > 0;
 const display = projectProductCardDisplay({
 	amount: product.amount,
 	brand: product.brand?.name,
@@ -59,7 +57,7 @@ const display = projectProductCardDisplay({
 >
 	<div class="relative block" aria-hidden="true">
 		<div
-			class={`relative ${aspectRatio} ${washClass}`}
+			class={`relative ${aspectRatio} bg-white`}
 			data-card-image-frame
 			transition:name={`product-image-${product.id}`}
 		>
@@ -85,15 +83,7 @@ const display = projectProductCardDisplay({
 			)}
 		</div>
 	</div>
-	{hasSale && (
-		<span
-			class="-rotate-2 absolute top-2 left-2 inline-flex items-center rounded-full bg-sale px-2 py-0.5 font-semibold text-[11px] text-sale-foreground"
-			data-card-sale
-			aria-label={`Хямдрал ${product.discount} хувь`}
-		>
-			-{product.discount}%
-		</span>
-	)}
+	<SaleSticker compareAtPrice={product.compareAtPrice} price={product.price} productId={product.id} />
 
 	<div class="flex flex-1 flex-col gap-1 p-3">
 		{product.brand && (
@@ -123,9 +113,7 @@ const display = projectProductCardDisplay({
 		</p>
 
 		<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
-			<div class="min-w-0 font-bold text-sm leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-base" data-inventory-price={product.id}>
-				{formatCurrency(product.price)}
-			</div>
+			<CardPrice compareAtPrice={product.compareAtPrice} price={product.price} productId={product.id} />
 			<CardAddButton
 				client:load
 				outOfStock={isOutOfStock}
@@ -175,7 +163,7 @@ const display = projectProductCardDisplay({
 		[data-inventory-state="checking"],
 		[data-inventory-state="degraded"],
 		[data-inventory-state="out"]
-	) [data-card-sale] {
+	) :global([data-sale-sticker]) {
 		display: none;
 	}
 	[data-server-product-card][data-inventory-state="low"] [data-card-stock] {
@@ -185,3 +173,13 @@ const display = projectProductCardDisplay({
 		color: var(--color-success-foreground);
 	}
 </style>
+
+<script>
+	import { enterOnScroll } from "@/lib/card-enter";
+
+	document.addEventListener("astro:page-load", () => {
+		for (const card of document.querySelectorAll<HTMLElement>("[data-server-product-card]")) {
+			enterOnScroll(card);
+		}
+	});
+</script>

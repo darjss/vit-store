@@ -1,13 +1,13 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
 import ContinueUnpaidCheckout from "@/components/payment/continue-unpaid-checkout";
+import SaleBanner from "@/components/sale/sale-banner.astro";
 import MobileSearchBar from "@/components/search/mobile-search-bar";
 import Layout from "@/layouts/Layout.astro";
 import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { washBg } from "@/lib/wash";
 import { DeliveryIcon as IconTruck, ShieldCheckIcon as IconShield, PhoneIcon as IconPhone } from "@solar-icons/solid/linear";
 
 export const prerender = true;
@@ -28,7 +28,7 @@ type BrandRow = {
 };
 
 const products = await api.product.getProductsForHome.query();
-const { featuredProducts, newProducts } = products;
+const { featuredProducts, newProducts, saleProducts } = products;
 const brands = await api.brand.getAllBrandsWithStock.query();
 const allCategories = await api.category.getAllCategories.query();
 
@@ -68,6 +68,8 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
   <div class="md:hidden border-b border-border bg-background px-4 py-3">
     <MobileSearchBar client:idle />
   </div>
+
+  <SaleBanner products={saleProducts} />
 
   <!-- ==================== 1. HERO ==================== -->
   <section class="bg-hero-warm">
@@ -159,7 +161,7 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
         {categoryTiles.map((cat) => (
           <a
             href={`/products/category/${cat.slug}/1/`}
-            class={`${washBg(cat.slug)} group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
+            class={`border border-border bg-card group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
           >
             <h3 class="text-sm font-bold leading-snug lg:text-base">{cat.name}</h3>
             <span class="text-xs font-semibold text-foreground/60">{cat.productCount} бүтээгдэхүүн</span>
@@ -178,7 +180,7 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
         <a href="/products?filter=featured" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
       </div>
       <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
-      <div data-reveal-group class="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-2 lg:-mx-8 lg:gap-4 lg:px-8">
+      <div class="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-2 lg:-mx-8 lg:gap-4 lg:px-8">
         {shelfProducts.map((p: ProductForHome) => (
           <HomeProductCard product={p} class="w-[160px] flex-none snap-start lg:w-[220px]" />
         ))}
@@ -190,7 +192,7 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
         <a href="/products?filter=recent" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
       </div>
       <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
-      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
+      <div class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
         {gridProducts.map((p: ProductForHome) => (
           <HomeProductCard product={p} />
         ))}

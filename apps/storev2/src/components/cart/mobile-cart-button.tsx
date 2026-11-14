@@ -25,7 +25,7 @@ const MobileCartButton = () => {
 			type="button"
 		>
 			<div class="flex flex-col items-center gap-1">
-				<div class="relative">
+				<div class="relative" data-cart-target>
 					<IconShoppingCart aria-hidden="true" class="h-5 w-5" strokeWidth={2} />
 					<Show when={isHydrated() && cart.count() > 0}>
 						<span class="border-background bg-secondary text-secondary-foreground absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full border-2 px-0.5 text-[10px] font-bold tabular-nums">

@@ -1,15 +1,15 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/solid-query";
-import { parseSort } from "@vit/shared/domain/product";
+import { parseSort, SALE_CAMPAIGN } from "@vit/shared/domain/product";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { hydrateServerState } from "@/lib/hydration";
 import { captureException } from "@/lib/analytics";
+import { isCampaignLive } from "@/lib/campaign";
 import { errorKind, isNativeError, thrownErrorWireSchema } from "@/lib/error-wire";
 import { queryClient } from "@/lib/query";
 import { parse } from "valibot";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { washBg } from "@/lib/wash";
 import {
 	TuningIcon as IconEqualizer,
 	MinimalisticMagnifierIcon as IconSearch,
@@ -373,13 +373,7 @@ const ProductsList = (props: ProductsListProps) => {
 	return (
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 			<div>
-				{/* Compact Header on wash tint */}
-				<div
-					class={cn(
-						"border-border mb-3 flex flex-col gap-1 rounded-2xl border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
-						washBg("all-products"),
-					)}
-				>
+				<div class="border-border bg-card mb-3 flex flex-col gap-1 rounded-2xl border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5">
 					<h1 class="font-display text-lg leading-tight font-bold tracking-tight sm:text-xl lg:text-2xl">
 						{filters.pageTitle()}
 					</h1>
@@ -429,6 +423,25 @@ const ProductsList = (props: ProductsListProps) => {
 						</Show>
 					</button>
 				</div>
+
+				<Show when={isCampaignLive()}>
+					<button
+						aria-pressed={filters.listFilter() === "sale"}
+						class={cn(
+							"mb-3 inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-[transform,background-color,color] duration-150 ease-out active:scale-[0.97]",
+							filters.listFilter() === "sale"
+								? "border-secondary bg-secondary text-secondary-foreground"
+								: "border-border bg-card text-foreground",
+						)}
+						onClick={() => filters.setListFilter(filters.listFilter() === "sale" ? null : "sale")}
+						type="button"
+					>
+						{SALE_CAMPAIGN.name}
+						<span class="bg-sale text-sale-foreground rounded-full px-1.5 text-[11px] font-bold">
+							-{SALE_CAMPAIGN.percent}%
+						</span>
+					</button>
+				</Show>
 
 				<AppliedFilters chips={filters.appliedChips()} onClearAll={filters.handleClearFilters} />
 

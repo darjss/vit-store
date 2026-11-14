@@ -340,6 +340,47 @@
 		}
 	}
 
+	/* Product photo flying into the cart button, see flyToCart. */
+	.cart-fly {
+		position: fixed;
+		z-index: 100;
+		pointer-events: none;
+		object-fit: contain;
+		padding: 0.5rem;
+		border-radius: 1rem;
+		background: white;
+		box-shadow: 0 10px 30px oklch(0.3 0.02 60 / 0.25);
+	}
+
+	/* Product cards rise in as they scroll or swipe into view, see enterOnScroll.
+	   The sale sticker pops in once its card lands. */
+	@media (prefers-reduced-motion: no-preference) {
+		[data-card-enter="pending"] {
+			opacity: 0;
+		}
+		[data-card-enter="in"] {
+			animation: card-enter 550ms var(--ease-out) var(--card-enter-delay, 0ms) backwards;
+		}
+		[data-card-enter="in"] [data-sale-sticker] {
+			animation: sale-sticker-pop 520ms var(--ease-playful-spring)
+				calc(var(--card-enter-delay, 0ms) + 240ms) backwards;
+		}
+	}
+
+	@keyframes card-enter {
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+	}
+
+	@keyframes sale-sticker-pop {
+		from {
+			opacity: 0;
+			transform: scale(0.6) rotate(14deg);
+		}
+	}
+
 	@keyframes working-spin {
 		to {
 			transform: rotate(360deg);

@@ -1,6 +1,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/solid-query";
 import { formatCurrency } from "@vit/shared";
-import { parseSort, productSortOptions, type SortSelection } from "@vit/shared/domain/product";
+import {
+	parseSort,
+	type ProductPresetFilter,
+	productSortOptions,
+	type SortSelection,
+} from "@vit/shared/domain/product";
 import type { JSX } from "solid-js";
 import {
 	createEffect,
@@ -72,7 +77,7 @@ type FilterDrawerProps = {
 	effectiveSearchTerm: string | null;
 	focusRestore: SheetFocusRestore;
 	includeOutOfStock: boolean;
-	listFilter: "featured" | "recent" | null;
+	listFilter: ProductPresetFilter | null;
 	onApply: (next: {
 		brandId: number | null;
 		categoryId: number | null;

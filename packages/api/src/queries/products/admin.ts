@@ -65,7 +65,6 @@ export const adminQueries = {
 			categoryId: number;
 			dailyIntake: number;
 			description: string;
-			discount: number;
 			expirationDate?: string | null;
 			ingredients?: Array<string>;
 			name: string;
@@ -319,7 +318,6 @@ export const adminQueries = {
 			categoryId?: number;
 			dailyIntake?: number;
 			description?: string;
-			discount?: number;
 			expirationDate?: string | null;
 			name: string;
 			potency?: string;

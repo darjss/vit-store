@@ -1,0 +1,1 @@
+ALTER TABLE "ecom_vit_product" DROP COLUMN "discount";

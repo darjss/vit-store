@@ -8,6 +8,7 @@ const CartButton = () => {
 		<button
 			aria-label="Сагс"
 			class="border-border bg-card shadow-soft-sm hover:bg-primary hover:shadow-soft focus-visible:ring-ring focus-visible:ring-offset-background relative flex size-11 items-center justify-center rounded-full border transition-[transform,box-shadow,background-color] duration-[140ms] ease-out focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.97]"
+			data-cart-target
 			onClick={(event) => {
 				cartSheetFocusRestore.register(event.currentTarget);
 				cart.toggleDrawer();

@@ -116,9 +116,11 @@ export const ProductsTable = createTable(
 		categoryId: integer("category_id")
 			.references(() => CategoriesTable.id)
 			.notNull(),
+		// Price before a sale. Set only while the product is on sale; `price` is
+		// always what checkout charges.
+		compareAtPrice: integer("compare_at_price"),
 		dailyIntake: integer("daily_intake").default(0).notNull(),
 		description: text("description").notNull(),
-		discount: integer("discount").default(0).notNull(),
 		expirationDate: varchar("expiration_date", { length: 7 }),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity().notNull(),
 		ingredients: jsonb("ingredients")

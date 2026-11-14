@@ -6,13 +6,13 @@ import {
 	LOW_STOCK_THRESHOLD as SHARED_LOW_STOCK_THRESHOLD,
 } from "@vit/shared/domain/product";
 import type { ProductCardData } from "@vit/shared/types";
-import { createMemo, createSignal, Show } from "solid-js";
-import { Badge } from "@/components/ui/badge";
+import { createMemo, createSignal, onMount, Show } from "solid-js";
+import { enterOnScroll } from "@/lib/card-enter";
 import { getProductImageProps } from "@/lib/image";
-import { washBg } from "@/lib/wash";
 import CardAddButton from "./card-add-button";
 import { useInventorySnapshot } from "./inventory-reconciler";
 import ProductImageFallback from "./product-image-fallback";
+import { CardPrice, SaleSticker } from "./sale-price";
 
 /**
  * Re-exported so existing imports (`from "./product-card"`) keep working.
@@ -29,7 +29,7 @@ export interface NormalizedProduct {
 	amount?: string | null;
 	brand: string | null;
 	categoryId?: number;
-	discount?: number | null;
+	compareAtPrice?: number | null;
 	id: number;
 	image: string;
 	name: string;
@@ -48,7 +48,7 @@ export interface SearchProductInput {
 	amount?: string | null;
 	brand: string;
 	categoryId?: number;
-	discount?: number | null;
+	compareAtPrice?: number | null;
 	id: number;
 	image: string;
 	name: string;
@@ -66,7 +66,7 @@ export function normalizeProduct(product: ProductCardData | SearchProductInput):
 			amount: product.amount,
 			brand: product.brand?.name ?? null,
 			categoryId: product.categoryId,
-			discount: product.discount,
+			compareAtPrice: product.compareAtPrice,
 			id: product.id,
 			image: product.images?.[0]?.url ?? "",
 			name: product.name,
@@ -89,7 +89,8 @@ const ProductCard = (props: ProductCardProps) => {
 	const product = createMemo(() => normalizeProduct(props.product));
 	const inventory = useInventorySnapshot(product().id);
 
-	const washClass = createMemo(() => washBg(product().categoryId ?? "uncategorized"));
+	let card!: HTMLDivElement;
+	onMount(() => enterOnScroll(card));
 	const productImageProps = createMemo(() => getProductImageProps(product().image, "card"));
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
@@ -110,19 +111,17 @@ const ProductCard = (props: ProductCardProps) => {
 	);
 	const isLowStock = createMemo(() => !isOutOfStock() && stockState() === "low");
 	const price = createMemo(() => inventory()?.price ?? product().price);
-	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
 	const [imageFailed, setImageFailed] = createSignal(false);
 
 	return (
 		<div
 			class="group border-border bg-card shadow-soft hover:shadow-soft-lg relative flex h-full flex-col overflow-hidden rounded-2xl border transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-[3px]"
 			data-product-id={product().id}
+			ref={card}
 		>
 			{/* Image is decorative; the concise heading below is the card's only link. */}
 			<div aria-hidden="true" class="relative block">
-				<div
-					class={`relative aspect-4/5 ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
-				>
+				<div class={`relative aspect-4/5 bg-white ${isOutOfStock() ? "saturate-[0.35]" : ""}`}>
 					<Show
 						fallback={<ProductImageFallback brand={brandName()} name={product().name} />}
 						when={product().image && !imageFailed()}
@@ -143,14 +142,12 @@ const ProductCard = (props: ProductCardProps) => {
 					</Show>
 				</div>
 			</div>
-			<Show when={hasSale() && !isOutOfStock()}>
-				<Badge
-					aria-label={`Хямдрал ${product().discount} хувь`}
-					class="absolute top-2 left-2 -rotate-2 px-2 py-0.5 text-[11px]"
-					variant="sale"
-				>
-					-{product().discount}%
-				</Badge>
+			<Show when={!isOutOfStock()}>
+				<SaleSticker
+					compareAtPrice={product().compareAtPrice}
+					price={price()}
+					productId={product().id}
+				/>
 			</Show>
 
 			{/* Content Section */}
@@ -196,12 +193,11 @@ const ProductCard = (props: ProductCardProps) => {
 				</p>
 
 				<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
-					<div
-						class="min-w-0 text-sm leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-base"
-						data-inventory-price={product().id}
-					>
-						{formatCurrency(price())}
-					</div>
+					<CardPrice
+						compareAtPrice={product().compareAtPrice}
+						price={price()}
+						productId={product().id}
+					/>
 					<CardAddButton
 						cartItem={{
 							image: product().image,

@@ -21,7 +21,7 @@ export interface SearchStorefrontData {
 	products: Array<{
 		brand: string;
 		categoryId?: number;
-		discount?: number;
+		compareAtPrice?: number | null;
 		id: number;
 		image: string;
 		name: string;

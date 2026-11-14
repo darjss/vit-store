@@ -3,7 +3,7 @@ import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/ca
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, onCleanup } from "solid-js";
 import { isServer } from "@/lib/runtime";
-import { playCartBurst } from "@/lib/cart-burst";
+import { flyToCart, playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import { Button } from "../ui/button";
@@ -30,15 +30,12 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 		window.clearTimeout(drawerTimer);
 	});
 
-	const handleAddToCart = (event: MouseEvent) => {
+	const handleAddToCart = (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
 		const openDrawer = props.openDrawer ?? true;
 		cart.add(props.cartItem, { openDrawer: false });
 		setIsAdded(true);
-		const target = event.currentTarget;
-		if (target && "style" in target) {
-			// SAFETY: click target with CSSOM style is the button HTMLElement.
-			playCartBurst(target as HTMLElement);
-		}
+		playCartBurst(event.currentTarget);
+		flyToCart(document.querySelector<HTMLImageElement>("[data-product-gallery] img"));
 
 		if (openDrawer) {
 			drawerTimer = window.setTimeout(() => cart.openDrawer(), 520);

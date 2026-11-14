@@ -5,7 +5,6 @@ import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { dehydrateSeeds } from "@/lib/hydration";
 import { api } from "@/lib/trpc";
-import { WASH_BG, washFor } from "@/lib/wash";
 
 export const prerender = true;
 
@@ -69,7 +68,7 @@ const itemListSchema = {
 <Layout title={title} description={description}>
 	<div id="products-ssr">
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-			<header class={`enter-rise mb-3 flex flex-col gap-1 rounded-2xl border border-border ${WASH_BG[washFor("all-products")]} px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5`}>
+			<header class="enter-rise mb-3 flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5">
 				<h1 class="font-bold font-display text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
 					Бүх бүтээгдэхүүн
 				</h1>

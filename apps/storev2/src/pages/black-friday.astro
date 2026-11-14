@@ -1,0 +1,108 @@
+---
+import { SALE_CAMPAIGN } from "@vit/shared/domain/product";
+import HomeProductCard from "@/components/product/home-product-card.astro";
+import CampaignClock from "@/components/sale/campaign-clock.astro";
+import Layout from "@/layouts/Layout.astro";
+import { campaignDates } from "@/lib/campaign";
+import { api } from "@/lib/trpc";
+
+export const prerender = true;
+
+const { saleProducts } = await api.product.getProductsForHome.query();
+const title = `${SALE_CAMPAIGN.name} · ${SALE_CAMPAIGN.percent}% хямдрал`;
+const description = `${campaignDates}: ${saleProducts.length} бүтээгдэхүүн ${SALE_CAMPAIGN.percent}% хямдарлаа. 10:30-аас өмнө захиалбал өдөртөө хүргэнэ.`;
+---
+
+<Layout title={title} description={description}>
+	<section class="overflow-hidden bg-secondary text-secondary-foreground">
+		<div class="relative mx-auto max-w-6xl px-4 pt-5 pb-6 lg:px-8 lg:pt-10 lg:pb-12">
+			<span class="bf-rise inline-block rounded-full border border-secondary-foreground/30 px-3 py-0.5 text-xs font-semibold tabular-nums">
+				{campaignDates}
+			</span>
+			<h1 class="mt-2.5 font-display text-[clamp(46px,14vw,112px)] leading-[0.9] font-bold tracking-tight text-primary">
+				<span class="bf-line"><span>Black</span></span>
+				<span class="bf-line"><span>Friday</span></span>
+			</h1>
+			<span
+				class="bf-sticker absolute top-5 right-4 grid size-24 -rotate-9 place-items-center rounded-full border-[3px] border-background bg-sale font-display text-2xl font-bold tracking-tight text-sale-foreground lg:top-10 lg:right-8 lg:size-36 lg:text-4xl"
+				style="box-shadow: 5px 5px 0 var(--color-primary-deep)"
+			>
+				-{SALE_CAMPAIGN.percent}%
+			</span>
+			<div class="bf-rise mt-4 flex flex-wrap items-center gap-2.5" data-campaign-live>
+				<span class="text-[13px] font-semibold text-secondary-foreground/75">Дуусахад</span>
+				<CampaignClock />
+			</div>
+		</div>
+	</section>
+	<p class="bg-primary px-4 py-2 text-center text-[13px] font-semibold text-primary-foreground">
+		10:30-аас өмнө захиалбал өдөртөө хүргэнэ
+	</p>
+
+	<div class="mx-auto max-w-6xl px-3 pt-5 pb-10 sm:px-6 lg:px-8 lg:pt-8">
+		{saleProducts.length > 0 ? (
+			<>
+				<div class="mb-3 flex items-baseline justify-between">
+					<h2 class="font-display text-lg font-semibold lg:text-xl">{saleProducts.length} бараа</h2>
+					<span class="text-xs text-muted-foreground">Тоо ширхэг хязгаартай</span>
+				</div>
+				<div class="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
+					{saleProducts.map((product) => (
+						<HomeProductCard product={product} />
+					))}
+				</div>
+			</>
+		) : (
+			<div class="rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
+				<p class="font-display text-lg font-semibold">Хямдрал удахгүй эхэлнэ</p>
+				<a href="/products" class="mt-4 inline-flex h-11 items-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-lift active:scale-[0.97]">
+					Бүх бүтээгдэхүүн үзэх
+				</a>
+			</div>
+		)}
+	</div>
+</Layout>
+
+<style>
+	/* "Black" and "Friday" slide up from behind their own line, then the sticker stamps on. */
+	.bf-line {
+		display: block;
+		overflow: hidden;
+		padding-bottom: 0.1em;
+		margin-bottom: -0.1em;
+	}
+	.bf-line > span {
+		display: block;
+	}
+	@media (prefers-reduced-motion: no-preference) {
+		.bf-line > span {
+			animation: bf-line-up 750ms var(--ease-out) 80ms backwards;
+		}
+		.bf-line + .bf-line > span {
+			animation-delay: 170ms;
+		}
+		.bf-rise {
+			animation: bf-rise 500ms var(--ease-out) 260ms backwards;
+		}
+		.bf-sticker {
+			animation: bf-stamp 520ms var(--ease-playful-spring) 440ms backwards;
+		}
+	}
+	@keyframes bf-line-up {
+		from {
+			transform: translateY(105%);
+		}
+	}
+	@keyframes bf-rise {
+		from {
+			opacity: 0;
+			transform: translateY(12px);
+		}
+	}
+	@keyframes bf-stamp {
+		from {
+			opacity: 0;
+			transform: scale(0.6) rotate(14deg);
+		}
+	}
+</style>

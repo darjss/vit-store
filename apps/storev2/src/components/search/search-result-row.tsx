@@ -6,7 +6,6 @@ import CardAddButton from "@/components/product/card-add-button";
 import ProductImageFallback from "@/components/product/product-image-fallback";
 import { trackSearchResultClicked } from "@/lib/analytics";
 import { getProductImageProps } from "@/lib/image";
-import { washBg } from "@/lib/wash";
 
 export interface SearchResultProduct {
 	brand: string;
@@ -35,7 +34,6 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 	const isLowStock = () => stockState() === "low";
 
 	const productUrl = () => `/products/${props.product.slug}-${props.product.id}`;
-	const washClass = () => washBg(props.product.categoryId ?? "uncategorized");
 	const imageProps = () => getProductImageProps(props.product.image, "thumb");
 
 	const trackInteraction = () => {
@@ -58,9 +56,7 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 
 	return (
 		<div class="border-border bg-card shadow-soft hover:shadow-soft-lg flex items-center gap-3 rounded-2xl border p-2.5 transition-shadow duration-200 ease-out">
-			<div
-				class={`relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl ${washClass()}`}
-			>
+			<div class="relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-white">
 				<Show
 					fallback={<ProductImageFallback brand={props.product.brand} name={props.product.name} />}
 					when={props.product.image && !imageFailed()}

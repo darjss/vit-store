@@ -6,7 +6,7 @@ import { ProductImagesTable } from "~/db/schema";
 export const storefrontCardColumns = {
 	amount: true,
 	categoryId: true,
-	discount: true,
+	compareAtPrice: true,
 	id: true,
 	name: true,
 	name_mn: true,
@@ -31,7 +31,7 @@ export interface StorefrontCardRow {
 	amount: string | null;
 	brand: { name: string };
 	categoryId: number;
-	discount: number | null;
+	compareAtPrice: number | null;
 	id: number;
 	images: Array<{ url: string }>;
 	name: string;
@@ -47,7 +47,7 @@ export const projectStorefrontCard = (product: StorefrontCardRow) => ({
 	amount: product.amount,
 	brand: product.brand.name,
 	categoryId: product.categoryId,
-	discount: product.discount ?? 0,
+	compareAtPrice: product.compareAtPrice,
 	id: product.id,
 	image: product.images[0]?.url ?? "",
 	name: product.name,

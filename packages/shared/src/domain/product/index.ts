@@ -5,5 +5,6 @@ export * from "./card-display";
 export * from "./display";
 export * from "./filters";
 export * from "./form";
+export * from "./sale";
 export * from "./sort";
 export * from "./stock";

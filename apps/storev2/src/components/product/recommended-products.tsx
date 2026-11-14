@@ -7,7 +7,6 @@ interface RecommendedProductsProps {
 	brandId: number;
 	categoryId: number;
 	currentProductId: number;
-	washKey?: string | number;
 }
 
 const RECOMMENDED_FETCH_TIMEOUT_MS = 6000;

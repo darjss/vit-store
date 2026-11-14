@@ -103,10 +103,9 @@ export interface ProductFormValues {
 export interface ProductCardData {
 	amount?: string | null;
 	brand?: { name: string } | null;
-	/** Category id used for the stable sorbet wash mapping on the card. */
 	categoryId?: number;
-	/** Discount percent (0-100). 0 or absent means no sale price. */
-	discount?: number;
+	/** Price before the sale. Absent or not above `price` means no sale. */
+	compareAtPrice?: number | null;
 	id: number;
 	images: Array<{ url: string | null }>;
 	name: string;

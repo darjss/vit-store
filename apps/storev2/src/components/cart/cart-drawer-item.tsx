@@ -4,7 +4,6 @@ import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
 import { isServer } from "@/lib/runtime";
 import { cn } from "@/lib/utils";
-import { washBg } from "@/lib/wash";
 import { cart } from "@/store/cart";
 import { CloseCircleIcon as IconClose } from "@solar-icons/solid/linear";
 
@@ -109,10 +108,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 				>
 					<div class="flex gap-3">
 						<a
-							class={cn(
-								"block size-20 shrink-0 overflow-hidden rounded-xl",
-								washBg(props.item.productId),
-							)}
+							class="block size-20 shrink-0 overflow-hidden rounded-xl bg-white"
 							href={productUrl()}
 							onClick={props.onNavigate}
 						>

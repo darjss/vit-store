@@ -1,7 +1,15 @@
+import { SALE_CAMPAIGN } from "./sale";
+
+/** Preset product lists, shared by the storefront URL `filter` param and the API `listType`. */
+export const PRODUCT_PRESET_FILTERS = ["featured", "recent", "sale"] as const;
+
+export type ProductPresetFilter = (typeof PRODUCT_PRESET_FILTERS)[number];
+
 export const productPresetFilterLabels = {
 	featured: "Онцлох",
 	recent: "Шинэ ирсэн",
-} as const;
+	sale: SALE_CAMPAIGN.name,
+} as const satisfies Record<ProductPresetFilter, string>;
 
 export const productSortOptions = [
 	{ direction: "desc", field: "createdAt", label: "Шинэ" },
@@ -17,5 +25,3 @@ export const trendingProductSearches = [
 	"Протеин",
 	"Collagen",
 ] as const;
-
-export type ProductPresetFilter = keyof typeof productPresetFilterLabels;

@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
 import { CACHE_POLICY, inventoryTag, PRODUCTS_TAG, productTag } from "@vit/shared";
-import { PRODUCT_SORT_DIRECTIONS } from "@vit/shared/domain/product";
+import { PRODUCT_PRESET_FILTERS, PRODUCT_SORT_DIRECTIONS } from "@vit/shared/domain/product";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
@@ -29,7 +29,7 @@ const infiniteProductsInput = {
 	categoryId: v.optional(v.number(), 0),
 	cursor: v.optional(v.string()),
 	limit: v.optional(v.number(), 10),
-	listType: v.optional(v.picklist(["featured", "recent", "discount"])),
+	listType: v.optional(v.picklist(PRODUCT_PRESET_FILTERS)),
 	maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	requireStock: v.optional(v.boolean(), false),
@@ -41,7 +41,7 @@ const infiniteProductsInput = {
 const paginatedProductsInput = {
 	brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-	listType: v.optional(v.picklist(["featured", "recent", "discount"])),
+	listType: v.optional(v.picklist(PRODUCT_PRESET_FILTERS)),
 	maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	page: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -303,16 +303,16 @@ export const product = router({
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = productQueries.store;
-			const [featuredProducts, newProducts, discountedProducts] = await Promise.all([
+			const [featuredProducts, newProducts, saleProducts] = await Promise.all([
 				q.getFeaturedProducts(),
 				q.getNewProducts(),
-				q.getDiscountedProducts(),
+				q.getSaleProducts(),
 			]);
 			markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
 			return {
-				discountedProducts: discountedProducts.map(projectStorefrontCard),
 				featuredProducts: featuredProducts.map(projectStorefrontCard),
 				newProducts: newProducts.map(projectStorefrontCard),
+				saleProducts: saleProducts.map(projectStorefrontCard),
 			};
 		} catch (error) {
 			throw new TRPCError({
