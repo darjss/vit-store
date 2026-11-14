@@ -16,6 +16,7 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
+import { type ProductPresetFilter, SALE_CAMPAIGN } from "@vit/shared/domain/product";
 import { db } from "~/db/client";
 import { ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
@@ -57,11 +58,13 @@ import {
 
 const inStockRankExpr = sql`(${ProductsTable.stock} > 0)`;
 const inStockFirst = desc(inStockRankExpr);
+const onSale = gt(ProductsTable.compareAtPrice, ProductsTable.price);
+const campaignOrder: ReadonlyArray<number> = SALE_CAMPAIGN.productIds;
 
 type StorefrontProductFilters = {
 	brandId?: number;
 	categoryId?: number;
-	listType?: "featured" | "recent" | "discount";
+	listType?: ProductPresetFilter;
 	maxPrice?: number;
 	minPrice?: number;
 	requireStock?: boolean;
@@ -72,7 +75,7 @@ const resolveStorefrontProductSort = ({
 	sortDirection,
 	sortField,
 }: {
-	listType?: "featured" | "recent" | "discount";
+	listType?: ProductPresetFilter;
 	sortDirection?: "asc" | "desc";
 	sortField?: "price" | "stock" | "createdAt";
 }) => {
@@ -130,8 +133,8 @@ const buildStorefrontProductConditions = ({
 	if (listType === "featured") {
 		conditions.push(eq(ProductsTable.isFeatured, true));
 	}
-	if (listType === "discount") {
-		conditions.push(gt(ProductsTable.discount, 0));
+	if (listType === "sale") {
+		conditions.push(onSale);
 	}
 	return conditions;
 };
@@ -217,15 +220,19 @@ export const storeQueries = {
 		});
 	},
 
-	async getDiscountedProducts(options?: { requireStock?: boolean }) {
-		const requireStock = options?.requireStock ?? false;
-		return db().query.ProductsTable.findMany({
+	/** Every product on sale, campaign products first in campaign order. */
+	async getSaleProducts() {
+		const products = await db().query.ProductsTable.findMany({
 			columns: storefrontCardColumns,
-			limit: 4,
-			orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
-			where: and(gt(ProductsTable.discount, 0), buildActiveProductConditions(requireStock)),
+			orderBy: [inStockFirst, desc(ProductsTable.stock)],
+			where: and(onSale, buildActiveProductConditions(false)),
 			with: storefrontCardRelations,
 		});
+		const rank = (id: number) => {
+			const index = campaignOrder.indexOf(id);
+			return index === -1 ? campaignOrder.length : index;
+		};
+		return products.toSorted((a, b) => rank(a.id) - rank(b.id));
 	},
 
 	async getFeaturedProducts(options?: { requireStock?: boolean }) {
@@ -298,9 +305,9 @@ export const storeQueries = {
 				amount: true,
 				brandId: true,
 				categoryId: true,
+				compareAtPrice: true,
 				dailyIntake: true,
 				description: true,
-				discount: true,
 				expirationDate: true,
 				id: true,
 				ingredients: true,
@@ -522,7 +529,7 @@ export const storeQueries = {
 		categoryId?: number;
 		cursor?: string | undefined;
 		limit: number;
-		listType?: "featured" | "recent" | "discount";
+		listType?: ProductPresetFilter;
 		maxPrice?: number;
 		minPrice?: number;
 		requireStock?: boolean;
@@ -669,7 +676,7 @@ export const storeQueries = {
 	async getPaginatedProducts(params: {
 		brandId?: number;
 		categoryId?: number;
-		listType?: "featured" | "recent" | "discount";
+		listType?: ProductPresetFilter;
 		maxPrice?: number;
 		minPrice?: number;
 		page: number;

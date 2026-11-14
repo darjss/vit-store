@@ -10,7 +10,7 @@ export interface CartItems {
 export interface ProductForHome {
 	amount?: string | null;
 	brand: string;
-	discount?: number | null;
+	compareAtPrice?: number | null;
 	id: number;
 	image: string;
 	name: string;
@@ -32,9 +32,9 @@ export interface ProductDetail {
 	brandId: number;
 	category: { name: string };
 	categoryId: number;
+	compareAtPrice?: number | null;
 	dailyIntake?: string | null;
 	description?: string | null;
-	discount?: number | null;
 	expirationDate?: string | null;
 	id: number;
 	images: Array<ProductImage>;

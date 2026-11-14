@@ -25,11 +25,11 @@ export function instantSearchToProductCard(product: InstantSearchProduct): Produ
 		amount: "",
 		brandId: 0,
 		categoryId: 0,
+		compareAtPrice: null,
 		createdAt: new Date(0),
 		dailyIntake: 0,
 		deletedAt: null,
 		description: "",
-		discount: 0,
 		expirationDate: null,
 		id: product.id,
 		images: product.images.map((image, index) => ({

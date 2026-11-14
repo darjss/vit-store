@@ -1,0 +1,1 @@
+ALTER TABLE "ecom_vit_product" ADD COLUMN "compare_at_price" integer;

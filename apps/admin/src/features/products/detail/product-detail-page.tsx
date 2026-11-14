@@ -462,19 +462,19 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 										</div>
 										<div className="px-4 py-4 sm:px-6">
 											<EditableField
-												format={(value) => `${value}%`}
+												format={(value) => (Number(value) > 0 ? formatCurrency(Number(value)) : "Хямдралгүй")}
 												isLoading={isUpdateProductFieldPending}
-												label="Хөнгөлөлт:"
+												label="Хямдралын өмнөх үнэ:"
 												onSave={async (next) => {
 													await updateProductField({
-														field: "discount",
+														field: "compareAtPrice",
 														id: productId,
 														numberValue: next,
 													});
 												}}
 												parse={(raw) => parseNonNegativeInt(raw)}
 												type="number"
-												value={product.discount}
+												value={product.compareAtPrice ?? 0}
 											/>
 										</div>
 									</div>

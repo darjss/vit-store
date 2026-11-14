@@ -18,11 +18,11 @@ import type {
 } from "~/lib/product-search/types";
 import { thrownErrorWireSchema } from "~/lib/logging";
 
-const PRODUCT_SEARCH_INDEX = "vit-products-v3";
-const PRODUCT_KEY_PREFIX = "search:vit:v3:product:";
-const ACTIVE_GENERATION_KEY = "search:vit:v3:active";
-const STATUS_KEY = "search:vit:v3:status";
-const REBUILD_LOCK_KEY = "search:vit:v3:rebuild-lock";
+const PRODUCT_SEARCH_INDEX = "vit-products-v4";
+const PRODUCT_KEY_PREFIX = "search:vit:v4:product:";
+const ACTIVE_GENERATION_KEY = "search:vit:v4:active";
+const STATUS_KEY = "search:vit:v4:status";
+const REBUILD_LOCK_KEY = "search:vit:v4:rebuild-lock";
 const WRITE_BATCH_SIZE = 50;
 const STALE_GENERATION_TTL_SECONDS = 10 * 60;
 const REBUILD_LOCK_TTL_MS = 30_000;
@@ -35,11 +35,11 @@ const PRODUCT_SEARCH_SCHEMA = s.object({
 	brandId: s.number("I64"),
 	category: s.string().noStem(),
 	categoryId: s.number("I64"),
+	compareAtPrice: s.number("F64"),
 	createdAt: s.keyword(),
 	createdAtEpoch: s.number("I64"),
 	dailyIntake: s.number("I64"),
 	description: s.string(),
-	discount: s.number("F64"),
 	dosage: s.string().noStem(),
 	generation: s.keyword(),
 	hasImage: s.boolean().fast(),
@@ -326,9 +326,9 @@ const toSearchResult = (document: IndexedProductSearchDocument): SearchProductRe
 	brandId: document.brandId >= 0 ? document.brandId : undefined,
 	category: document.category,
 	categoryId: document.categoryId >= 0 ? document.categoryId : undefined,
+	compareAtPrice: document.compareAtPrice > 0 ? document.compareAtPrice : null,
 	createdAt: document.createdAt,
 	dailyIntake: document.dailyIntake,
-	discount: document.discount,
 	hasImage: document.hasImage,
 	id: document.id,
 	image: document.image,

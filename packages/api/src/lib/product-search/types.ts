@@ -51,9 +51,9 @@ export interface SearchProductResult {
 	brandId?: number;
 	category: string;
 	categoryId?: number;
+	compareAtPrice: number | null;
 	createdAt: string;
 	dailyIntake: number;
-	discount: number;
 	hasImage: boolean;
 	id: number;
 	image: string;
@@ -90,11 +90,12 @@ export interface ProductSearchDocument {
 	brandId: number;
 	category: string;
 	categoryId: number;
+	/** 0 when the product is not on sale; Upstash number fields cannot be null. */
+	compareAtPrice: number;
 	createdAt: string;
 	createdAtEpoch: number;
 	dailyIntake: number;
 	description: string;
-	discount: number;
 	dosage: string;
 	hasImage: boolean;
 	id: number;
@@ -136,10 +137,10 @@ export interface ProductSearchSourceDocument {
 	brandId?: number;
 	category: string;
 	categoryId?: number;
+	compareAtPrice?: number | null;
 	createdAt: Date | string;
 	dailyIntake?: number | null;
 	description?: string | null;
-	discount?: number | null;
 	id: number;
 	image?: string | null;
 	ingredients?: Array<string> | string | null;

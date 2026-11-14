@@ -8,7 +8,7 @@ export interface SearchProductResult {
 	amount?: string | null;
 	brand: string;
 	categoryId?: number;
-	discount: number;
+	compareAtPrice: number | null;
 	id: number;
 	image: string;
 	name: string;
@@ -50,7 +50,7 @@ interface CatalogSearchRow {
 	amount?: string | null;
 	brand: string;
 	categoryId?: number;
-	discount: number;
+	compareAtPrice: number | null;
 	id: number;
 	image: string;
 	name: string;
@@ -88,7 +88,7 @@ export const performCatalogSearch = async (
 			amount: result.amount,
 			brand: result.brand,
 			categoryId: result.categoryId,
-			discount: result.discount,
+			compareAtPrice: result.compareAtPrice,
 			id: result.id,
 			image: result.image,
 			name: result.name,
@@ -114,7 +114,7 @@ export const performProductSearch = async (
 		amount: row.amount,
 		brand: row.brand,
 		categoryId: row.categoryId,
-		discount: row.discount,
+		compareAtPrice: row.compareAtPrice,
 		id: row.id,
 		image: row.image,
 		name: row.name,
@@ -138,7 +138,7 @@ export const performProductSearchPage = async (input: {
 			amount: row.amount,
 			brand: row.brand,
 			categoryId: row.categoryId,
-			discount: row.discount,
+			compareAtPrice: row.compareAtPrice,
 			id: row.id,
 			image: row.image,
 			name: row.name,

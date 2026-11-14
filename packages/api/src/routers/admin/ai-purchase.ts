@@ -338,7 +338,6 @@ async function createProductFromDraft(
 			categoryId: draft.categoryId,
 			dailyIntake: 1,
 			description: draft.description || draft.name,
-			discount: 0,
 			expirationDate: item.expirationDate ?? null,
 			ingredients: [],
 			name: draft.name,

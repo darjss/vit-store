@@ -48,11 +48,11 @@ export const productFields = [
 	"slug",
 	"description",
 	"status",
-	"discount",
 	"amount",
 	"potency",
 	"stock",
 	"price",
+	"compareAtPrice",
 	"dailyIntake",
 	"expirationDate",
 	"categoryId",
@@ -71,11 +71,11 @@ export const editableProductFields = [
 	"name",
 	"description",
 	"status",
-	"discount",
 	"amount",
 	"potency",
 	"stock",
 	"price",
+	"compareAtPrice",
 	"dailyIntake",
 	"expirationDate",
 	"categoryId",
@@ -116,18 +116,6 @@ export const productColors = [
 	"#C8DCB6",
 	"#ECCFAE",
 ];
-
-export const badgeClasses = {
-	discount: "bg-destructive text-destructive-foreground",
-	featured: "bg-secondary text-secondary-foreground",
-	new: "bg-accent text-accent-foreground",
-};
-
-export const badgeIconNames = {
-	discount: "fire-fill",
-	featured: "star-fill",
-	new: "sparkles-line",
-};
 
 // Flat delivery fee added to every order (storefront cart, the order API total,
 // and the Messenger order summary). 6,000₮ going forward; the zone is recorded

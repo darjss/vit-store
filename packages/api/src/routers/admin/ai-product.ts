@@ -51,7 +51,6 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 							categoryId: extracted.categoryId ?? 1,
 							dailyIntake: extracted.dailyIntake,
 							description: extracted.description,
-							discount: 0,
 							ingredients: extracted.ingredients,
 							name: `${extracted.brand ? `${extracted.brand} ` : ""}${extracted.name} ${extracted.potency} ${extracted.amount}`,
 							name_mn: extracted.name_mn,
