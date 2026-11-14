@@ -40,7 +40,7 @@ describe("product search query", () => {
 
 		expect(filter.$must).toHaveLength(4);
 		expect(serialized).toContain('"$smart":"vitamin"');
-		expect(serialized).toContain('"value":"d3","prefix":true');
+		expect(serialized).toContain('"prefix":true,"value":"d3"');
 		expect(serialized).not.toContain('"$smart":"d3"');
 		expect(serialized).not.toContain('"$smart":"d"');
 	});
@@ -73,7 +73,7 @@ describe("product search query", () => {
 	test("uses primary product fields for normal ingredient searches", () => {
 		const serialized = JSON.stringify(buildProductSearchFilter("magnesium", "generation"));
 
-		expect(serialized).toContain('"primaryName":{"$smart":"magnesium","$boost":18}');
+		expect(serialized).toContain('"primaryName":{"$boost":18,"$smart":"magnesium"}');
 		expect(serialized).not.toContain('"ingredients"');
 		expect(serialized).not.toContain('"intentTerms"');
 	});
