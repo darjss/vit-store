@@ -58,10 +58,10 @@ export function AIPurchaseInput({ onCancel, onExtracted }: AIInvoiceInputProps) 
 	});
 
 	return (
-		<Card className="border-border bg-card shadow-hard overflow-hidden border-2">
-			<div className="border-border bg-primary flex items-center justify-between border-b-2 px-4 py-3">
+		<Card className="border-border bg-card overflow-hidden border">
+			<div className="border-border bg-primary flex items-center justify-between border-b px-4 py-3">
 				<div className="flex items-center gap-2">
-					<div className="border-primary-foreground/30 bg-primary-foreground/10 flex h-8 w-8 items-center justify-center border-2">
+					<div className="border-primary-foreground/30 bg-primary-foreground/10 flex h-8 w-8 items-center justify-center border">
 						<Sparkles className="text-primary-foreground h-4 w-4" />
 					</div>
 					<div>
@@ -106,7 +106,7 @@ export function AIPurchaseInput({ onCancel, onExtracted }: AIInvoiceInputProps) 
 					</Select>
 				</div>
 
-				<div className="rounded-base border-border bg-muted/20 space-y-3 border-2 p-4">
+				<div className="rounded-base border-border bg-muted/20 space-y-3 border p-4">
 					<div className="flex items-center gap-2">
 						<FileImage className="h-4 w-4" />
 						<p className="font-medium">Падааны зураг</p>
@@ -126,7 +126,7 @@ export function AIPurchaseInput({ onCancel, onExtracted }: AIInvoiceInputProps) 
 						<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 							{images.map((image, index) => (
 								<div
-									className="group rounded-base border-border bg-background relative border-2 p-2"
+									className="group rounded-base border-border bg-background relative border p-2"
 									key={image.url}
 								>
 									<img
@@ -152,7 +152,7 @@ export function AIPurchaseInput({ onCancel, onExtracted }: AIInvoiceInputProps) 
 				</div>
 
 				{extractMutation.isError ? (
-					<div className="rounded-base border-destructive bg-destructive/10 text-destructive border-2 p-3 text-sm">
+					<div className="rounded-base border-destructive bg-destructive/10 text-destructive border p-3 text-sm">
 						<div className="mb-1 flex items-center gap-2 font-medium">
 							<AlertCircle className="h-4 w-4" />
 							Падаанаас мэдээлэл ялгаж чадсангүй
@@ -193,8 +193,8 @@ type AIPurchasePreviewProps = {
 
 export function AIPurchasePreview({ data, onCancel, onConfirm, onEdit }: AIPurchasePreviewProps) {
 	return (
-		<Card className="border-border bg-card shadow-hard overflow-hidden border-2">
-			<div className="border-border bg-secondary text-secondary-foreground border-b-2 px-4 py-3">
+		<Card className="border-border bg-card overflow-hidden border">
+			<div className="border-border bg-secondary text-secondary-foreground border-b px-4 py-3">
 				<h3 className="font-heading font-bold">AI урьдчилан харах</h3>
 				<p className="text-secondary-foreground/70 text-xs">
 					Засварлахаас өмнө ялгаж авсан падааны толгой болон барааны таарцыг шалгана уу.

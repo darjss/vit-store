@@ -26,7 +26,7 @@ function CardGrid({ count = 8 }: { count?: number }) {
 	return (
 		<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 			{Array.from({ length: count }).map((_, index) => (
-				<div className="border-border bg-card shadow-hard-sm border-2 p-4" key={index}>
+				<div className="border-border bg-card border p-4" key={index}>
 					<div className="mb-4 flex items-start gap-3">
 						<Skeleton className="h-14 w-14" />
 						<div className="flex-1 space-y-2">
@@ -48,7 +48,7 @@ function TableList({ count = 6 }: { count?: number }) {
 	return (
 		<div className="space-y-3">
 			{Array.from({ length: count }).map((_, index) => (
-				<div className="border-border bg-card shadow-hard-sm border-2 p-4" key={index}>
+				<div className="border-border bg-card border p-4" key={index}>
 					<div className="flex items-center justify-between gap-4">
 						<div className="flex flex-1 items-center gap-3">
 							<Skeleton className="h-12 w-12" />

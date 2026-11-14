@@ -67,10 +67,8 @@ function AddPurchasePage() {
 
 				<div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<button
-						className={`group border-border relative border-2 p-4 text-left transition-all sm:p-5 ${
-							activeTab === "manual"
-								? "bg-primary shadow-hard"
-								: "bg-card hover:bg-muted/30 hover:translate-y-0.5"
+						className={`group border-border relative border p-4 text-left transition-all sm:p-5 ${
+							activeTab === "manual" ? "bg-primary" : "bg-card hover:bg-muted/30"
 						}`}
 						onClick={() => {
 							setActiveTab("manual");
@@ -80,7 +78,7 @@ function AddPurchasePage() {
 					>
 						<div className="flex items-start gap-3">
 							<div
-								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border-2 ${
+								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border ${
 									activeTab === "manual"
 										? "bg-primary-foreground text-primary"
 										: "bg-muted text-muted-foreground"
@@ -111,17 +109,17 @@ function AddPurchasePage() {
 					</button>
 
 					<button
-						className={`group border-border relative border-2 p-4 text-left transition-all sm:p-5 ${
+						className={`group border-border relative border p-4 text-left transition-all sm:p-5 ${
 							activeTab === "ai"
-								? "bg-secondary text-secondary-foreground shadow-hard"
-								: "bg-card hover:bg-muted/30 hover:translate-y-0.5"
+								? "bg-secondary text-secondary-foreground"
+								: "bg-card hover:bg-muted/30"
 						}`}
 						onClick={() => setActiveTab("ai")}
 						type="button"
 					>
 						<div className="flex items-start gap-3">
 							<div
-								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border-2 ${
+								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border ${
 									activeTab === "ai"
 										? "bg-secondary-foreground text-secondary"
 										: "bg-muted text-muted-foreground"
@@ -152,7 +150,7 @@ function AddPurchasePage() {
 					</button>
 				</div>
 
-				<div className="rounded-base border-border bg-card shadow-shadow border-2 p-4 sm:p-6">
+				<div className="rounded-base border-border bg-card border p-4 sm:p-6">
 					{activeTab === "manual" ? (
 						<PurchaseForm
 							onSuccess={(purchaseId) =>

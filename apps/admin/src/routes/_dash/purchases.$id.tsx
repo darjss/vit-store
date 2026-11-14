@@ -206,7 +206,7 @@ function PurchaseDetailPage() {
 
 				<div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
 					<div className="space-y-6">
-						<section className="rounded-base border-border bg-card shadow-shadow border-2 p-5">
+						<section className="rounded-base border-border bg-card border p-5">
 							<h2 className="font-heading text-lg">Худалдан авалтын мэдээлэл</h2>
 							<div className="mt-4 grid gap-3 sm:grid-cols-2">
 								<SummaryRow
@@ -249,7 +249,7 @@ function PurchaseDetailPage() {
 							) : null}
 						</section>
 
-						<section className="rounded-base border-border bg-card shadow-shadow border-2 p-5">
+						<section className="rounded-base border-border bg-card border p-5">
 							<h2 className="font-heading text-lg">Бараа</h2>
 							<div className="mt-4 space-y-3">
 								{purchase.items.map((item) => (
@@ -280,7 +280,7 @@ function PurchaseDetailPage() {
 							</div>
 						</section>
 
-						<section className="rounded-base border-border bg-card shadow-shadow border-2 p-5">
+						<section className="rounded-base border-border bg-card border p-5">
 							<h2 className="font-heading text-lg">Хүлээн авалтын түүх</h2>
 							<div className="mt-4 space-y-3">
 								{purchase.receipts.length === 0 ? (
@@ -310,7 +310,7 @@ function PurchaseDetailPage() {
 						</section>
 					</div>
 
-					<section className="rounded-base border-border bg-card shadow-shadow border-2 p-5">
+					<section className="rounded-base border-border bg-card border p-5">
 						<h2 className="font-heading text-lg">Бараа хүлээн авах</h2>
 						<p className="text-muted-foreground mt-1 text-sm">
 							Зөвхөн танд ирсэн тоо хэмжээгээр нөөцөд нэмнэ үү.

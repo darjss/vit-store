@@ -58,7 +58,7 @@ function RouteComponent() {
 				fallback={
 					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
 						{Array.from({ length: 12 }).map((_, index) => (
-							<Skeleton className="rounded-base border-border aspect-square border-2" key={index} />
+							<Skeleton className="rounded-base border-border aspect-square border" key={index} />
 						))}
 					</div>
 				}

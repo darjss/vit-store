@@ -29,10 +29,10 @@ const CategoryCard = (category: CategoryType) => {
 				</DialogContent>
 			</Dialog>
 
-			<Card className="group border-border bg-background shadow-shadow relative overflow-hidden border-2 transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
+			<Card className="group border-border bg-background relative overflow-hidden border transition-all duration-200">
 				<CardContent className="p-3">
 					<div className="flex items-center gap-3">
-						<div className="rounded-base border-border bg-secondary font-heading text-foreground/60 flex h-8 w-8 items-center justify-center border-2 text-xs uppercase">
+						<div className="rounded-base border-border bg-secondary font-heading text-foreground/60 flex h-8 w-8 items-center justify-center border text-xs uppercase">
 							{category.name[0]}
 						</div>
 						<div className="min-w-0">

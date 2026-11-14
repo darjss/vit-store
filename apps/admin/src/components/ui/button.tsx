@@ -4,19 +4,19 @@ import React, { type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-	"flex cursor-pointer items-center justify-center font-heading font-bold outline-hidden transition-all active:translate-y-1 active:shadow-none",
+	"flex cursor-pointer items-center justify-center font-heading font-bold outline-hidden transition-all",
 	{
 		variants: {
 			variant: {
 				default:
-					"border-2 border-border bg-primary text-primary-foreground shadow-hard hover:translate-y-1 hover:shadow-none",
+					"border border-foreground bg-primary text-primary-foreground",
 				secondary:
-					"border-2 border-border bg-secondary text-secondary-foreground shadow-hard hover:translate-y-1 hover:shadow-none",
+					"border border-border bg-secondary text-secondary-foreground",
 				outline:
-					"border-2 border-border bg-background text-foreground shadow-hard hover:translate-y-1 hover:shadow-none",
+					"border border-border bg-background text-foreground",
 				ghost: "bg-transparent hover:bg-muted/50",
 				destructive:
-					"border-2 border-destructive bg-destructive text-destructive-foreground shadow-hard hover:translate-y-1 hover:shadow-none",
+					"border border-destructive bg-destructive text-destructive-foreground",
 				link: "text-primary underline-offset-4 hover:underline",
 			},
 			size: {

@@ -7,7 +7,10 @@ type ProductImage = {
 };
 
 export function useProductFeaturedImage(images: Array<ProductImage> | undefined) {
-	const [featuredImageIndex, setFeaturedImageIndex] = useState(0);
+	// Start on the primary image, the one the store shows.
+	const [featuredImageIndex, setFeaturedImageIndex] = useState(() =>
+		Math.max(0, images?.findIndex((img) => img.isPrimary) ?? 0),
+	);
 
 	const primaryImage = images?.find((img) => img.isPrimary);
 	const currentFeaturedImage = images?.[featuredImageIndex] || primaryImage;

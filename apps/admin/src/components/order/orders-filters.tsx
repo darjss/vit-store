@@ -1,39 +1,50 @@
 import { useNavigate } from "@tanstack/react-router";
 import { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
-import { Calendar as CalendarIcon, ChevronDown, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, RotateCcw } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { chipClass, FilterChip } from "@/components/filter-chip";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { paymentStatusLabel } from "@/lib/enum-labels";
 import { labelForOrderStatus } from "@/lib/order-status-display";
+import { cn } from "@/lib/utils";
 
-const primaryStatuses = ["active", "pending", "shipped", "delivered", "all"] as const;
-const issueStatuses = ["created", "cancelled", "refunded"] as const;
+// en-CA formats as YYYY-MM-DD, the day key the orders filter expects.
+const ubDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ulaanbaatar" });
 
-const datePresets = [
-	{ label: "Бүгд", value: "all" },
-	{ label: "Өнөөдөр", value: "today" },
-	{ label: "Өчигдөр", value: "yesterday" },
-	{ label: "7 хоног", value: "last7days" },
-	{ label: "30 хоног", value: "last30days" },
+const statusTabs = [
+	"active",
+	"pending",
+	"shipped",
+	"delivered",
+	"created",
+	"cancelled",
+	"refunded",
+	"all",
 ] as const;
 
-function formatStatusLabel(status?: string) {
-	if (!status || status === "all") {
+const datePresets = [
+	{ label: "Бүх өдөр", value: "all" },
+	{ label: "Өнөөдөр", value: "today" },
+	{ label: "Өчигдөр", value: "yesterday" },
+	{ label: "Сүүлийн 7 хоног", value: "last7days" },
+	{ label: "Сүүлийн 30 хоног", value: "last30days" },
+] as const;
+
+const sortOptions = [
+	{ label: "Шинэ нь эхэндээ", value: "createdAt:desc" },
+	{ label: "Хуучин нь эхэндээ", value: "createdAt:asc" },
+	{ label: "Дүн ихээс", value: "total:desc" },
+	{ label: "Дүн багаас", value: "total:asc" },
+] as const;
+
+const paymentOptions = [
+	{ label: "Бүх төлбөр", value: "all" },
+	...paymentStatusConstants.map((status) => ({ label: paymentStatusLabel[status], value: status })),
+];
+
+function formatStatusLabel(status: string) {
+	if (status === "all") {
 		return "Бүгд";
 	}
 	if (status === "active") {
@@ -47,7 +58,7 @@ interface OrdersFiltersProps {
 	filtersActive: boolean;
 	onFilterChange: (field: string, value: string) => void;
 	onResetFilters: () => void;
-	onSort: (field: string) => void;
+	onSortChange: (field: string, direction: "asc" | "desc") => void;
 	orderStatus?: string;
 	pageSize: number;
 	paymentStatus?: string;
@@ -56,15 +67,13 @@ interface OrdersFiltersProps {
 	sortField?: string;
 }
 
-// ponytail: legacy admin orders filters — split filter groups later; complexity ceiling 23
-// oxlint-disable-next-line complexity
 export default function OrdersFilters({
-	date,
+	date = "all",
 	filtersActive,
 	onFilterChange,
 	onResetFilters,
-	onSort,
-	orderStatus,
+	onSortChange,
+	orderStatus = "active",
 	pageSize,
 	paymentStatus,
 	searchTerm,
@@ -73,22 +82,14 @@ export default function OrdersFilters({
 }: OrdersFiltersProps) {
 	const navigate = useNavigate({ from: "/orders" });
 	const [isDateOpen, setIsDateOpen] = useState(false);
-	const isCustomDate =
-		date !== undefined &&
-		date !== "all" &&
-		date !== "today" &&
-		date !== "yesterday" &&
-		date !== "last7days" &&
-		date !== "last30days";
-	const selectedDate = isCustomDate ? new Date(`${date}T00:00:00+08:00`) : undefined;
+	const isPreset = datePresets.some((preset) => preset.value === date);
+	const selectedDate = isPreset ? undefined : new Date(`${date}T00:00:00+08:00`);
+	const sortValue = `${sortField ?? "createdAt"}:${sortDirection ?? "desc"}`;
 
-	const isIssueActive =
-		orderStatus === "created" || orderStatus === "cancelled" || orderStatus === "refunded";
-
-	const handleDatePreset = (preset: string) => {
+	const setDate = (value: string) => {
 		navigate({
 			search: {
-				date: preset,
+				date: value,
 				orderStatus,
 				page: 1,
 				pageSize,
@@ -101,181 +102,93 @@ export default function OrdersFilters({
 		});
 	};
 
-	const handleCustomDateSelect = (selectedDate: Date | undefined) => {
-		if (selectedDate) {
-			const dateStr = selectedDate.toISOString().split("T")[0];
-			navigate({
-				search: {
-					date: dateStr,
-					orderStatus,
-					page: 1,
-					pageSize,
-					paymentStatus,
-					searchTerm,
-					sortDirection,
-					sortField,
-				},
-				to: "/orders",
-			});
-		}
-		setIsDateOpen(false);
-	};
-
 	return (
-		<div className="space-y-4">
-			{/* Status tabs — primary + issues dropdown */}
-			<div className="flex scrollbar-thin gap-1 overflow-x-auto pb-1">
-				{primaryStatuses.map((status) => {
-					const value = status;
-					const isActive = orderStatus === value;
+		<div className="space-y-2.5">
+			<div className="-mx-3 flex [scrollbar-width:none] overflow-x-auto border-b px-3 md:mx-0 md:px-0">
+				{statusTabs.map((status) => {
+					const isActive = orderStatus === status;
 					return (
-						<Button
-							className={`h-10 shrink-0 px-4 text-xs font-bold sm:text-sm ${
-								isActive ? "shadow-hard" : "shadow-hard-sm"
-							}`}
-							key={value}
-							onClick={() => onFilterChange("orderStatus", value)}
-							size="sm"
-							variant={isActive ? "default" : "outline"}
+						<button
+							className={cn(
+								"-mb-px h-10 shrink-0 border-b-[3px] px-3 text-sm whitespace-nowrap",
+								isActive
+									? "border-foreground text-foreground font-semibold"
+									: "text-muted-foreground hover:text-foreground border-transparent",
+							)}
+							key={status}
+							onClick={() => onFilterChange("orderStatus", status)}
+							type="button"
 						>
 							{formatStatusLabel(status)}
-						</Button>
+						</button>
 					);
 				})}
-
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							className={`h-10 shrink-0 gap-1 px-3 text-xs font-bold sm:text-sm ${
-								isIssueActive ? "shadow-hard" : "shadow-hard-sm"
-							}`}
-							size="sm"
-							variant={isIssueActive ? "default" : "outline"}
-						>
-							Асуудалтай
-							<ChevronDown className="h-3.5 w-3.5" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" className="border-border bg-card shadow-hard border-2">
-						{issueStatuses.map((status) => (
-							<DropdownMenuItem
-								className={`py-2.5 font-bold ${
-									orderStatus === status ? "bg-primary text-primary-foreground" : ""
-								}`}
-								key={status}
-								onClick={() => onFilterChange("orderStatus", status)}
-							>
-								{formatStatusLabel(status)}
-							</DropdownMenuItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
 			</div>
 
-			{/* Secondary filters row */}
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-				<div className="flex flex-wrap items-center gap-1.5">
-					{datePresets.map((preset) => {
-						const isActive = date === preset.value || (!date && preset.value === "all");
-						return (
-							<Button
-								className={`h-9 px-2.5 text-xs ${isActive ? "shadow-hard" : "shadow-hard-sm"}`}
-								key={preset.value}
-								onClick={() => handleDatePreset(preset.value)}
-								size="sm"
-								variant={isActive ? "default" : "outline"}
-							>
-								{preset.label}
-							</Button>
-						);
-					})}
-					<Popover onOpenChange={setIsDateOpen} open={isDateOpen}>
-						<PopoverTrigger asChild>
-							<Button
-								aria-label="Огноо сонгох"
-								className={`h-9 w-9 p-0 ${isCustomDate ? "shadow-hard" : "shadow-hard-sm"}`}
-								size="sm"
-								variant={isCustomDate ? "default" : "outline"}
-							>
-								<CalendarIcon className="h-3.5 w-3.5" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent align="start" className="w-auto p-0">
-							<Calendar
-								components={{ DayButton: CalendarDayButton }}
-								mode="single"
-								onSelect={handleCustomDateSelect}
-								selected={selectedDate}
-							/>
-						</PopoverContent>
-					</Popover>
-				</div>
-
-				<div className="flex items-center gap-2 sm:ml-auto">
-					<Select
-						onValueChange={(value) => onFilterChange("paymentStatus", value)}
-						value={paymentStatus ?? "all"}
+			<div className="-mx-3 flex [scrollbar-width:none] items-center gap-2 overflow-x-auto px-3 md:mx-0 md:px-0">
+				{isPreset ? (
+					<FilterChip
+						idle="all"
+						label="Огноо"
+						onChange={setDate}
+						options={datePresets}
+						value={date}
+					/>
+				) : (
+					<button className={chipClass(true)} onClick={() => setDate("all")} type="button">
+						{selectedDate?.toLocaleDateString("mn-MN", {
+							day: "numeric",
+							month: "short",
+							timeZone: "Asia/Ulaanbaatar",
+						})}{" "}
+						✕
+					</button>
+				)}
+				<Popover onOpenChange={setIsDateOpen} open={isDateOpen}>
+					<PopoverTrigger aria-label="Өдөр сонгох" className={cn(chipClass(false), "px-2.5")}>
+						<CalendarIcon className="size-4" />
+					</PopoverTrigger>
+					<PopoverContent align="start" className="w-auto border p-0">
+						<Calendar
+							components={{ DayButton: CalendarDayButton }}
+							mode="single"
+							onSelect={(day) => {
+								if (day) {
+									setDate(ubDay.format(day));
+								}
+								setIsDateOpen(false);
+							}}
+							selected={selectedDate}
+						/>
+					</PopoverContent>
+				</Popover>
+				<FilterChip
+					idle="all"
+					label="Төлбөр"
+					onChange={(value) => onFilterChange("paymentStatus", value)}
+					options={paymentOptions}
+					value={paymentStatus ?? "all"}
+				/>
+				<FilterChip
+					idle="createdAt:desc"
+					label="Эрэмбэ"
+					onChange={(value) => {
+						const [field, direction] = value.split(":");
+						onSortChange(field ?? "createdAt", direction === "asc" ? "asc" : "desc");
+					}}
+					options={sortOptions}
+					value={sortValue}
+				/>
+				{filtersActive && (
+					<button
+						className="text-muted-foreground hover:text-foreground flex h-9 shrink-0 items-center gap-1.5 px-2 text-sm"
+						onClick={onResetFilters}
+						type="button"
 					>
-						<SelectTrigger className="shadow-hard-sm h-9 w-[150px] text-xs">
-							<SelectValue placeholder="Төлбөр" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Бүх төлбөр</SelectItem>
-							{paymentStatusConstants.map((status) => (
-								<SelectItem key={status} value={status}>
-									{paymentStatusLabel[status]}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					<div className="bg-border h-6 w-px" />
-
-					<Button
-						className={`h-9 gap-1 px-3 text-xs ${
-							sortField === "total" ? "shadow-hard" : "shadow-hard-sm"
-						}`}
-						onClick={() => onSort("total")}
-						size="sm"
-						variant={sortField === "total" ? "default" : "outline"}
-					>
-						Нийт
-						{sortField === "total" &&
-							(sortDirection === "asc" ? (
-								<span className="text-[10px]">↑</span>
-							) : (
-								<span className="text-[10px]">↓</span>
-							))}
-					</Button>
-					<Button
-						className={`h-9 gap-1 px-3 text-xs ${
-							sortField === "createdAt" ? "shadow-hard" : "shadow-hard-sm"
-						}`}
-						onClick={() => onSort("createdAt")}
-						size="sm"
-						variant={sortField === "createdAt" ? "default" : "outline"}
-					>
-						Огноо
-						{sortField === "createdAt" &&
-							(sortDirection === "asc" ? (
-								<span className="text-[10px]">↑</span>
-							) : (
-								<span className="text-[10px]">↓</span>
-							))}
-					</Button>
-
-					{filtersActive && (
-						<Button
-							className="hidden h-9 gap-1.5 sm:flex"
-							onClick={onResetFilters}
-							size="sm"
-							variant="ghost"
-						>
-							<RotateCcw className="h-3.5 w-3.5" />
-							Цэвэрлэх
-						</Button>
-					)}
-				</div>
+						<RotateCcw className="size-3.5" />
+						Цэвэрлэх
+					</button>
+				)}
 			</div>
 		</div>
 	);

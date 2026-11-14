@@ -20,8 +20,8 @@ export default function NotFound() {
 					opacity: 0.6,
 				}}
 			/>
-			<div className="rounded-base border-border bg-card shadow-shadow relative z-10 w-full max-w-xl space-y-6 border-2 p-8 text-center">
-				<div className="rounded-base border-border mx-auto flex size-16 items-center justify-center border-2 bg-yellow-200 text-yellow-900">
+			<div className="rounded-base border-border bg-card relative z-10 w-full max-w-xl space-y-6 border p-8 text-center">
+				<div className="rounded-base border-border mx-auto flex size-16 items-center justify-center border bg-yellow-200 text-yellow-900">
 					<MapPinX className="h-8 w-8" />
 				</div>
 				<Text as="h1">404 - Хуудас олдсонгүй</Text>

@@ -203,7 +203,7 @@ export default function OrdersList({
 		<>
 			{/* Batch select header */}
 			{pendingOnPage.length > 0 && (
-				<div className="border-border bg-card shadow-hard-sm flex items-center gap-3 border-2 px-4 py-3">
+				<div className="flex items-center gap-3 px-3 py-1">
 					<label
 						className="flex cursor-pointer items-center gap-3 text-sm select-none"
 						htmlFor="select-all-pending-orders"
@@ -224,7 +224,7 @@ export default function OrdersList({
 			)}
 
 			{/* Order grid */}
-			<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+			<div className="grid grid-cols-1 gap-2 md:gap-3 xl:grid-cols-2">
 				{orders.map((order) => (
 					<OrderCard
 						key={order.orderNumber}
@@ -253,7 +253,7 @@ export default function OrdersList({
 
 			{/* Empty state */}
 			{orders.length === 0 && (
-				<div className="border-border flex flex-col items-center justify-center border-2 border-dashed py-16">
+				<div className="border-border flex flex-col items-center justify-center border border-dashed py-16">
 					<Package className="text-muted-foreground mb-3 h-12 w-12" />
 					<p className="font-heading text-lg font-bold">Захиалга олдсонгүй</p>
 					<p className="text-muted-foreground mt-1 text-sm">
@@ -284,11 +284,11 @@ export default function OrdersList({
 					<TooltipProvider delayDuration={400}>
 						<div
 							className={[
-								"fixed z-40 border-border border-t-2 bg-card/95 backdrop-blur-md",
+								"fixed z-40 border-border border-t bg-card/95 backdrop-blur-md",
 								"inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom,0px)]",
 								"shadow-[0_-8px_28px_rgba(0,0,0,0.08)]",
 								"sm:-translate-x-1/2 sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[min(100%-2rem,28rem)]",
-								"sm:rounded-none sm:border-2 sm:shadow-hard",
+								"sm:rounded-none sm:border",
 							].join(" ")}
 						>
 							<div className="flex items-center justify-between gap-4 px-4 py-3">
@@ -313,7 +313,7 @@ export default function OrdersList({
 											<TooltipTrigger asChild>
 												<span className="inline-flex">
 													<Button
-														className="border-border h-10 gap-2 rounded-r-none border-r-2"
+														className="border-border h-10 gap-2 rounded-r-none border-r"
 														disabled={!canTuSend}
 														onClick={() => setIsBatchDialogOpen(true)}
 														size="sm"
@@ -351,7 +351,7 @@ export default function OrdersList({
 											</DropdownMenuTrigger>
 											<DropdownMenuContent
 												align="end"
-												className="border-border bg-card shadow-hard w-64 border-2"
+												className="border-border bg-card w-64 border"
 											>
 												<DropdownMenuItem
 													className="py-2.5"
@@ -385,13 +385,13 @@ export default function OrdersList({
 				}}
 				open={batchFailed !== null && batchFailed.length > 0}
 			>
-				<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] overflow-y-auto border-2 sm:max-w-md">
+				<DialogContent className="border-border bg-card max-h-[85vh] overflow-y-auto border sm:max-w-md">
 					<DialogHeader>
 						<DialogTitle className="font-heading text-lg">Илгээж чадсангүй</DialogTitle>
 					</DialogHeader>
 					<ul className="space-y-2 text-sm">
 						{batchFailed?.map((row) => (
-							<li className="border-border bg-muted border-2 px-3 py-2" key={row.orderNumber}>
+							<li className="border-border bg-muted border px-3 py-2" key={row.orderNumber}>
 								<span className="font-bold">#{row.orderNumber}</span>
 								<p className="text-muted-foreground mt-0.5 text-xs">{row.message}</p>
 							</li>

@@ -8,13 +8,7 @@ interface ICardProps extends HTMLAttributes<HTMLDivElement> {
 
 const Card = ({ className, ...props }: ICardProps) => {
 	return (
-		<div
-			className={cn(
-				"brutal-card block transition-all", // Use the class from your global CSS
-				className,
-			)}
-			{...props}
-		/>
+		<div className={cn("block border bg-card p-4", className)} {...props} />
 	);
 };
 

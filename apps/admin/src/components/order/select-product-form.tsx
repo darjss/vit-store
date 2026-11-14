@@ -91,7 +91,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 				<div className="relative">
 					<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 					<Input
-						className="border-border border-2 pl-10"
+						className="border-border border pl-10"
 						onChange={handleSearchChange}
 						placeholder="Бүтээгдэхүүнийг нэрээр хайх..."
 						value={inputValue}
@@ -104,7 +104,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 					</div>
 				)}
 				{data !== undefined && data?.length > 0 && inputValue && (
-					<Card className="border-border absolute right-0 left-0 z-[100] mt-1 border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+					<Card className="border-border absolute right-0 left-0 z-[100] mt-1 border">
 						<ScrollArea className="max-h-[260px]">
 							<div className="p-1">
 								{data.map((product) => (
@@ -114,7 +114,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 										onClick={() => handleSelectProduct(product)}
 										type="button"
 									>
-										<div className="border-border bg-muted h-10 w-10 flex-shrink-0 overflow-hidden border-2">
+										<div className="border-border bg-muted h-10 w-10 flex-shrink-0 overflow-hidden border">
 											<img
 												alt={product.name}
 												className="h-full w-full object-cover"
@@ -139,7 +139,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 					</Card>
 				)}
 				{data?.length === 0 && inputValue && !isFetching && (
-					<Card className="border-border absolute right-0 left-0 z-[100] mt-1 border-2">
+					<Card className="border-border absolute right-0 left-0 z-[100] mt-1 border">
 						<CardContent className="text-muted-foreground p-3 text-center text-xs">
 							&ldquo;{inputValue}&rdquo; олдсонгүй
 						</CardContent>
@@ -151,13 +151,13 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 			{fields.length > 0 && (
 				<div className="space-y-2.5">
 					{/* Summary bar */}
-					<div className="border-border bg-muted/50 flex flex-wrap items-center justify-between gap-2 border-2 px-3 py-2">
+					<div className="border-border bg-muted/50 flex flex-wrap items-center justify-between gap-2 border px-3 py-2">
 						<div className="flex items-center gap-2">
 							<ShoppingCart className="text-muted-foreground h-3.5 w-3.5" />
 							<span className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
 								Сонгосон
 							</span>
-							<span className="border-border bg-background flex h-5 min-w-5 items-center justify-center border-2 px-1 text-[10px] font-bold tabular-nums">
+							<span className="border-border bg-background flex h-5 min-w-5 items-center justify-center border px-1 text-[10px] font-bold tabular-nums">
 								{getTotalItems()}
 							</span>
 						</div>
@@ -173,10 +173,10 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 							const itemTotal = product.price * product.quantity;
 
 							return (
-								<div className="border-border bg-background border-2" key={field.id}>
+								<div className="border-border bg-background border" key={field.id}>
 									{/* Top row: image + name + remove */}
 									<div className="flex items-center gap-2.5 p-2.5 pb-2">
-										<div className="border-border bg-muted h-11 w-11 flex-shrink-0 overflow-hidden border-2">
+										<div className="border-border bg-muted h-11 w-11 flex-shrink-0 overflow-hidden border">
 											<img
 												alt={product.name}
 												className="h-full w-full object-cover"
@@ -212,7 +212,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 									<div className="border-border flex items-center justify-between border-t border-dashed px-2.5 py-2">
 										<div className="flex items-center gap-1">
 											<Button
-												className="border-border h-7 w-7 border-2"
+												className="border-border h-7 w-7 border"
 												disabled={product.quantity <= 1}
 												onClick={() => handleQuantityChange(index, "minus")}
 												size="icon"
@@ -221,11 +221,11 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 											>
 												<Minus className="h-3 w-3" />
 											</Button>
-											<div className="border-border bg-muted flex h-7 w-10 items-center justify-center border-2">
+											<div className="border-border bg-muted flex h-7 w-10 items-center justify-center border">
 												<span className="text-xs font-bold tabular-nums">{product.quantity}</span>
 											</div>
 											<Button
-												className="border-border h-7 w-7 border-2"
+												className="border-border h-7 w-7 border"
 												disabled={product.stock !== undefined && product.quantity >= product.stock}
 												onClick={() => handleQuantityChange(index, "add")}
 												size="icon"
@@ -248,7 +248,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 
 			{/* Empty State */}
 			{fields.length === 0 && (
-				<div className="border-border flex flex-col items-center justify-center border-2 border-dashed py-8">
+				<div className="border-border flex flex-col items-center justify-center border border-dashed py-8">
 					<ShoppingCart className="text-muted-foreground/50 mb-2 h-8 w-8" />
 					<p className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
 						Бүтээгдэхүүн сонгогдоогүй

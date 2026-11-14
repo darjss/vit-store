@@ -24,7 +24,7 @@ export function ProductStockEditor({
 	if (!isEditing) {
 		return (
 			<Button
-				className="border-border h-8 border-2 px-3 text-sm"
+				className="border-border h-8 border px-3 text-sm"
 				onClick={(e) => {
 					e.stopPropagation();
 					onEdit();
@@ -41,7 +41,7 @@ export function ProductStockEditor({
 	return (
 		<div className="flex items-center gap-1">
 			<Input
-				className="border-border h-8 w-20 border-2 text-center text-sm"
+				className="border-border h-8 w-20 border text-center text-sm"
 				disabled={isPending}
 				min="0"
 				onChange={(e) => {
@@ -112,7 +112,7 @@ export function ProductPriceEditor({
 	if (!isEditing) {
 		return (
 			<Button
-				className="border-border h-8 border-2 px-3 text-sm"
+				className="border-border h-8 border px-3 text-sm"
 				onClick={(e) => {
 					e.stopPropagation();
 					onEdit();
@@ -128,7 +128,7 @@ export function ProductPriceEditor({
 	return (
 		<div className="flex items-center gap-1">
 			<Input
-				className="border-border h-8 w-24 border-2 text-center text-sm"
+				className="border-border h-8 w-24 border text-center text-sm"
 				disabled={isPending}
 				min="0"
 				onChange={(e) => {

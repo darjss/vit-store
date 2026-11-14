@@ -7,7 +7,7 @@ interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
 
 function Skeleton({ className, variant = "default", ...props }: SkeletonProps) {
 	const baseClasses =
-		"relative overflow-hidden bg-muted border-2 border-border";
+		"relative overflow-hidden bg-muted border border-border";
 
 	const variantClasses = {
 		default: "h-4 w-full rounded-base",

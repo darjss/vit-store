@@ -1,46 +1,93 @@
 import { Link } from "@tanstack/react-router";
-import { sideNavItems } from "@/lib/constants";
+import { Menu } from "lucide-react";
+import { useState } from "react";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { navGroups } from "@/lib/constants";
+import { useNavCounts } from "@/lib/nav-counts";
 import { cn } from "@/lib/utils";
+import UserData from "./user-data";
+
+const tabClass =
+	"relative flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium";
 
 const MobileNavbar = () => {
-	const navItems = sideNavItems.slice(0, 4);
+	const counts = useNavCounts();
+	const [menuOpen, setMenuOpen] = useState(false);
+	const [daily, ...rest] = navGroups;
 
 	return (
-		<nav className="border-border bg-background fixed inset-x-0 bottom-0 z-40 border-t-2 pb-[env(safe-area-inset-bottom,0px)]">
-			<div className="mx-auto max-w-screen-sm">
-				<ul className="grid grid-cols-4 gap-2 px-4 py-3">
-					{navItems.map((nav) => (
-						<li key={nav.url}>
-							<Link
-								activeProps={{
-									className: "bg-primary text-primary-foreground shadow-hard-sm translate-y-[2px]",
-								}}
-								className={cn(
-									"group block rounded-none border-2 border-transparent",
-									"px-1 py-2",
-									"transition-all duration-200",
-									"text-foreground hover:bg-muted",
-									"focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
-								)}
-								to={nav.url}
-							>
-								<div className="flex flex-col items-center gap-1.5">
-									<nav.icon
-										className={cn(
-											"h-5 w-5",
-											"transition-transform duration-200",
-											"group-hover:-rotate-12 group-active:scale-95",
+		<nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-white pb-[env(safe-area-inset-bottom,0px)]">
+			<ul className="grid grid-cols-5">
+				{daily.items.map((item) => {
+					const count = "count" in item ? counts[item.count] : undefined;
+					return (
+						<li key={item.url}>
+							<Link activeOptions={{ exact: item.url === "/" }} className={tabClass} to={item.url}>
+								{({ isActive }) => (
+									<>
+										{isActive && (
+											<span aria-hidden className="bg-foreground absolute top-0 h-0.5 w-8" />
 										)}
-									/>
-									<p className="font-heading text-[10px] leading-none font-bold tracking-wide uppercase">
-										{nav.title}
-									</p>
-								</div>
+										<item.icon
+											className={cn(
+												"size-5",
+												isActive ? "text-foreground" : "text-muted-foreground",
+											)}
+										/>
+										<span
+											className={
+												isActive ? "text-foreground font-semibold" : "text-muted-foreground"
+											}
+										>
+											{item.title}
+										</span>
+										{count ? (
+											<span className="bg-primary absolute top-1.5 left-1/2 ml-1.5 min-w-5 px-1 text-center text-[11px] leading-5 font-semibold tabular-nums">
+												{count}
+											</span>
+										) : null}
+									</>
+								)}
 							</Link>
 						</li>
-					))}
-				</ul>
-			</div>
+					);
+				})}
+				<li>
+					<Sheet onOpenChange={setMenuOpen} open={menuOpen}>
+						<SheetTrigger className={cn(tabClass, "text-muted-foreground w-full")}>
+							<Menu className="size-5" />
+							<span>Цэс</span>
+						</SheetTrigger>
+						<SheetContent
+							className="gap-0 border-t p-0 pb-[env(safe-area-inset-bottom,0px)]"
+							side="bottom"
+						>
+							<SheetTitle className="sr-only">Цэс</SheetTitle>
+							{rest.map((group) => (
+								<div className="border-b px-2 py-2" key={group.title}>
+									<p className="text-muted-foreground px-3 pb-1 text-[11px] font-medium tracking-wide uppercase">
+										{group.title}
+									</p>
+									{group.items.map((item) => (
+										<Link
+											className="flex h-11 items-center gap-3 px-3 text-[15px]"
+											key={item.url}
+											onClick={() => setMenuOpen(false)}
+											to={item.url}
+										>
+											<item.icon className="text-muted-foreground size-5" />
+											{item.title}
+										</Link>
+									))}
+								</div>
+							))}
+							<div className="px-2 py-2">
+								<UserData />
+							</div>
+						</SheetContent>
+					</Sheet>
+				</li>
+			</ul>
 		</nav>
 	);
 };

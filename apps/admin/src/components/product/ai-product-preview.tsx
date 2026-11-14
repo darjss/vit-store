@@ -13,10 +13,10 @@ interface AIProductPreviewProps {
 
 export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProductPreviewProps) {
 	return (
-		<Card className="border-border bg-card shadow-hard overflow-hidden border-2">
-			<div className="border-border flex items-center justify-between border-b-2 bg-green-500 px-4 py-3">
+		<Card className="border-border bg-card overflow-hidden border">
+			<div className="border-border flex items-center justify-between border-b bg-green-500 px-4 py-3">
 				<div className="flex items-center gap-2">
-					<div className="flex h-8 w-8 items-center justify-center border-2 border-white/30 bg-white/10">
+					<div className="flex h-8 w-8 items-center justify-center border border-white/30 bg-white/10">
 						<CheckCircle2 className="h-4 w-4 text-white" />
 					</div>
 					<div>
@@ -37,7 +37,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 
 			<CardContent className="space-y-4 p-4">
 				{data.extractionStatus === "partial" && data.errors.length > 0 && (
-					<div className="space-y-2 rounded-none border-2 border-yellow-500 bg-yellow-500/10 p-3">
+					<div className="space-y-2 rounded-none border border-yellow-500 bg-yellow-500/10 p-3">
 						<div className="flex items-center gap-2">
 							<AlertCircle className="h-4 w-4 text-yellow-600" />
 							<span className="text-sm font-bold text-yellow-700">Зарим мэдээлэл дутуу байна</span>
@@ -55,7 +55,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 						<div className="flex gap-2 overflow-x-auto pb-2">
 							{data.images.slice(0, 5).map((img, i) => (
 								<div
-									className="border-border bg-muted relative h-20 w-20 shrink-0 overflow-hidden border-2"
+									className="border-border bg-muted relative h-20 w-20 shrink-0 overflow-hidden border"
 									key={i}
 								>
 									<Image
@@ -68,7 +68,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 								</div>
 							))}
 							{data.images.length > 5 && (
-								<div className="border-border bg-muted/50 flex h-20 w-20 shrink-0 items-center justify-center border-2 border-dashed">
+								<div className="border-border bg-muted/50 flex h-20 w-20 shrink-0 items-center justify-center border border-dashed">
 									<span className="text-muted-foreground text-sm font-bold">
 										+{data.images.length - 5}
 									</span>
@@ -78,13 +78,13 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 					)}
 
 					<div className="grid gap-2 sm:grid-cols-2">
-						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Нэр (EN)
 							</p>
 							<p className="text-sm font-medium">{data.name}</p>
 						</div>
-						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Нэр (MN)
 							</p>
@@ -93,7 +93,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 					</div>
 
 					<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Брэнд
 							</p>
@@ -102,7 +102,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 								{data.brandId && <span className="ml-1 text-xs text-green-600">✓</span>}
 							</p>
 						</div>
-						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Ангилал
 							</p>
@@ -114,13 +114,13 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 								)}
 							</p>
 						</div>
-						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Хэмжээ
 							</p>
 							<p className="truncate text-sm font-medium">{data.amount}</p>
 						</div>
-						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Хүч
 							</p>
@@ -130,7 +130,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 
 					{(data.amazonPriceUsd != null || data.calculatedPriceMnt != null) && (
 						<div className="grid grid-cols-2 gap-2">
-							<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 								<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 									Amazon үнэ (USD)
 								</p>
@@ -138,7 +138,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 									{data.amazonPriceUsd != null ? `$${data.amazonPriceUsd.toFixed(2)}` : "—"}
 								</p>
 							</div>
-							<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 								<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 									Тооцсон үнэ (MNT)
 								</p>
@@ -151,7 +151,7 @@ export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProduc
 						</div>
 					)}
 
-					<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+					<div className="border-border bg-muted/30 space-y-1 rounded-none border p-2">
 						<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 							Тайлбар
 						</p>

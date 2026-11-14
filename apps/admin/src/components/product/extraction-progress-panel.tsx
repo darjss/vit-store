@@ -31,7 +31,7 @@ function ExtractionStepRow({ index, step }: { index: number; step: ExtractionSte
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-3 rounded-none border-2 p-2 transition-all",
+				"flex items-center gap-3 rounded-none border p-2 transition-all",
 				step.status === "active" && "border-primary bg-primary/10",
 				step.status === "complete" && "border-green-500 bg-green-500/10",
 				step.status === "error" && "border-destructive bg-destructive/10",
@@ -40,7 +40,7 @@ function ExtractionStepRow({ index, step }: { index: number; step: ExtractionSte
 		>
 			<div
 				className={cn(
-					"font-heading flex h-6 w-6 shrink-0 items-center justify-center border-2 text-xs font-bold",
+					"font-heading flex h-6 w-6 shrink-0 items-center justify-center border text-xs font-bold",
 					step.status === "active" && "border-primary bg-primary text-primary-foreground",
 					step.status === "complete" && "border-green-600 bg-green-500 text-white",
 					step.status === "error" &&
@@ -69,7 +69,7 @@ function ExtractionStepRow({ index, step }: { index: number; step: ExtractionSte
 
 export function ExtractionProgressPanel({ steps }: ExtractionProgressPanelProps) {
 	return (
-		<div className="border-border bg-muted/30 space-y-3 rounded-none border-2 p-4">
+		<div className="border-border bg-muted/30 space-y-3 rounded-none border p-4">
 			<div className="flex items-center gap-2 text-sm">
 				<Loader2 className="text-primary h-4 w-4 animate-spin" />
 				<span className="font-bold">Ажиллаж байна...</span>

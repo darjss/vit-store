@@ -2,7 +2,8 @@ import { useState } from "react";
 
 type UseEditableOptions<T> = {
 	initialValue: T;
-	onSave: (next: T) => void | Promise<void>;
+	// Mutations resolve with their response object; the field only waits for it.
+	onSave: (next: T) => Promise<object | void> | void;
 };
 
 export function useEditableField<T>({ initialValue, onSave }: UseEditableOptions<T>) {

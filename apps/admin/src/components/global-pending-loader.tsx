@@ -17,19 +17,19 @@ export function GlobalPendingLoader() {
 				<div className="relative">
 					<div
 						aria-hidden
-						className="admin-pending-orbit border-border/35 pointer-events-none absolute -inset-8 border-2 border-dashed"
+						className="admin-pending-orbit border-border/35 pointer-events-none absolute -inset-8 border border-dashed"
 					/>
-					<div className="border-border bg-card shadow-hard-sm relative size-[5.75rem] border-2">
+					<div className="border-border bg-card relative size-[5.75rem] border">
 						<div className="border-border/55 bg-background/90 absolute inset-2.5 overflow-hidden border">
 							<div className="admin-pending-shine absolute -top-1/2 -left-1/2 h-[220%] w-[220%]" />
 						</div>
 						<div
 							aria-hidden
-							className="admin-pending-corner border-foreground bg-primary shadow-hard-sm absolute top-1.5 left-1.5 size-2 border-2"
+							className="admin-pending-corner border-foreground bg-primary absolute top-1.5 left-1.5 size-2 border"
 						/>
 						<div
 							aria-hidden
-							className="admin-pending-corner-delay border-foreground bg-primary shadow-hard-sm absolute right-1.5 bottom-1.5 size-2 border-2"
+							className="admin-pending-corner-delay border-foreground bg-primary absolute right-1.5 bottom-1.5 size-2 border"
 						/>
 					</div>
 				</div>
@@ -37,7 +37,7 @@ export function GlobalPendingLoader() {
 				<div aria-hidden className="flex items-end gap-3">
 					{[0, 1, 2, 3].map((i) => (
 						<span
-							className="admin-pending-bar border-border bg-primary shadow-hard-sm size-3 border-2"
+							className="admin-pending-bar border-border bg-primary size-3 border"
 							key={i}
 							style={{ animationDelay: `${i * 110}ms` }}
 						/>

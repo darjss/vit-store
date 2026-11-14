@@ -146,12 +146,12 @@ const CategoryForm = ({
 														</button>
 														<img
 															alt="Баннер"
-															className="border-border bg-background h-24 w-full rounded-lg border-2 object-cover shadow-sm"
+															className="border-border bg-background h-24 w-full rounded-lg border object-cover shadow-sm"
 															src={bannerImageUrl}
 														/>
 													</div>
 												) : (
-													<div className="border-border bg-muted/30 flex h-24 w-full items-center justify-center rounded-lg border-2 border-dashed">
+													<div className="border-border bg-muted/30 flex h-24 w-full items-center justify-center rounded-lg border border-dashed">
 														<p className="text-muted-foreground text-xs">Баннер байршуулах</p>
 													</div>
 												)}

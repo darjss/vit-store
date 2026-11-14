@@ -53,14 +53,14 @@ function ShipOrderDialogContent({
 	const canSubmit = zonesReady && selectedZoneExists && !shipOrder.isPending;
 
 	return (
-		<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-y-auto border-2 sm:max-w-lg">
+		<DialogContent className="border-border bg-card max-h-[85vh] max-w-[95vw] overflow-y-auto border sm:max-w-lg">
 			<DialogHeader className="px-4 sm:px-6">
 				<DialogTitle>Хүргэлтийн бүс сонгох</DialogTitle>
 				<DialogDescription>#{orderNumber} захиалгыг TU руу илгээх</DialogDescription>
 			</DialogHeader>
 
 			<div className="space-y-4 p-4 sm:p-6">
-				<div className="border-border bg-muted flex gap-2 border-2 p-3 text-sm">
+				<div className="border-border bg-muted flex gap-2 border p-3 text-sm">
 					<MapPin aria-hidden="true" className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
 					<p>{address || "Хаяг оруулаагүй"}</p>
 				</div>

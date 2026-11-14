@@ -134,7 +134,7 @@ function PurchasesPage() {
 				<div className="relative">
 					<Search className="text-muted-foreground absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2" />
 					<Input
-						className="rounded-base border-border bg-background shadow-shadow h-12 border-2 pr-14 pl-14"
+						className="rounded-base border-border bg-background h-12 border pr-14 pl-14"
 						onChange={(event) => setSearchValue(event.target.value)}
 						onKeyDown={(event) => {
 							if (event.key === "Enter") {
@@ -155,7 +155,7 @@ function PurchasesPage() {
 					}
 					value={provider ?? "all"}
 				>
-					<SelectTrigger className="rounded-base border-border bg-background shadow-shadow h-12 border-2">
+					<SelectTrigger className="rounded-base border-border bg-background h-12 border">
 						<SelectValue placeholder="Бүх нийлүүлэгч" />
 					</SelectTrigger>
 					<SelectContent>
@@ -177,7 +177,7 @@ function PurchasesPage() {
 					}
 					value={status ?? "all"}
 				>
-					<SelectTrigger className="rounded-base border-border bg-background shadow-shadow h-12 border-2">
+					<SelectTrigger className="rounded-base border-border bg-background h-12 border">
 						<SelectValue placeholder="Бүх төлөв" />
 					</SelectTrigger>
 					<SelectContent>
@@ -191,7 +191,7 @@ function PurchasesPage() {
 				</Select>
 
 				<Button
-					className="rounded-base border-border shadow-shadow h-12 border-2"
+					className="rounded-base border-border h-12 border"
 					onClick={() => updateSearch({ page: 1, searchTerm: searchValue })}
 					type="button"
 				>
@@ -201,14 +201,14 @@ function PurchasesPage() {
 
 			<div className="space-y-4">
 				{data.purchases.length === 0 ? (
-					<div className="rounded-base border-border bg-card text-muted-foreground border-2 p-12 text-center">
+					<div className="rounded-base border-border bg-card text-muted-foreground border p-12 text-center">
 						<Package className="mx-auto mb-3 h-10 w-10" />
 						<p>Худалдан авалт олдсонгүй.</p>
 					</div>
 				) : (
 					data.purchases.map((purchase) => (
 						<Link
-							className="rounded-base border-border bg-card shadow-shadow block border-2 p-5 transition-transform hover:-translate-y-0.5"
+							className="rounded-base border-border bg-card block border p-5 transition-transform"
 							key={purchase.id}
 							params={{ id: String(purchase.id) }}
 							to="/purchases/$id"

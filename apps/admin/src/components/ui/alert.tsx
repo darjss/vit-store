@@ -3,7 +3,7 @@ import type { HtmlHTMLAttributes } from "react";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 
-const alertVariants = cva("relative w-full border-2 p-4", {
+const alertVariants = cva("relative w-full border p-4", {
 	variants: {
 		variant: {
 			default: "bg-background text-foreground",

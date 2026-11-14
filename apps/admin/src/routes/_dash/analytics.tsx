@@ -125,13 +125,13 @@ function CompactStat({
 	const intentClass = STAT_INTENT_CLASSES[intent];
 
 	return (
-		<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+		<div className="border-border bg-card border p-3">
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-muted-foreground text-[10px] font-black tracking-[0.12em] uppercase">
 					{label}
 				</span>
 				<span
-					className={`border-border flex h-7 w-7 shrink-0 items-center justify-center border-2 ${intentClass}`}
+					className={`border-border flex h-7 w-7 shrink-0 items-center justify-center border ${intentClass}`}
 				>
 					<Icon className="h-3.5 w-3.5" />
 				</span>
@@ -154,8 +154,8 @@ function SectionShell({
 	title: string;
 }) {
 	return (
-		<section className="border-border bg-card shadow-hard-sm border-2">
-			<div className="border-border bg-muted/30 flex items-center justify-between gap-3 border-b-2 px-3 py-2.5">
+		<section className="border-border bg-card border">
+			<div className="border-border bg-muted/30 flex items-center justify-between gap-3 border-b px-3 py-2.5">
 				<div className="flex min-w-0 items-center gap-2">
 					<Icon className="text-muted-foreground h-4 w-4 shrink-0" />
 					<h2 className="font-heading truncate text-sm font-black">{title}</h2>
@@ -242,10 +242,10 @@ function RouteComponent() {
 
 	return (
 		<div className="space-y-3 pb-6">
-			<header className="border-border bg-card shadow-hard-sm border-2">
-				<div className="border-border bg-primary flex items-start justify-between gap-3 border-b-2 p-3">
+			<header className="border-border bg-card border">
+				<div className="border-border bg-primary flex items-start justify-between gap-3 border-b p-3">
 					<div className="min-w-0">
-						<div className="border-border bg-card mb-2 inline-flex items-center gap-1.5 border-2 px-2 py-1 text-[10px] font-black tracking-[0.14em] uppercase">
+						<div className="border-border bg-card mb-2 inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-black tracking-[0.14em] uppercase">
 							<BarChart3 className="h-3 w-3" />
 							Дэлгүүрийн пульс
 						</div>
@@ -256,10 +256,10 @@ function RouteComponent() {
 							Юу зарагдаж байна, хаана алдаж байна, юуг өнөөдөр нөхөх вэ.
 						</p>
 					</div>
-					<div className="border-border bg-card shadow-hard-sm flex shrink-0 border-2">
+					<div className="border-border bg-card flex shrink-0 border">
 						{(["daily", "weekly", "monthly"] as const).map((range) => (
 							<button
-								className={`px-3 py-2 text-xs font-black transition-colors active:translate-y-px ${
+								className={`px-3 py-2 text-xs font-black transition-colors ${
 									timeRange === range
 										? "bg-secondary text-secondary-foreground"
 										: "bg-card hover:bg-muted"
@@ -311,8 +311,8 @@ function RouteComponent() {
 			</header>
 
 			<section className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-				<div className="border-border bg-card shadow-hard-sm border-2">
-					<div className="border-border bg-secondary text-secondary-foreground border-b-2 px-3 py-2.5">
+				<div className="border-border bg-card border">
+					<div className="border-border bg-secondary text-secondary-foreground border-b px-3 py-2.5">
 						<div className="flex items-center justify-between gap-2">
 							<div className="flex items-center gap-2">
 								<CheckCircle2 className="h-4 w-4" />
@@ -369,8 +369,8 @@ function RouteComponent() {
 
 				<div className="space-y-3">
 					{failedCount > 0 && (
-						<div className="shadow-hard-sm border-2 border-red-500 bg-red-50">
-							<div className="flex items-center gap-2 border-b-2 border-red-500 bg-red-100 px-3 py-2">
+						<div className="border border-red-500 bg-red-50">
+							<div className="flex items-center gap-2 border-b border-red-500 bg-red-100 px-3 py-2">
 								<TrendingDown className="h-4 w-4 text-red-700" />
 								<span className="text-sm font-black text-red-800">Амжилтгүй төлбөр</span>
 							</div>
@@ -389,8 +389,8 @@ function RouteComponent() {
 					)}
 
 					{lowStockItems.length > 0 && (
-						<div className="border-border bg-primary shadow-hard-sm border-2">
-							<div className="border-border flex items-center justify-between border-b-2 px-3 py-2">
+						<div className="border-border bg-primary border">
+							<div className="border-border flex items-center justify-between border-b px-3 py-2">
 								<div className="flex items-center gap-2">
 									<AlertTriangle className="h-4 w-4" />
 									<span className="text-sm font-black">Дуусах гэж буй бараа</span>
@@ -412,11 +412,11 @@ function RouteComponent() {
 										{item.imageUrl ? (
 											<img
 												alt={item.name}
-												className="border-border h-10 w-10 border-2 object-cover"
+												className="border-border h-10 w-10 border object-cover"
 												src={item.imageUrl}
 											/>
 										) : (
-											<div className="border-border bg-muted flex h-10 w-10 items-center justify-center border-2">
+											<div className="border-border bg-muted flex h-10 w-10 items-center justify-center border">
 												<Package className="text-muted-foreground h-4 w-4" />
 											</div>
 										)}
@@ -465,7 +465,7 @@ function RouteComponent() {
 													return null;
 												}
 												return (
-													<div className="border-border bg-card shadow-hard-sm border-2 p-2 text-[10px]">
+													<div className="border-border bg-card border p-2 text-[10px]">
 														<p className="font-black">{payload[0].name}</p>
 														<p className="font-mono">
 															{formatCurrency(chartTooltipNumber(payload[0]?.value))}
@@ -478,7 +478,7 @@ function RouteComponent() {
 								</ResponsiveContainer>
 							</div>
 							<div className="space-y-2">
-								<div className="border-border bg-primary border-2 p-2">
+								<div className="border-border bg-primary border p-2">
 									<p className="text-[10px] font-black tracking-[0.12em] uppercase">
 										Тэргүүлэх ангилал
 									</p>
@@ -523,7 +523,7 @@ function RouteComponent() {
 									<div className="p-3" key={brand.name}>
 										<div className="mb-2 flex items-center justify-between gap-3">
 											<div className="flex min-w-0 items-center gap-2">
-												<div className="border-border bg-primary font-heading flex h-7 w-7 shrink-0 items-center justify-center border-2 text-xs font-black">
+												<div className="border-border bg-primary font-heading flex h-7 w-7 shrink-0 items-center justify-center border text-xs font-black">
 													{index + 1}
 												</div>
 												<div className="min-w-0">
@@ -537,9 +537,9 @@ function RouteComponent() {
 												₮{(brand.revenue / 1000).toFixed(0)}k
 											</span>
 										</div>
-										<div className="border-border bg-muted h-3 border-2">
+										<div className="border-border bg-muted h-3 border">
 											<div
-												className="border-border bg-primary h-full border-r-2"
+												className="border-border bg-primary h-full border-r"
 												style={{ width: `${percentage}%` }}
 											/>
 										</div>

@@ -3,7 +3,6 @@ import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 type Props = {
@@ -91,7 +90,7 @@ const SearchBar = ({
 			<Input
 				aria-label="Хайх"
 				autoFocus={autoFocus}
-				className="rounded-base h-10 w-full pr-10 pl-9"
+				className="bg-background h-9 w-full border pr-10 pl-9 text-sm shadow-none focus:bg-white"
 				onBlur={() => setIsFocused(false)}
 				onChange={(e) => setInputValue(e.target.value)}
 				onFocus={() => setIsFocused(true)}
@@ -120,21 +119,10 @@ const SearchBar = ({
 						<X className="h-4 w-4" />
 					</button>
 				) : null}
-
-				<Button
-					aria-label="Хайх"
-					className="h-8"
-					onClick={handleSubmit}
-					size="sm"
-					type="button"
-					variant="secondary"
-				>
-					<Search className="h-4 w-4" />
-				</Button>
 			</div>
 
 			{shouldShowDropdown ? (
-				<div className="rounded-base border-border bg-background shadow-shadow absolute top-[calc(100%+8px)] right-0 left-0 z-50 max-h-[360px] overflow-y-auto border-2 p-2">
+				<div className="rounded-base border-border bg-background absolute top-[calc(100%+8px)] right-0 left-0 z-50 max-h-[360px] overflow-y-auto border p-2">
 					{isSearching ? (
 						<div className="text-muted-foreground px-2 py-3 text-sm">Хайж байна...</div>
 					) : (

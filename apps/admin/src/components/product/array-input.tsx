@@ -104,7 +104,7 @@ export function ArrayInput<
 					{values.map((value, index) => (
 						<div
 							className={cn(
-								"group border-border bg-muted/50 flex items-center gap-1 border-2 px-2 py-1 text-sm",
+								"group border-border bg-muted/50 flex items-center gap-1 border px-2 py-1 text-sm",
 								"hover:border-destructive hover:bg-destructive/10",
 							)}
 							key={`${value}-${index}`}
@@ -232,7 +232,7 @@ export function TagsInput<
 
 				{/* Suggestions dropdown */}
 				{showSuggestions && filteredSuggestions.length > 0 && (
-					<div className="border-border bg-background shadow-hard-sm absolute top-full right-0 left-0 z-10 mt-1 max-h-40 overflow-y-auto border-2">
+					<div className="border-border bg-background absolute top-full right-0 left-0 z-10 mt-1 max-h-40 overflow-y-auto border">
 						{filteredSuggestions.slice(0, 8).map((suggestion) => (
 							<button
 								className="hover:bg-muted block w-full px-3 py-2 text-left text-sm"
@@ -253,7 +253,7 @@ export function TagsInput<
 					{values.map((value, index) => (
 						<div
 							className={cn(
-								"group border-primary bg-primary/20 flex items-center gap-1 border-2 px-2 py-0.5 text-sm",
+								"group border-primary bg-primary/20 flex items-center gap-1 border px-2 py-0.5 text-sm",
 								"hover:border-destructive hover:bg-destructive/10",
 							)}
 							key={`${value}-${index}`}

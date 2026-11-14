@@ -30,9 +30,9 @@ const BrandCard = (brand: BrandSelectType) => {
 				</DialogContent>
 			</Dialog>
 
-			<Card className="group border-border bg-background shadow-shadow relative overflow-hidden border-2 transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
+			<Card className="group border-border bg-background relative overflow-hidden border transition-all duration-200">
 				<CardContent className="p-0">
-					<div className="border-border bg-background relative flex aspect-square items-center justify-center border-b-2">
+					<div className="border-border bg-background relative flex aspect-square items-center justify-center border-b">
 						{brand.logoUrl ? (
 							<Image
 								alt={brand.name}

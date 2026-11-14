@@ -2,84 +2,80 @@ import { Link } from "@tanstack/react-router";
 import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarGroup,
-	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
 	SidebarMenu,
-	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { sideNavItems } from "@/lib/constants";
+import { navGroups } from "@/lib/constants";
+import { useNavCounts } from "@/lib/nav-counts";
 import { cn } from "@/lib/utils";
+import UserData from "./header/user-data";
 
 const AppSidebar = () => {
+	const counts = useNavCounts();
 	return (
-		<Sidebar className="border-border border-r-2" collapsible="offcanvas">
-			<SidebarContent>
-				<SidebarGroup className="p-3">
-					<SidebarGroupContent>
-						<SidebarMenu className="gap-2 pt-2">
-							{sideNavItems.map((item) => (
-								<SidebarMenuItem className="relative" key={item.title}>
-									<Link
-										activeProps={{
-											className: "is-active",
-										}}
-										className={cn(
-											"rounded-base block transition-colors",
-											"focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden",
-										)}
-										to={item.url}
-									>
-										{({ isActive }) => (
-											<div className="relative">
-												<span
-													aria-hidden
-													className={cn(
-														"absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-full transition-all",
-														isActive ? "bg-primary opacity-100" : "bg-transparent opacity-0",
-													)}
-												/>
-												<SidebarMenuButton
-													className={cn(
-														"rounded-base px-3 py-2",
-														"transition-colors duration-150",
-														"hover:bg-primary hover:text-primary-foreground",
-														isActive
-															? [
-																	"bg-primary text-primary-foreground",
-																	"shadow-[var(--shadow-shadow)]",
-																	"font-heading",
-																	"pl-4",
-																	"outline-border",
-																].join(" ")
-															: "text-foreground",
-													)}
-													isActive={isActive}
-												>
+		<Sidebar className="border-r bg-white" collapsible="offcanvas">
+			<SidebarHeader className="px-4 pt-4 pb-2">
+				<span className="text-sm font-bold tracking-tight">Amerik Vitamin</span>
+			</SidebarHeader>
+			<SidebarContent className="gap-0">
+				{navGroups.map((group, index) => (
+					<SidebarGroup className="px-2 py-1.5" key={index}>
+						{"title" in group && (
+							<SidebarGroupLabel className="text-muted-foreground h-6 px-2 text-[11px] font-medium tracking-wide uppercase">
+								{group.title}
+							</SidebarGroupLabel>
+						)}
+						<SidebarMenu className="gap-0.5">
+							{group.items.map((item) => {
+								const count = "count" in item ? counts[item.count] : undefined;
+								return (
+									<SidebarMenuItem key={item.url}>
+										<Link
+											activeOptions={{ exact: item.url === "/" }}
+											className="text-foreground/80 hover:bg-muted flex h-8 items-center gap-2.5 px-2 text-sm"
+											to={item.url}
+										>
+											{({ isActive }) => (
+												<>
 													<item.icon
 														className={cn(
-															"size-5 transition-colors",
-															isActive ? "text-primary-foreground" : "text-foreground",
+															"size-4",
+															isActive ? "text-foreground" : "text-muted-foreground",
 														)}
 													/>
 													<span
 														className={cn(
-															"truncate text-sm md:text-base",
-															isActive ? "text-primary-foreground" : "text-foreground",
+															"flex-1 truncate",
+															isActive && "text-foreground font-semibold",
 														)}
 													>
 														{item.title}
 													</span>
-												</SidebarMenuButton>
-											</div>
-										)}
-									</Link>
-								</SidebarMenuItem>
-							))}
+													{count ? (
+														<span className="bg-primary min-w-5 px-1.5 text-center text-xs font-semibold tabular-nums">
+															{count}
+														</span>
+													) : null}
+													{isActive && (
+														<span aria-hidden className="bg-foreground -mr-2 h-5 w-0.5" />
+													)}
+												</>
+											)}
+										</Link>
+									</SidebarMenuItem>
+								);
+							})}
 						</SidebarMenu>
-					</SidebarGroupContent>
-				</SidebarGroup>
+					</SidebarGroup>
+				))}
 			</SidebarContent>
+			<SidebarFooter className="border-t p-2">
+				<UserData />
+			</SidebarFooter>
 		</Sidebar>
 	);
 };

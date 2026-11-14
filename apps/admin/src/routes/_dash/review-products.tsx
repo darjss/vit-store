@@ -46,7 +46,7 @@ function RouteComponent() {
 
 	return (
 		<div className="space-y-4">
-			<div className="border-border bg-card flex flex-col gap-3 border-2 p-4 md:flex-row md:items-end md:justify-between">
+			<div className="border-border bg-card flex flex-col gap-3 border p-4 md:flex-row md:items-end md:justify-between">
 				<div>
 					<p className="text-muted-foreground mb-1 text-xs font-black tracking-[0.16em] uppercase">
 						VIT импортын хяналт
@@ -57,7 +57,7 @@ function RouteComponent() {
 						баганаар харуулж байна.
 					</p>
 				</div>
-				<div className="border-border grid grid-cols-3 border-2 text-center text-xs">
+				<div className="border-border grid grid-cols-3 border text-center text-xs">
 					<MetricCell label="Нэмсэн" value={addedProducts.length} />
 					<MetricCell label="Үнэ" value={priceChangedProducts.length} />
 					<MetricCell label="Зөрүү" value={formatMoney(totalNewPrice - totalOldPrice)} />
@@ -118,7 +118,7 @@ function RouteComponent() {
 
 function MetricCell({ label, value }: { label: string; value: number | string }) {
 	return (
-		<div className="border-border min-w-24 border-r-2 p-2 last:border-r-0">
+		<div className="border-border min-w-24 border-r p-2 last:border-r-0">
 			<div className="text-lg font-black tabular-nums">{value}</div>
 			<div className="text-muted-foreground font-bold tracking-wide uppercase">{label}</div>
 		</div>
@@ -140,11 +140,11 @@ function StatusPanel({
 		<div
 			className={
 				tone === "primary"
-					? "border-border bg-primary flex items-center gap-3 border-2 p-3"
-					: "border-border bg-card flex items-center gap-3 border-2 p-3"
+					? "border-border bg-primary flex items-center gap-3 border p-3"
+					: "border-border bg-card flex items-center gap-3 border p-3"
 			}
 		>
-			<div className="border-border bg-background flex h-9 w-9 items-center justify-center border-2">
+			<div className="border-border bg-background flex h-9 w-9 items-center justify-center border">
 				{icon}
 			</div>
 			<div className="min-w-0">
@@ -169,16 +169,16 @@ function ReviewColumn({
 	title: string;
 }) {
 	return (
-		<Card className="border-border rounded-none border-2 shadow-none">
-			<CardHeader className="border-border border-b-2 p-3">
+		<Card className="border-border rounded-none border shadow-none">
+			<CardHeader className="border-border border-b p-3">
 				<CardTitle className="flex items-center justify-between gap-3 text-base">
 					<span className="flex min-w-0 items-center gap-2">
-						<span className="border-border bg-primary flex h-8 w-8 shrink-0 items-center justify-center border-2">
+						<span className="border-border bg-primary flex h-8 w-8 shrink-0 items-center justify-center border">
 							{icon}
 						</span>
 						<span className="truncate font-black">{title}</span>
 					</span>
-					<span className="border-border bg-background shrink-0 border-2 px-2 py-1 text-xs font-black tabular-nums">
+					<span className="border-border bg-background shrink-0 border px-2 py-1 text-xs font-black tabular-nums">
 						{count}
 					</span>
 				</CardTitle>
@@ -256,7 +256,7 @@ function PriceChangedRow({
 
 function ProductThumb({ alt, src }: { alt: string; src: string | null }) {
 	return (
-		<div className="border-border bg-background flex h-[88px] w-[88px] items-center justify-center overflow-hidden border-2">
+		<div className="border-border bg-background flex h-[88px] w-[88px] items-center justify-center overflow-hidden border">
 			{src ? (
 				<img alt={alt} className="h-full w-full object-contain" loading="lazy" src={src} />
 			) : (
@@ -280,14 +280,14 @@ function RowTopline({
 	return (
 		<div className="flex items-center justify-between gap-2">
 			<div className="flex flex-wrap items-center gap-1.5">
-				<span className="border-border bg-background border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
+				<span className="border-border bg-background border px-1.5 py-0.5 text-[10px] font-black uppercase">
 					#{id}
 				</span>
-				<span className="border-border bg-muted border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
+				<span className="border-border bg-muted border px-1.5 py-0.5 text-[10px] font-black uppercase">
 					{labelForProductStatus(status)}
 				</span>
 				{score !== null && (
-					<span className="border-border bg-background border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
+					<span className="border-border bg-background border px-1.5 py-0.5 text-[10px] font-black uppercase">
 						{Math.round(score * 100)}%
 					</span>
 				)}
@@ -312,9 +312,7 @@ function PriceBox({
 	return (
 		<div
 			className={
-				emphatic
-					? "border-border bg-primary border-2 p-2"
-					: "border-border bg-background border-2 p-2"
+				emphatic ? "border-border bg-primary border p-2" : "border-border bg-background border p-2"
 			}
 		>
 			<div className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
-import { Button } from "../ui/button";
+import { LogOut } from "lucide-react";
 
 const UserData = () => {
 	const { queryClient, session, trpc } = useRouteContext({ from: "/_dash" });
@@ -15,12 +15,18 @@ const UserData = () => {
 	});
 
 	return (
-		<div className="space-y-3 p-2">
-			<div className="text-foreground/70 truncate text-sm">Нэвтэрсэн хэрэглэгч</div>
-			<div className="text-foreground truncate font-medium">{session?.user.username}</div>
-			<Button className="w-full" onClick={() => logout.mutate()} variant="destructive">
-				{logout.isPending ? "Гарах..." : "Гарах"}
-			</Button>
+		<div className="flex items-center gap-2 px-2 py-1">
+			<span className="text-muted-foreground flex-1 truncate text-sm">
+				{session?.user.username}
+			</span>
+			<button
+				className="text-muted-foreground hover:text-foreground flex h-8 items-center gap-1.5 px-2 text-sm"
+				onClick={() => logout.mutate()}
+				type="button"
+			>
+				<LogOut className="size-4" />
+				{logout.isPending ? "Гарч байна" : "Гарах"}
+			</button>
 		</div>
 	);
 };

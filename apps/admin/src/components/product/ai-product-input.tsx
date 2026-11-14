@@ -96,10 +96,10 @@ export function AIProductInput({ onCancel, onExtracted }: AIProductInputProps) {
 	};
 
 	return (
-		<Card className="border-border bg-card shadow-hard overflow-hidden border-2">
-			<div className="border-border bg-primary flex items-center justify-between border-b-2 px-4 py-3">
+		<Card className="border-border bg-card overflow-hidden border">
+			<div className="border-border bg-primary flex items-center justify-between border-b px-4 py-3">
 				<div className="flex items-center gap-2">
-					<div className="border-primary-foreground/30 bg-primary-foreground/10 flex h-8 w-8 items-center justify-center border-2">
+					<div className="border-primary-foreground/30 bg-primary-foreground/10 flex h-8 w-8 items-center justify-center border">
 						<Sparkles className="text-primary-foreground h-4 w-4" />
 					</div>
 					<div>
@@ -157,7 +157,7 @@ export function AIProductInput({ onCancel, onExtracted }: AIProductInputProps) {
 				{isLoading && <ExtractionProgressPanel steps={steps} />}
 
 				{errorMessage && (
-					<div className="border-destructive bg-destructive/10 space-y-3 rounded-none border-2 p-4">
+					<div className="border-destructive bg-destructive/10 space-y-3 rounded-none border p-4">
 						<div className="flex items-start gap-2">
 							<AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
 							<div className="min-w-0 flex-1">
@@ -178,7 +178,7 @@ export function AIProductInput({ onCancel, onExtracted }: AIProductInputProps) {
 				)}
 
 				{!isLoading && !errorMessage && (
-					<div className="border-border bg-muted/20 space-y-2 rounded-none border-2 border-dashed p-3">
+					<div className="border-border bg-muted/20 space-y-2 rounded-none border border-dashed p-3">
 						<p className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
 							Зөвлөгөө
 						</p>

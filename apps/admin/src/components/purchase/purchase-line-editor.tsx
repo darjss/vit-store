@@ -233,7 +233,7 @@ function ProductSearchField({
 		<div className="space-y-2">
 			<Label>Бараа</Label>
 			{selectedProduct ? (
-				<div className="rounded-base border-border bg-background flex items-center justify-between gap-2 border-2 px-3 py-2">
+				<div className="rounded-base border-border bg-background flex items-center justify-between gap-2 border px-3 py-2">
 					<span className="line-clamp-1 text-sm">{selectedProduct.name}</span>
 					<Button
 						onClick={() => onUpdateItem(index, "productId", 0)}
@@ -262,7 +262,7 @@ function ProductSearchField({
 					</div>
 				) : null}
 				{searchResults.length > 0 && productSearch ? (
-					<Card className="border-border absolute right-0 left-0 z-50 mt-1 border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+					<Card className="border-border absolute right-0 left-0 z-50 mt-1 border">
 						<ScrollArea className="max-h-[260px]">
 							<div className="p-1">
 								{searchResults.map((product) => (
@@ -310,7 +310,7 @@ export function PurchaseLineEditor({
 	products,
 }: PurchaseLineEditorProps) {
 	return (
-		<div className="rounded-base border-border bg-card space-y-4 border-2 p-4">
+		<div className="rounded-base border-border bg-card space-y-4 border p-4">
 			<div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto]">
 				<div className="space-y-2">
 					<ProductSearchField

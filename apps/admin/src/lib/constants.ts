@@ -1,6 +1,7 @@
 import {
 	BarChart2,
 	Bell,
+	ClipboardCheck,
 	CreditCard,
 	FolderTree,
 	Home,
@@ -11,58 +12,34 @@ import {
 	Users,
 } from "lucide-react";
 
-export const sideNavItems = [
+// `count` names the badge from useNavCounts.
+export const navGroups = [
 	{
-		icon: Home,
-		title: "Нүүр",
-		url: "/",
+		items: [
+			{ icon: Home, title: "Нүүр", url: "/" },
+			{ count: "pending", icon: ClipboardCheck, title: "Савлах", url: "/pack" },
+			{ count: "claimed", icon: ShoppingCart, title: "Захиалга", url: "/orders" },
+			{ icon: Package, title: "Бараа", url: "/products" },
+		],
 	},
 	{
-		icon: ShoppingCart,
-		title: "Захиалгууд",
-		url: "/orders",
+		items: [
+			{ icon: CreditCard, title: "Худалдан авалт", url: "/purchases" },
+			{ icon: Bell, title: "Нөөц хүлээлт", url: "/restock-waitlist" },
+			{ icon: ScanSearch, title: "Үнэ харьцуулалт", url: "/review-products" },
+		],
+		title: "Нөөц",
 	},
 	{
-		icon: Package,
-		title: "Бүтээгдэхүүнүүд",
-		url: "/products",
+		items: [
+			{ icon: Tags, title: "Брэнд", url: "/brands" },
+			{ icon: FolderTree, title: "Ангилал", url: "/categories" },
+			{ icon: Users, title: "Хэрэглэгч", url: "/customers" },
+			{ icon: BarChart2, title: "Аналитик", url: "/analytics" },
+		],
+		title: "Бусад",
 	},
-	{
-		icon: Bell,
-		title: "Нөөц хүлээлт",
-		url: "/restock-waitlist",
-	},
-	{
-		icon: ScanSearch,
-		title: "Харьцуулалт",
-		url: "/review-products",
-	},
-	{
-		icon: BarChart2,
-		title: "Аналитик",
-		url: "/analytics",
-	},
-	{
-		icon: CreditCard,
-		title: "Худалдан авалт",
-		url: "/purchases",
-	},
-	{
-		icon: Tags,
-		title: "Брэндүүд",
-		url: "/brands",
-	},
-	{
-		icon: FolderTree,
-		title: "Ангиллууд",
-		url: "/categories",
-	},
-	{
-		icon: Users,
-		title: "Хэрэглэгчид",
-		url: "/customers",
-	},
-];
+] as const;
 
 export const breadcrumbLabels = {
 	add: "Нэмэх",
@@ -70,8 +47,9 @@ export const breadcrumbLabels = {
 	brands: "Брэндүүд",
 	categories: "Ангиллууд",
 	customers: "Хэрэглэгчид",
-	orders: "Захиалгууд",
-	products: "Бүтээгдэхүүнүүд",
+	orders: "Захиалга",
+	pack: "Савлах",
+	products: "Бараа",
 	purchases: "Худалдан авалт",
 	"restock-waitlist": "Нөөц хүлээлт",
 	"review-products": "Харьцуулалт",

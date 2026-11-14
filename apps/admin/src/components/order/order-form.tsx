@@ -123,7 +123,7 @@ const OrderForm = ({ onSuccess, order }: { onSuccess: () => void; order?: addOrd
 			<form className="relative" onSubmit={form.handleSubmit(onSubmit)}>
 				<FormLoadingOverlay isLoading={isMutating} />
 				<div className="grid grid-cols-1 gap-4">
-					<Card className="border-border border-2 bg-transparent shadow-none">
+					<Card className="border-border border bg-transparent shadow-none">
 						<CardContent className="space-y-4 p-3 sm:p-4">
 							<h3 className="text-sm font-bold tracking-wider uppercase">Харилцагчийн мэдээлэл</h3>
 							<FormField
@@ -164,7 +164,7 @@ const OrderForm = ({ onSuccess, order }: { onSuccess: () => void; order?: addOrd
 						</CardContent>
 					</Card>
 
-					<Card className="border-border border-2 bg-transparent shadow-none">
+					<Card className="border-border border bg-transparent shadow-none">
 						<CardContent className="space-y-4 p-3 sm:p-4">
 							<h3 className="text-sm font-bold tracking-wider uppercase">Захиалгын дэлгэрэнгүй</h3>
 							<FormField
@@ -244,7 +244,7 @@ const OrderForm = ({ onSuccess, order }: { onSuccess: () => void; order?: addOrd
 						</CardContent>
 					</Card>
 
-					<Card className="border-border overflow-visible border-2 bg-transparent shadow-none">
+					<Card className="border-border overflow-visible border bg-transparent shadow-none">
 						<CardContent className="space-y-4 p-3 sm:p-4">
 							<h3 className="text-sm font-bold tracking-wider uppercase">Бүтээгдэхүүн</h3>
 							<SelectProductForm form={form} />
@@ -253,7 +253,7 @@ const OrderForm = ({ onSuccess, order }: { onSuccess: () => void; order?: addOrd
 
 					<div className="flex items-center justify-end pt-1">
 						<SubmitButton
-							className="border-border hover:bg-primary/90 border-2 px-6 py-2.5 text-sm font-bold tracking-wider uppercase transition-colors duration-300"
+							className="border-border hover:bg-primary/90 border px-6 py-2.5 text-sm font-bold tracking-wider uppercase transition-colors duration-300"
 							isPending={isMutating}
 						>
 							{order ? "Захиалга шинэчлэх" : "Захиалга баталгаажуулах"}
