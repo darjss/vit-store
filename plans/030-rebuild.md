@@ -26,7 +26,7 @@ The goal: mom packs boxes and decides what to buy. Software does everything else
 - oRPC v2. The API is an SDK. Agents get it as typed agent tools. No MCP for now.
 - valibot for schemas. No zod. Drizzle derives schemas from tables through `drizzle-orm/valibot`.
 - Types flow db to contract to UI. No OpenAPI codegen step.
-- Drizzle RC with a new db schema. We design the schema we want, then migrate the data over. Don't carry old mistakes forward to stay compatible.
+- Drizzle RC with a new db schema, and the new schema is amerik-vitamin's `shop` schema (`~/dev/amerik-vitamin/packages/db/src/schema.ts`). It was designed from vit-store's mistakes: uuid ids, a stock move log, order events, payments as a ledger, slug history, Better Auth tables, supplier orders, an outbox. Port it off Effect, fill the gaps vit-store needs, and migrate the data with its legacy import as the starting point. Its rules come along too: `docs/COMMERCE-RULES.md` and the "bugs to never repeat" list in `docs/LEGACY.md` over there. Don't carry old mistakes forward to stay compatible.
 - Better Auth. Admins sign in with Google. No passkeys, no shared bot token, no KV sessions nobody can revoke. Agents get scoped API keys.
 - Alchemy 2 beta. CI is the only thing that deploys. Every PR gets its own preview stage.
 - The new stack runs on staging for a while before it touches prod.
@@ -71,6 +71,8 @@ Rule for all of these: use a good maintained library. I don't want a custom impl
 - When I ask an agent about sales, it answers from PostHog. Agents shouldn't grind raw SQL to tell me what sold last week.
 
 ### How agents work here
+
+Agent experience is the point of the whole rebuild. Every choice gets judged by whether the next agent ships faster and breaks less.
 
 - Machine-checkable rules over docs. One check command. Short AGENTS.md.
 - Use a library before custom code. No backward compatibility. Delete code.
