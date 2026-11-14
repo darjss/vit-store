@@ -106,6 +106,7 @@ Agent experience is the point of the whole rebuild. Every choice gets judged by 
 - No erxes-specific rules. Only generic lessons carry over.
 - Work runs as T3 delegates, each in its own worktree under `~/dev/scratchpad/vit-store`. Never in `~/dev/vit-store`, the main checkout.
 - Never point local runs at production mutations. Never write to the prod database without my OK.
+- Upstream bugs are mine to report. When Solid 2, frames, the router, the vite plugin, oRPC, Alchemy or Drizzle breaks or acts strange, stop and tell me. Bring a minimal repro in `~/dev/scratchpad/vit-store/upstream/<package>-<short-name>/`, the exact versions, what you expected and what happened, and the source line you think is wrong. Search the upstream issues first and link any match. A workaround in our code is fine to keep moving, but it carries a comment linking the upstream issue, and it gets deleted when the fix ships. I file the issues and PRs myself. Agents don't open them.
 
 ## Order of work
 
