@@ -41,6 +41,21 @@ export const UsersTable = createTable(
 	],
 );
 
+/**
+ * Per-machine API keys for ops scripts. Each key names its machine, acts as the
+ * admin who minted it, and expires. Only the SHA-256 of the key is stored.
+ */
+export const OpsTokensTable = createTable("ops_token", {
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	expiresAt: timestamp("expires_at").notNull(),
+	id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+	name: varchar("name", { length: 128 }).notNull(),
+	tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+	userId: integer("user_id")
+		.notNull()
+		.references(() => UsersTable.id),
+});
+
 export const CustomersTable = createTable(
 	"customer",
 	{
