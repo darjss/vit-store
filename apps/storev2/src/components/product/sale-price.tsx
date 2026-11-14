@@ -21,7 +21,7 @@ export function SaleSticker(props: SalePriceProps) {
 				<span
 					aria-label={`Хямдрал ${sale().percent} хувь`}
 					class={cn(
-						"border-cocoa bg-sale text-sale-foreground shadow-pop-sm font-display absolute top-2 left-2 grid size-12 -rotate-8 place-items-center rounded-full border-2 text-[13px] font-bold tracking-tight",
+						"border-cocoa bg-sale text-sale-foreground shadow-pop-sm font-display absolute top-2 left-2 grid size-12 -rotate-8 place-items-center rounded-full border-2 text-[11px] font-bold tracking-tighter",
 						props.class,
 					)}
 					data-compare-at={sale().compareAtPrice}
