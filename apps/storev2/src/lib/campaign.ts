@@ -7,7 +7,7 @@ const dayMonth = (iso: string) =>
 		.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", timeZone: "Asia/Ulaanbaatar" })
 		.replace("/", ".");
 
-/** "11.14 – 11.23", read in Ulaanbaatar time. */
+/** "11.14 – 11.30", read in Ulaanbaatar time. */
 export const campaignDates = `${dayMonth(SALE_CAMPAIGN.start)} – ${dayMonth(SALE_CAMPAIGN.end)}`;
 
 export const isCampaignLive = (now = Date.now()) => now <= end;

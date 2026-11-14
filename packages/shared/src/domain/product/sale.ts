@@ -22,7 +22,7 @@ export type ProductSale = NonNullable<ReturnType<typeof productSale>>;
  * prices for these ids at the start and restores them at the end.
  */
 export const SALE_CAMPAIGN = {
-	end: "2026-11-23T23:59:59+08:00",
+	end: "2026-11-30T23:59:59+08:00",
 	name: "Black Friday",
 	path: "/black-friday",
 	percent: 20,
