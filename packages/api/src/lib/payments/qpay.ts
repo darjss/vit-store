@@ -67,9 +67,10 @@ const paymentRowSchema = v.object({
 	trx_fee: v.string(),
 });
 
+// payment/check leaves out paid_amount until the invoice has a payment.
 const paymentResponseSchema = v.object({
 	count: v.number(),
-	paid_amount: v.number(),
+	paid_amount: v.optional(v.number()),
 	rows: v.array(paymentRowSchema),
 });
 
