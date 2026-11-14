@@ -6,7 +6,7 @@ import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/ca
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
-import { playCartBurst } from "@/lib/cart-burst";
+import { flyToCart, playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import { useInventorySnapshot, useInventoryVerification } from "./inventory-reconciler";
@@ -63,16 +63,13 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			: (props.outOfStock ?? false);
 	const price = () => inventory()?.price ?? props.cartItem.price;
 
-	const handleAdd = (event: MouseEvent) => {
+	const handleAdd = (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
+		const button = event.currentTarget;
 		if (props.disabled || !isInventoryVerified()) {
 			return;
 		}
 		if (isOutOfStock()) {
-			const target = event.currentTarget;
-			if (target && "style" in target) {
-				// SAFETY: button currentTarget exposes HTMLElement.style.
-				restockSheetFocusRestore.register(target as HTMLElement);
-			}
+			restockSheetFocusRestore.register(button);
 			setNotifyOpen(true);
 			return;
 		}
@@ -82,11 +79,8 @@ const CardAddButton = (props: CardAddButtonProps) => {
 		props.onAdd?.();
 		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
-		const target = event.currentTarget;
-		if (target && "style" in target) {
-			// SAFETY: button currentTarget exposes HTMLElement.style.
-			playCartBurst(target as HTMLElement);
-		}
+		playCartBurst(button);
+		flyToCart(button.closest("[data-product-id]")?.querySelector("img"));
 		setTimeout(() => setIsAdded(false), 1500);
 	};
 

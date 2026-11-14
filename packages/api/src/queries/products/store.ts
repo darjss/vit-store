@@ -220,21 +220,6 @@ export const storeQueries = {
 		});
 	},
 
-	/** Every product on sale, campaign products first in campaign order. */
-	async getSaleProducts() {
-		const products = await db().query.ProductsTable.findMany({
-			columns: storefrontCardColumns,
-			orderBy: [inStockFirst, desc(ProductsTable.stock)],
-			where: and(onSale, buildActiveProductConditions(false)),
-			with: storefrontCardRelations,
-		});
-		const rank = (id: number) => {
-			const index = campaignOrder.indexOf(id);
-			return index === -1 ? campaignOrder.length : index;
-		};
-		return products.toSorted((a, b) => rank(a.id) - rank(b.id));
-	},
-
 	async getFeaturedProducts(options?: { requireStock?: boolean }) {
 		const requireStock = options?.requireStock ?? false;
 		return db().query.ProductsTable.findMany({
@@ -486,6 +471,21 @@ export const storeQueries = {
 			),
 			with: recommendableProductWith,
 		});
+	},
+
+	/** Every product on sale, campaign products first in campaign order. */
+	async getSaleProducts() {
+		const products = await db().query.ProductsTable.findMany({
+			columns: storefrontCardColumns,
+			orderBy: [inStockFirst, desc(ProductsTable.stock)],
+			where: and(onSale, buildActiveProductConditions(false)),
+			with: storefrontCardRelations,
+		});
+		const rank = (id: number) => {
+			const index = campaignOrder.indexOf(id);
+			return index === -1 ? campaignOrder.length : index;
+		};
+		return products.toSorted((a, b) => rank(a.id) - rank(b.id));
 	},
 
 	async searchByName(searchTerm: string, limit = 8) {

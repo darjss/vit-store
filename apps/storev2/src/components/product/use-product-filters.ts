@@ -1,5 +1,6 @@
 import { formatCurrency } from "@vit/shared";
 import {
+	PRODUCT_PRESET_FILTERS,
 	productPresetFilterLabels,
 	productSortOptions,
 	type ProductPresetFilter,
@@ -51,6 +52,7 @@ export interface ProductFilters {
 	priceRange: () => [number, number];
 	resetDrawerFilters: () => void;
 	selectedSort: () => SortSelection | null;
+	setListFilter: (filter: ListFilter | null) => void;
 	setSearchTerm: (value: string | null) => void;
 	sortDirection: () => string | null;
 	sortField: () => string | null;
@@ -100,13 +102,9 @@ export function useProductFilters(args: {
 	const effectiveSearchTerm = createMemo(() => getEffectiveProductSearchTerm(searchTerm()));
 	const isSearchMode = createMemo(() => effectiveSearchTerm() !== null);
 
-	const listFilter = createMemo<ListFilter | null>(() => {
-		const val = listFilterParam();
-		if (val === "featured" || val === "recent") {
-			return val;
-		}
-		return null;
-	});
+	const listFilter = createMemo<ListFilter | null>(
+		() => PRODUCT_PRESET_FILTERS.find((preset) => preset === listFilterParam()) ?? null,
+	);
 
 	// Numeric id only. Non-numeric values (legacy name params) resolve to null
 	// instead of flashing all products while a name lookup query resolves.
@@ -348,6 +346,7 @@ export function useProductFilters(args: {
 		priceRange,
 		resetDrawerFilters,
 		selectedSort,
+		setListFilter: (filter: ListFilter | null) => setListFilterParam(filter),
 		setSearchTerm,
 		sortDirection,
 		sortField,

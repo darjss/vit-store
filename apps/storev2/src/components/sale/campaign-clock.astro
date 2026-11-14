@@ -1,0 +1,36 @@
+---
+interface Props {
+	class?: string;
+	/** `boxes`: one tile per unit, for dark banners. `inline`: "12 өдөр 03:43:21". */
+	variant?: "boxes" | "inline";
+}
+
+const { class: className = "", variant = "boxes" } = Astro.props;
+const units = [
+	["d", "өдөр"],
+	["h", "цаг"],
+	["m", "мин"],
+	["s", "сек"],
+] as const;
+---
+
+{variant === "boxes" ? (
+	<div class={`flex gap-1.5 ${className}`} data-countdown>
+		{units.map(([key, label]) => (
+			<div class="min-w-11 overflow-hidden rounded-lg bg-secondary-foreground/10 px-1.5 py-1 text-center">
+				<b class="block font-display text-base leading-tight tabular-nums" data-unit={key}>--</b>
+				<small class="block text-[10px] text-secondary-foreground/65">{label}</small>
+			</div>
+		))}
+	</div>
+) : (
+	<span class={`tabular-nums ${className}`} data-countdown>
+		<b class="inline-block" data-unit="d">--</b> өдөр <b class="inline-block" data-unit="h">--</b>:<b class="inline-block" data-unit="m">--</b>:<b class="inline-block" data-unit="s">--</b>
+	</span>
+)}
+
+<script>
+	import { startCampaignClocks } from "@/lib/campaign";
+
+	document.addEventListener("astro:page-load", startCampaignClocks);
+</script>

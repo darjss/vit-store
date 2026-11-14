@@ -3,7 +3,6 @@ import { createSignal, For, Show } from "solid-js";
 import { Motion } from "solid-motionone";
 import { getProductImageProps } from "@/lib/image";
 import { cn } from "@/lib/utils";
-import { WASH_BG, type Wash, washFor } from "@/lib/wash";
 import ProductImageFallback from "./product-image-fallback";
 
 interface ProductImage {
@@ -13,9 +12,7 @@ interface ProductImage {
 
 interface Props {
 	images: Array<ProductImage>;
-	productId: number;
 	productName: string;
-	washKey?: string | number;
 }
 
 export default function ProductImageCarousel(props: Props) {
@@ -23,9 +20,6 @@ export default function ProductImageCarousel(props: Props) {
 		const imgs = [...props.images];
 		return imgs.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
 	};
-
-	const wash = (): Wash => washFor(props.washKey ?? props.productId);
-	const washClass = () => WASH_BG[wash()];
 
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
 	const [heroImageFailed, setHeroImageFailed] = createSignal(false);
@@ -70,16 +64,12 @@ export default function ProductImageCarousel(props: Props) {
 	return (
 		<div class="w-full space-y-4">
 			<div
-				class={cn(
-					"shadow-soft sm:shadow-soft-lg relative aspect-square w-full overflow-hidden rounded-2xl",
-					washClass(),
-				)}
+				class="shadow-soft sm:shadow-soft-lg relative aspect-square w-full overflow-hidden rounded-2xl bg-white"
+				data-product-gallery
 				onPointerDown={handlePointerDown}
 				onPointerUp={handlePointerUp}
 				style={{ "touch-action": "pan-y" }}
 			>
-				<div class="bg-dots-subtle absolute inset-0" />
-
 				<Show
 					fallback={<ProductImageFallback class="relative z-10" name={props.productName} />}
 					keyed
@@ -147,8 +137,7 @@ export default function ProductImageCarousel(props: Props) {
 							return (
 								<button
 									class={cn(
-										"ease-out-quart relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl transition-[opacity,transform,box-shadow] duration-200 sm:w-20 md:w-24",
-										washClass(),
+										"ease-out-quart relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl bg-white transition-[opacity,transform,box-shadow] duration-200 sm:w-20 md:w-24",
 										selectedIndex() === index()
 											? "shadow-soft ring-cocoa/40 ring-offset-background ring-2 ring-offset-2"
 											: "hover:shadow-soft-sm opacity-60 hover:opacity-100",
@@ -156,7 +145,6 @@ export default function ProductImageCarousel(props: Props) {
 									onClick={() => handleThumbnailClick(index())}
 									type="button"
 								>
-									<div class="bg-dots-subtle absolute inset-0" />
 									<Show when={!thumbFailed()}>
 										<Image
 											alt={`${props.productName} харагдац ${index() + 1}`}

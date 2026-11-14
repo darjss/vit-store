@@ -27,7 +27,7 @@ const { aspectRatio, class: className, imageSize, product } = Astro.props;
 		brand: product.brand ? { name: product.brand } : null,
 		images: [{ url: product.image }],
 		stock: product.stock,
-		discount: product.discount,
+		compareAtPrice: product.compareAtPrice,
 	}}
 	aspectRatio={aspectRatio}
 	imageSize={imageSize}

@@ -462,7 +462,9 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 										</div>
 										<div className="px-4 py-4 sm:px-6">
 											<EditableField
-												format={(value) => (Number(value) > 0 ? formatCurrency(Number(value)) : "Хямдралгүй")}
+												format={(value) =>
+													Number(value) > 0 ? formatCurrency(Number(value)) : "Хямдралгүй"
+												}
 												isLoading={isUpdateProductFieldPending}
 												label="Хямдралын өмнөх үнэ:"
 												onSave={async (next) => {

@@ -272,6 +272,11 @@ function reconcileDocument(snapshot: InventorySnapshot): void {
 	)) {
 		setTextIfChanged(element, formatCurrency(snapshot.price));
 	}
+	// Prerendered sale marks outlive the sale until the next deploy; hide them
+	// once the live price is back at or above the compare-at price.
+	for (const element of document.querySelectorAll<HTMLElement>(`[data-sale="${snapshot.id}"]`)) {
+		element.hidden = !(Number(element.dataset.compareAt) > snapshot.price);
+	}
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-stock-badge="${snapshot.id}"]`,
 	)) {
