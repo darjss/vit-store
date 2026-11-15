@@ -1,6 +1,6 @@
 # Plan 030: rebuild vit-store
 
-Status: research done, foundation next. Items marked (open) wait on my answer.
+Status: research done, end state agreed, foundation next. Items marked (open) wait on my answer.
 
 Every agent working on the rebuild reads this whole file first. If you hit something this file doesn't answer, ask me. Don't guess my intent from old docs, because most of them predate this plan.
 
@@ -66,7 +66,7 @@ Rule for all of these: use a good maintained library. I don't want a custom impl
 | Analytics | PostHog only, same-origin proxy on the storefront Worker | Cloudflare Basin can't feed PostHog. Revisit at millions of events |
 | Recommendations | a Postgres `product_related` table, rebuilt on a schedule, rendered on the server | co-purchase first, filled from category and brand so it's never empty |
 | Infra | Alchemy 2 | Effect syntax is allowed in `infra/` and nowhere else |
-| Messenger bot | Pi Durable 1.5.2 on Durable Object SQLite, models through pi-ai and AI Gateway | ran in local workerd: tool calls, idempotent requests, state across a restart. 345 KB gzip. Cloudflare's `agents` ships a Pi host to try. Report: `agent-runtime.md` |
+| Messenger bot | Pi Durable 1.5.2 on Durable Object SQLite, models through pi-ai and Cloudflare AI Gateway with a paid provider key, so the bot never depends on my dev box being awake. A small shim turns oRPC procedures into Pi tools, which I approved | ran in local workerd: tool calls, idempotent requests, state across a restart. 345 KB gzip. Cloudflare's `agents` ships a Pi host to try. Report: `agent-runtime.md` |
 
 ### Rules from the audit
 
@@ -164,7 +164,7 @@ One row is one PR for one agent in one worktree. At most three run at once. A PR
 | D3 | Products: edit, 1600 px upload, background cutout | D1, A2 |
 | D4 | Purchases: arrivals by batch, the counter per product, close, the prices sheet with suggestions, restock. amerik PR #30's flow in PR #373's look | D1, A5 |
 | D5 | Admin home: today's numbers | D2 |
-| M0 | Bot spike, 30 minutes: Pi Durable in a Durable Object deployed by Alchemy to a preview stage, one real model call, `PiHarness` bundle size | F3, the model and key I approve |
+| M0 | Bot spike, 30 minutes: Pi Durable in a Durable Object deployed by Alchemy to a preview stage, one real model call through AI Gateway, `PiHarness` bundle size | F3, the provider key I hand over |
 | M1 | Bot Worker: Zernio ingress and sends, the Session Durable Object, taps and ice breakers, the Mongolian prompt, photos and stickers | M0, A2 |
 | M2 | Bot sells: oRPC tools through a Pi tool shim, cart, delivery, order and payment link, the paid signal from the outbox | M1, A4, A6 |
 | M3 | Bot hands off: escalate tool and triggers, the handoff document with a 12 hour sleep, Telegram ping, every message mirrored to Postgres | M2 |
