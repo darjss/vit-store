@@ -22,11 +22,11 @@ The goal: mom packs boxes and decides what to buy. Software does everything else
 ### Stack, decided
 
 - All UI is Solid 2: storefront and admin. Betas and RCs are fine, this is my project. Use server frames and server components where they actually help.
-- No Effect anywhere in the backend. Plain TypeScript.
+- No Effect anywhere in the backend. Plain TypeScript. The one exception is `infra/`, because Alchemy 2 resources are written in Effect syntax. App code never imports from `infra/`.
 - oRPC v2. The API is an SDK. Agents get it as typed agent tools. No MCP for now.
 - valibot for schemas. No zod. Drizzle derives schemas from tables through `drizzle-orm/valibot`.
 - Types flow db to contract to UI. No OpenAPI codegen step.
-- Drizzle RC with a new db schema. The rebuild owns the `shop` migrations after the fork, and the new schema is amerik-vitamin's `shop` schema (`~/dev/amerik-vitamin/packages/db/src/schema.ts`). It was designed from vit-store's mistakes: uuid ids, a stock move log, order events, payments as a ledger, slug history, Better Auth tables, supplier orders, an outbox. Port it off Effect, fill the gaps vit-store needs, and migrate the data with its legacy import as the starting point. Its rules come along too: `docs/COMMERCE-RULES.md` and the "bugs to never repeat" list in `docs/LEGACY.md` over there. Don't carry old mistakes forward to stay compatible.
+- Drizzle RC with a new db schema. The rebuild owns the `shop` migrations after the fork, and the new schema is amerik-vitamin's `shop` schema (`~/dev/amerik-vitamin/packages/db/src/schema.ts`). It was designed from vit-store's mistakes: uuid ids, a stock move log, order events, payments as a ledger, slug history, Better Auth tables, supplier orders, an outbox. amerik-vitamin's migrations are frozen, so only this repo migrates `shop`. Port it off Effect, fill the gaps vit-store needs, and migrate the data with its legacy import as the starting point. Its rules come along too: `docs/COMMERCE-RULES.md` and the "bugs to never repeat" list in `docs/LEGACY.md` over there. Don't carry old mistakes forward to stay compatible.
 - Better Auth. Admins sign in with Google. No passkeys, no shared bot token, no KV sessions nobody can revoke. Agents get scoped API keys.
 - The `shop` schema gains three tables: restock requests, deliveries and product images.
 - Alchemy 2 beta. CI is the only thing that deploys. Every PR gets its own preview stage.
@@ -55,14 +55,14 @@ Rule for all of these: use a good maintained library. I don't want a custom impl
 | Agent tools | `@orpc/ai-sdk` over the router | valibot inputs go through `toStandardJsonSchema` |
 | Auth | Better Auth 1.7, Google allowlist for admins, api-key plugin for agents, phone OTP for buyers | one instance per request because of Hyperdrive |
 | Database | Drizzle RC on `pg` through Hyperdrive | Neon branch per PR and for staging, the existing Postgres for prod |
-| Dead code | (open) fallow or knip | the repo already has `.fallowrc.json` |
+| Dead code | fallow | the repo already has `.fallowrc.json` and it ran clean on a copy. Switch to knip only if fallow can't read Solid 2 |
 | Other gates | gitleaks, size-limit, Renovate | |
 | Images | Cloudflare image transformations, `@unpic/core` for srcset, upload originals at 1600 px | background cutout with `segment=foreground` |
 | Fonts | one variable family with ө, ү and ₮ | today's fonts miss those glyphs and cost 260 KB |
 | Frames | Port the DUND pattern to rc.21, then server components for listing and product pages | I already ran frames on Workers in July: `~/dev/store-kit`, branch `demo-solid-plugged`, `apps/demo-solid-store`. Read its review route and benchmark first. Check that the beta.26 bug where fresh frame slots lost captured context is fixed, and whether frame documents can be cached at the CDN yet |
 | Analytics | PostHog only, same-origin proxy on the storefront Worker | Cloudflare Basin can't feed PostHog. Revisit at millions of events |
 | Recommendations | a Postgres `product_related` table, rebuilt on a schedule, rendered on the server | co-purchase first, filled from category and brand so it's never empty |
-| Infra | (open) Alchemy 2 | its infra files are written in Effect syntax, which may break the no-Effect rule |
+| Infra | Alchemy 2 | Effect syntax is allowed in `infra/` and nowhere else |
 
 ### Rules from the audit
 
@@ -130,9 +130,9 @@ One row is one PR for one agent in one worktree. At most three run at once. A PR
 | 0c | Storefront fonts: one variable family with ө, ү and ₮ | |
 | 0d | Uploads keep 1600 px originals instead of 800x600 | |
 | F1 | vp 1.6 on pnpm 12 with a strict catalog. Bun and turbo go | 0a |
-| F2 | One `vp check`: tsrs plus the tsgo parity job, the audit rules, `@shadcn/lint`, gitleaks, size-limit, dead code, Renovate, the Bash hook, a short AGENTS.md | F1, dead-code pick (open) |
-| F3 | Alchemy 2 stages `pr-N`, `staging` and `prod`, deployed by CI only. Neon branch per PR, Hyperdrive | F1, Effect in `infra/` (open) |
-| F4 | `shop` schema ported off Effect, plus restock requests, deliveries, product images and `product_related`. One baseline migration | F1, amerik migrations frozen (open) |
+| F2 | One `vp check`: tsrs plus the tsgo parity job, the audit rules, `@shadcn/lint`, gitleaks, size-limit, dead code, Renovate, the Bash hook, a short AGENTS.md | F1 |
+| F3 | Alchemy 2 stages `pr-N`, `staging` and `prod`, deployed by CI only. Neon branch per PR, Hyperdrive | F1 |
+| F4 | `shop` schema ported off Effect, plus restock requests, deliveries, product images and `product_related`. One baseline migration | F1 |
 | F5 | Legacy import into the staging Neon branch, checked by row counts and order totals | F4 |
 | F6 | Better Auth: Google allowlist for admins, API keys for agents, phone OTP for buyers | F3, F4 |
 | F7 | Axiom logs and traces, one `onError` | F3 |
@@ -162,7 +162,7 @@ One row is one PR for one agent in one worktree. At most three run at once. A PR
 | C2 | Prod switches to the new stack behind a manual CI approval | C1 |
 | C3 | Delete the old apps and packages | C2 |
 
-Not PRs, and each needs my OK: repo protection and secret scanning through `gh`, UTM tags in Ads Manager, and deleting the hashed phone ids in PostHog.
+Not PRs: branch protection, secret scanning and push protection through `gh`, which I approved. UTM tags in Ads Manager and deleting the hashed phone ids in PostHog are mine to do.
 
 ## Out of scope for now
 
