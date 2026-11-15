@@ -30,12 +30,15 @@ The goal: mom packs boxes and decides what to buy. Software does everything else
 - Better Auth. Admins sign in with Google. No passkeys, no shared bot token, no KV sessions nobody can revoke. Agents get scoped API keys.
 - The `shop` schema gains three tables: restock requests, deliveries and product images.
 - Alchemy 2 beta. CI is the only thing that deploys. Every PR gets its own preview stage.
-- The new stack runs on staging for a while before it touches prod.
-- Axiom keeps logs and traces. Errors are typed.
-- `vp` for everything. Bun goes.
+- No second infra provider and no Neon. Dev, previews and staging use one Postgres on my dev box, reached through its `dev-box` Cloudflare Tunnel and Hyperdrive with an Access service token. Each PR gets its own database there. Previews being down while the box is off is fine. Prod stays on the existing Postgres.
+- The new stack runs on staging for a while before it touches prod. Staging lives on the dev box, so the soak is mom and me placing real orders, not customers.
+- Axiom keeps logs and traces and sends alerts. Monitors and a Telegram notifier are Alchemy resources in `infra/` through `@alchemy.run/axiom`, so an alert is reviewed like code. Errors are typed.
+- `vp` for everything. Bun goes. `vp dev` is the one local command: it starts Postgres, migrates, seeds synthetic fixtures and runs every Worker.
 - Tailwind v4, with `@shadcn/lint` enforcing the design system. Rules agents can verify beat rules in a doc.
 - CI gates. Type checks run on tsrs, not tsgo.
 - Delivery fee is 6,000.
+- Purchases get the new flow amerik-vitamin built: supplier orders imported from Amazon order history, grouped into batches by delivery burst, counted on arrival, the rest closed as not coming, and a suggested price in 5,000 steps that mom can edit. The rules are in amerik's `docs/COMMERCE-RULES.md`, the backend in its PR #27 and the screens in its PR #30.
+- The customer Messenger bot gets rebuilt on Pi Durable (`@earendil-works/pi-durable`, pinned exactly) with one Durable Object per Messenger thread, deployed by Alchemy. It sells full time and hands off to mom or me when it should, like erxes frontline's bots. Its tools call the oRPC SDK, every message is mirrored to Postgres, and mom reads and takes over chats in the admin. Pi is experimental and its storage only rolls forward, so upgrades are deliberate PRs. The Telegram admin assistant stays on the old Worker until A6 and P4 land.
 
 ### Stack, picked from research
 
@@ -51,18 +54,19 @@ Rule for all of these: use a good maintained library. I don't want a custom impl
 | Animation | plain CSS plus `motion/mini`, View Transitions for page changes | compositor-only properties, `prefers-reduced-motion` respected |
 | Data fetching | Solid router `query` and `action` with the oRPC client | no TanStack Query |
 | Forms | Formisch `/v2` with valibot | |
-| Design lint | `@shadcn/lint` as an oxlint jsPlugin | all six rules fire on Solid `class=` |
+| Lint | dmmulroy/anti-slop at HEAD, vendored with its `install-anti-slop` skill and recorded in `UPSTREAM.md`. Plus `eslint-plugin-solid` 0.19 `v2-strict`, `@shadcn/lint`, type-aware rules on `tsrs-lint`, and a `vit` plugin with our own rules | all run as oxlint jsPlugins, checked on Solid 2 files. No `effect/` plugin. oRPC has no lint plugin, so `vit/orpc-require-output` is ours. oxlint can't see JSON or a file-level disable, so a grep gate in `vp check` bans lint-disable comments and `"./*"` exports. Report: `lint.md` |
 | Agent tools | `@orpc/ai-sdk` over the router | valibot inputs go through `toStandardJsonSchema` |
 | Auth | Better Auth 1.7, Google allowlist for admins, api-key plugin for agents, phone OTP for buyers | one instance per request because of Hyperdrive |
-| Database | Drizzle RC on `pg` through Hyperdrive | Neon branch per PR and for staging, the existing Postgres for prod |
+| Database | Drizzle RC on `pg` through Hyperdrive | dev-box Postgres through the Tunnel for dev, previews and staging. It needs TLS on, because Hyperdrive requires it. The existing Postgres for prod |
 | Dead code | fallow | the repo already has `.fallowrc.json` and it ran clean on a copy. Switch to knip only if fallow can't read Solid 2 |
 | Other gates | gitleaks, size-limit, Renovate | |
 | Images | Cloudflare image transformations, `@unpic/core` for srcset, upload originals at 1600 px | background cutout with `segment=foreground` |
 | Fonts | one variable family with ө, ү and ₮ | today's fonts miss those glyphs and cost 260 KB |
-| Frames | Port the DUND pattern to rc.21, then server components for listing and product pages | I already ran frames on Workers in July: `~/dev/store-kit`, branch `demo-solid-plugged`, `apps/demo-solid-store`. Read its review route and benchmark first. Check that the beta.26 bug where fresh frame slots lost captured context is fixed, and whether frame documents can be cached at the CDN yet |
+| Frames | Port the DUND pattern to rc.21. Server components for markup that rarely changes: home shelves, `/angilal`, category grids, the product body, brand and guide pages. The CDN caches those frame streams through `GET` plus `respond` headers and a Cache API wrapper, purged by the writer. Price and stock are a separate live frame that is never cached. Client components only for the cart, add buttons, buy bar, search, filters and checkout | I already ran frames on Workers in July: `~/dev/store-kit`, branch `demo-solid-plugged`, `apps/demo-solid-store`. Read its review route and benchmark first. Check that the beta.26 bug where fresh frame slots lost captured context is fixed. Public documents never send a traceparent, or the trace meta tag makes them uncacheable. Try `live()` for payment status on `/pay/<n>` before writing a poll |
 | Analytics | PostHog only, same-origin proxy on the storefront Worker | Cloudflare Basin can't feed PostHog. Revisit at millions of events |
 | Recommendations | a Postgres `product_related` table, rebuilt on a schedule, rendered on the server | co-purchase first, filled from category and brand so it's never empty |
 | Infra | Alchemy 2 | Effect syntax is allowed in `infra/` and nowhere else |
+| Messenger bot | Pi Durable 1.5.2 on Durable Object SQLite, models through pi-ai and AI Gateway | ran in local workerd: tool calls, idempotent requests, state across a restart. 345 KB gzip. Cloudflare's `agents` ships a Pi host to try. Report: `agent-runtime.md` |
 
 ### Rules from the audit
 
@@ -77,7 +81,7 @@ Each of these becomes a lint rule or a CI gate, and each rule's message names th
 ### How it looks and feels
 
 - Seamless, playful, fun animations. Tasteful background hues. Never distracting, never in the way of buying.
-- Admin keeps the cream look from PR #373 and gets ported to Solid 2 after the storefront.
+- Admin keeps the new look from vit-store PR #373, which I like much better than the old UI, and gets ported to Solid 2 after the storefront. amerik's screens bring their flows, not their look.
 - Fast on cheap phones beats every animation. If an effect costs frames on a slow Android, it goes.
 
 ### Storefront
@@ -87,6 +91,7 @@ Each of these becomes a lint rule or a CI gate, and each rule's message names th
 - SEO pages that drive sales, not pages for the sake of pages.
 - Photos look better than they do now: resized properly, high quality, `fetchpriority` on the main image, explicit sizes.
 - Recommended products are good and always work. Right now they're basic and broken half the time.
+- The numbers I hold it to: Lighthouse mobile 95 or better on home, category and product. From PostHog web vitals at p75: LCP under 2.0 s, INP under 150 ms, CLS under 0.05. At most 45 KB of gzipped JS on listing and product pages and 60 KB on checkout, enforced by size-limit. Fonts under 50 KB. Proxy loss under 2%.
 
 ### Data
 
@@ -107,11 +112,11 @@ Agent experience is the point of the whole rebuild. Every choice gets judged by 
 - No erxes-specific rules. Only generic lessons carry over.
 - Work runs as T3 delegates, each in its own worktree under `~/dev/scratchpad/vit-store`. Never in `~/dev/vit-store`, the main checkout.
 - Never point local runs at production mutations. Never write to the prod database without my OK.
-- Upstream bugs are mine to report. When Solid 2, frames, the router, the vite plugin, oRPC, Alchemy or Drizzle breaks or acts strange, stop and tell me. Bring a minimal repro in `~/dev/scratchpad/vit-store/upstream/<package>-<short-name>/`, the exact versions, what you expected and what happened, and the source line you think is wrong. Search the upstream issues first and link any match. A workaround in our code is fine to keep moving, but it carries a comment linking the upstream issue, and it gets deleted when the fix ships. I file the issues and PRs myself. Agents don't open them.
+- Upstream bugs are mine to report. When Solid 2, frames, the router, the vite plugin, oRPC, Alchemy, Drizzle or Pi breaks or acts strange, stop and tell me. Bring a minimal repro in `~/dev/scratchpad/vit-store/upstream/<package>-<short-name>/`, the exact versions, what you expected and what happened, and the source line you think is wrong. Search the upstream issues first and link any match. A workaround in our code is fine to keep moving, but it carries a comment linking the upstream issue, and it gets deleted when the fix ships. I file the issues and PRs myself. Agents don't open them.
 
 ## Order of work
 
-1. Research. Done, five reports listed below.
+1. Research. Done, seven reports listed below.
 2. Foundation on staging: repo protection and secret scanning, vp, Alchemy 2 stages, the new schema with a data migration, Better Auth, Axiom, CI gates, local dev.
 3. The API as an SDK, with the commerce bugs fixed in the new code: QPay checks the paid amount, stock moves correctly on cancel, refund, delete and restore, order status changes go through one transition table, saving a product never overwrites stock. Cost follows amerik's COMMERCE-RULES: the latest landed cost, stored as whole ₮.
 4. Storefront in Solid 2, order flow first.
@@ -130,17 +135,18 @@ One row is one PR for one agent in one worktree. At most three run at once. A PR
 | 0c | Storefront fonts: one variable family with ө, ү and ₮ | |
 | 0d | Uploads keep 1600 px originals instead of 800x600 | |
 | F1 | vp 1.6 on pnpm 12 with a strict catalog. Bun and turbo go | 0a |
-| F2 | One `vp check`: tsrs plus the tsgo parity job, the audit rules, `@shadcn/lint`, gitleaks, size-limit, dead code, Renovate, the Bash hook, a short AGENTS.md | F1 |
-| F3 | Alchemy 2 stages `pr-N`, `staging` and `prod`, deployed by CI only. Neon branch per PR, Hyperdrive | F1 |
+| F2 | One `vp check`: tsrs plus the tsgo parity job, anti-slop at HEAD, `eslint-plugin-solid`, `@shadcn/lint`, the `vit` rules with one RuleTester each, the grep gates, gitleaks, size-limit, fallow, Renovate, the Bash hook, a short AGENTS.md | F1 |
+| F3 | Alchemy 2 stages `pr-N`, `staging` and `prod`, deployed by CI only. A TCP route on the `dev-box` Tunnel, an Access service token, Hyperdrive per stage, one database per PR created and migrated by CI | F1 |
 | F4 | `shop` schema ported off Effect, plus restock requests, deliveries, product images and `product_related`. One baseline migration | F1 |
-| F5 | Legacy import into the staging Neon branch, checked by row counts and order totals | F4 |
+| F5 | Legacy import into the staging database, checked by row counts and order totals | F4 |
 | F6 | Better Auth: Google allowlist for admins, API keys for agents, phone OTP for buyers | F3, F4 |
-| F7 | Axiom logs and traces, one `onError` | F3 |
+| F7 | Axiom logs and traces, one `onError`, monitors with a Telegram notifier: 5xx rate, payment check failures, database errors, the `product_related` job not running, the bot's model errors and open handoffs | F3 |
+| F8 | `vp dev`: Postgres with TLS on the dev box, migrations, synthetic fixtures, every Worker through `alchemy dev` on named local URLs | F3, F4 |
 | A1 | oRPC v2 router: valibot from the tables, typed errors, one db client per request, the typed client | F4, F7 |
 | A2 | Catalog: products, brands, categories, slug history, images, live stock | A1 |
 | A3 | Orders: one transition table, stock moves on cancel, refund, delete and restore | A1 |
 | A4 | Payments: QPay checks the paid amount, bank transfers, the payments ledger | A3 |
-| A5 | Supply: supplier orders, landed cost in whole ₮, restock requests, deliveries | A3 |
+| A5 | Purchases: supplier orders imported from Amazon order history, batches by delivery burst, receive and count, close what's not coming, landed cost in whole ₮, price suggestions in 5,000 steps, restock requests, deliveries. Port of amerik PR #27 off Effect | A3 |
 | A6 | Agent tools through `@orpc/ai-sdk`, scoped by API key | A2, A4, A5, F6 |
 | A7 | `product_related` rebuilt on a schedule: co-purchase first, then category and brand | A3 |
 | S1 | Storefront shell: DUND frames on rc.21, Tailwind v4 tokens, the font, images through Cloudflare transforms and `@unpic/core`, a Cache API wrapper for frame streams | F2, F3 |
@@ -156,9 +162,14 @@ One row is one PR for one agent in one worktree. At most three run at once. A PR
 | D1 | Admin shell: Google sign-in, the cream look from PR #373 | D0, F6 |
 | D2 | Orders on mom's phone: list, pack, status | D1, A3, A4 |
 | D3 | Products: edit, 1600 px upload, background cutout | D1, A2 |
-| D4 | Supply: supplier orders, stock count, restock | D1, A5 |
+| D4 | Purchases: arrivals by batch, the counter per product, close, the prices sheet with suggestions, restock. amerik PR #30's flow in PR #373's look | D1, A5 |
 | D5 | Admin home: today's numbers | D2 |
-| C1 | Rehearsal: a fresh prod snapshot imported into staging, and staging takes real orders | S4, S5, D5, P3 |
+| M0 | Bot spike, 30 minutes: Pi Durable in a Durable Object deployed by Alchemy to a preview stage, one real model call, `PiHarness` bundle size | F3, the model and key I approve |
+| M1 | Bot Worker: Zernio ingress and sends, the Session Durable Object, taps and ice breakers, the Mongolian prompt, photos and stickers | M0, A2 |
+| M2 | Bot sells: oRPC tools through a Pi tool shim, cart, delivery, order and payment link, the paid signal from the outbox | M1, A4, A6 |
+| M3 | Bot hands off: escalate tool and triggers, the handoff document with a 12 hour sleep, Telegram ping, every message mirrored to Postgres | M2 |
+| M4 | Admin inbox: open handoffs first, transcript, order cards, reply through Zernio, give back to bot | M3, D2 |
+| C1 | Rehearsal: a fresh prod snapshot imported into staging, and mom and I place real orders there | S4, S5, D5, P3, M3 |
 | C2 | Prod switches to the new stack behind a manual CI approval | C1 |
 | C3 | Delete the old apps and packages | C2 |
 
@@ -169,6 +180,7 @@ Not PRs: branch protection, secret scanning and push protection through `gh`, wh
 - The storefront hard-line copy issues: the "албан ёсоор" wording, the certification badges and health-claim copy.
 - The old `/webhooks/messenger` route signature. Customer Messenger runs through Zernio and `apps/messenger` now (ADR 0011), so the old route is dead code to delete.
 - MCP.
+- Rebuilding the Telegram admin assistant. It waits for A6 and P4.
 - Server-side carts. Abandoned checkouts live in PostHog.
 
 ## Research reports
@@ -182,3 +194,5 @@ They live in `~/dev/scratchpad/vit-store/rebuild-research/`, outside the repo. T
 | `platform-stack.md` | vp, local dev, knip and other gates, tsrs, oRPC agent tools, Better Auth with Google on Workers, new schema and data migration |
 | `storefront.md` | Full storefront redesign: order flow, sidebar, cursed UI, SEO that sells, photos |
 | `data.md` | PostHog proxy, event plan, data warehouse for sales questions, recommendations that work |
+| `lint.md` | anti-slop upstream and every repo's copy, ranked rules, Solid 2 and type-aware lint, the `vit` rules, a proposed config |
+| `agent-runtime.md` | Pi Durable for the Messenger bot, Alchemy deploy, tools, escalation, today's bot features mapped, a spike plan |
