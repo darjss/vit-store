@@ -231,7 +231,6 @@ async function insertFreshCheckout(
 		orderNumber: string;
 		paymentNumberGenerated: string;
 		productById: Map<number, CheckoutProduct>;
-		provider: "qpay" | "transfer";
 		total: number;
 	},
 ) {
@@ -265,7 +264,7 @@ async function insertFreshCheckout(
 			amount: params.total,
 			orderId: createdOrder.orderId,
 			paymentNumber: params.paymentNumberGenerated,
-			provider: params.provider,
+			provider: "qpay",
 			status: "pending",
 		})
 		.returning({ paymentNumber: PaymentsTable.paymentNumber });
@@ -288,7 +287,6 @@ async function executeCheckoutTransaction(
 		orderNumber: string;
 		paymentNumberGenerated: string;
 		productById: Map<number, CheckoutProduct>;
-		provider: "qpay" | "transfer";
 		submittedFingerprint: string;
 		total: number;
 	},
@@ -328,7 +326,6 @@ function logCheckoutOutcome(
 	txResult: Awaited<ReturnType<typeof executeCheckoutTransaction>>,
 	normalizedProducts: Array<CartLine>,
 	total: number,
-	provider: "qpay" | "transfer",
 ) {
 	const { orderId, paymentNumber, reused } = txResult;
 	if (reused) {
@@ -354,7 +351,7 @@ function logCheckoutOutcome(
 			amount: total,
 			orderId,
 			paymentNumber,
-			provider,
+			provider: "qpay",
 			status_text: "pending",
 		});
 	}
@@ -386,13 +383,6 @@ async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
 	});
 }
 
-/** Facebook iOS webviews often fail bank-app handoff, so those Payments start on transfer. Everyone else starts on QPay. Chosen once at insert. */
-function initialPaymentProvider(userAgent: string | undefined) {
-	const ua = userAgent ?? "";
-	const facebookIos = /FB_IAB|FBAN\/FBIOS/.test(ua) && /iPhone|iPad|iPod/.test(ua);
-	return facebookIos ? ("transfer" as const) : ("qpay" as const);
-}
-
 export const order = router({
 	addOrder: publicProcedure.input(newOrderSchema).mutation(async ({ ctx, input }) => {
 		const startTime = performance.now();
@@ -403,14 +393,12 @@ export const order = router({
 			const paymentNumberGenerated = generatePaymentNumber();
 			const customerPhone = Number(input.phoneNumber);
 			const submittedFingerprint = cartFingerprint(normalizedProducts);
-			const provider = initialPaymentProvider(ctx.c.req.header("user-agent"));
 			const txResult = await executeCheckoutTransaction(ctx, input, {
 				customerPhone,
 				normalizedProducts,
 				orderNumber,
 				paymentNumberGenerated,
 				productById,
-				provider,
 				submittedFingerprint,
 				total,
 			});
@@ -418,7 +406,7 @@ export const order = router({
 			const reused = txResult.reused;
 			const resolvedOrderNumber = txResult.orderNumber;
 			const paymentNumber = txResult.paymentNumber;
-			logCheckoutOutcome(ctx, input, txResult, normalizedProducts, total, provider);
+			logCheckoutOutcome(ctx, input, txResult, normalizedProducts, total);
 
 			// Keep speculative QPay invoice creation alive after the response.
 			// Failure is non-fatal — createQr is the fallback.
