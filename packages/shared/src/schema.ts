@@ -293,7 +293,18 @@ export const phoneSchema = v.pipe(
 	v.regex(/^[6-9]\d{7}$/, "Утасны дугаар 6-9-өөр эхлэх ёстой"),
 );
 
+const clip = (s: string) => s.slice(0, 200);
+
 export const newOrderSchema = v.object({
+	// The Facebook ad that opened the Messenger chat, so `order_created` can be counted per campaign.
+	// Analytics only, so long values are cut rather than failing the order.
+	ad: v.optional(
+		v.object({
+			campaign: v.pipe(v.string(), v.transform(clip)),
+			id: v.pipe(v.string(), v.transform(clip)),
+			name: v.pipe(v.string(), v.transform(clip)),
+		}),
+	),
 	address: v.string(),
 	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	notes: v.optional(v.string()),

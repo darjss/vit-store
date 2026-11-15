@@ -54,7 +54,7 @@ import { renderTurn, sendCards } from "./render";
 import { botClient, storeClient, withTimeout } from "./store";
 import { sendTelegramAlert } from "./telegram";
 import { createTools, replyInputSchema, type CheckoutState, type ReplyResult } from "./tools";
-import { adProductIds, listMessages, send, type ZernioSendBody } from "./zernio";
+import { listMessages, lookupAd, send, type ZernioSendBody } from "./zernio";
 
 // A chat message handed from Ingress (mapped off the Chat SDK Message) or
 // rebuilt from a persisted inbox payload on recovery. `raw` is the Zernio
@@ -1603,9 +1603,20 @@ export class Conversation extends Agent<Env> {
 		if (checkout.phone === null || checkout.address === null) {
 			return;
 		}
+		// A failed ad lookup costs the order its campaign, never the order itself.
+		const ad = await this.ad().catch((error) => {
+			logError({
+				error: errorFields(error),
+				event: "error",
+				thread: this.name ?? "",
+				where: "order_ad",
+			});
+			return undefined;
+		});
 		try {
 			const res = await storeClient(this.env).order.addOrder.mutate(
 				{
+					ad: ad && { campaign: ad.campaign, id: ad.id, name: ad.name },
 					address: checkout.address,
 					notes: checkout.note ?? undefined,
 					phoneNumber: checkout.phone,
@@ -2004,25 +2015,36 @@ export class Conversation extends Agent<Env> {
 		};
 	}
 
-	// Products named by the ad that opened this chat. The ad's ids are looked up
-	// once and cached in meta ("" when the ad names none); product details are
-	// read fresh each turn so price and stock stay current. Any failure just
-	// means a normal reply.
-	private async adProducts() {
-		const adId = this.getMeta("ad_id");
-		if (adId === undefined) {
-			return [];
+	// The ad that opened this chat, looked up once and cached in meta. ad_name
+	// goes last, so a lookup that fails halfway is retried on the next call.
+	private async ad() {
+		const id = this.getMeta("ad_id");
+		if (id === undefined) {
+			return undefined;
 		}
-		try {
-			let cached = this.getMeta("ad_product_ids");
-			if (cached === undefined) {
-				cached = (await adProductIds(this.env, adId)).join(",");
-				this.setMeta("ad_product_ids", cached);
-			}
-			const ids = cached
+		if (this.getMeta("ad_name") === undefined) {
+			const found = await lookupAd(this.env, id);
+			this.setMeta("ad_campaign", found.campaign);
+			this.setMeta("ad_product_ids", found.productIds.join(","));
+			this.setMeta("ad_name", found.name);
+		}
+		return {
+			campaign: this.getMeta("ad_campaign") ?? "",
+			id,
+			name: this.getMeta("ad_name") ?? "",
+			productIds: (this.getMeta("ad_product_ids") ?? "")
 				.split(",")
-				.filter((id) => id.length > 0)
-				.map(Number);
+				.filter((p) => p.length > 0)
+				.map(Number),
+		};
+	}
+
+	// Products named by the ad that opened this chat. Product details are read
+	// fresh each turn so price and stock stay current. Any failure just means a
+	// normal reply.
+	private async adProducts() {
+		try {
+			const ids = (await this.ad())?.productIds ?? [];
 			if (ids.length === 0) {
 				return [];
 			}
