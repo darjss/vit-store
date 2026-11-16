@@ -18,6 +18,15 @@ Single-context layout: root `CONTEXT.md` plus root `docs/adr/`. See `docs/agents
 
 Funnel, conversion, revenue and attribution questions: read `docs/agents/posthog-funnels.md` first. It has the event spine, the Executor query path and the known data gaps.
 
+### Production database
+
+The prod database has 25 connections, shared by the live API's Hyperdrive (12), amerik-vitamin's Hyperdrive (5) and PlanetScale's own processes (3). On 11-16 they filled up, and every direct login failed with 53300 (#379).
+
+- Agents and scripts read prod as `agent_ro`: `AGENT_RO_USER`, `AGENT_RO_PASSWORD` and `AGENT_RO_HOST` from the main checkout's `.env.prod`, on port 6432 (PgBouncer). The role is read-only with a 30 s statement timeout.
+- One connection per script (`max: 1` in postgres.js or Bun SQL), closed when it ends. One script at a time.
+- Never connect as `PLANETSCALE_USER`. That role feeds both Hyperdrives, and PlanetScale doesn't let us cap `agent_ro`, so this rule is the cap.
+- Writes go through the admin API, or a one-off script the owner approves first.
+
 ### vit-playground
 
 Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes live in the sibling repo [`darjss/vit-playground`](https://github.com/darjss/vit-playground) at `../vit-playground` (or `~/dev/vit-playground`). Keep `vit-store` for app source, ADRs, `docs/problems/`, and `plans/`.
