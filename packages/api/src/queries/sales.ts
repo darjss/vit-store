@@ -48,23 +48,6 @@ export const salesQueries = {
 
 		// Last week's same weekday, from Ulaanbaatar midnight up to this time of day,
 		// so a morning check isn't compared against a whole finished day.
-		async getSameTimeLastWeek() {
-			const result = await db()
-				.select({
-					orders: sql<number>`count(distinct ${SalesTable.orderId})::int`,
-					revenue: sql<number>`coalesce(sum(${SalesTable.sellingPrice} * ${SalesTable.quantitySold}), 0)::int`,
-				})
-				.from(SalesTable)
-				.where(
-					and(
-						isNull(SalesTable.deletedAt),
-						sql`${SalesTable.createdAt} >= (date_trunc('day', (now() - interval '7 days') at time zone 'Asia/Ulaanbaatar') at time zone 'Asia/Ulaanbaatar') at time zone 'UTC'`,
-						sql`${SalesTable.createdAt} < (now() - interval '7 days') at time zone 'UTC'`,
-					),
-				);
-			return result[0] ?? { orders: 0, revenue: 0 };
-		},
-
 		async getAnalyticsForHome(timeRange: "daily" | "weekly" | "monthly" = "daily") {
 			try {
 				const result = await db()
@@ -92,6 +75,23 @@ export const salesQueries = {
 				logger.error("getAnalyticsForHome", parseCaught(error));
 				return { profit: 0, revenue: 0, salesCount: 0 };
 			}
+		},
+
+		async getSameTimeLastWeek() {
+			const result = await db()
+				.select({
+					orders: sql<number>`count(distinct ${SalesTable.orderId})::int`,
+					revenue: sql<number>`coalesce(sum(${SalesTable.sellingPrice} * ${SalesTable.quantitySold}), 0)::int`,
+				})
+				.from(SalesTable)
+				.where(
+					and(
+						isNull(SalesTable.deletedAt),
+						sql`${SalesTable.createdAt} >= (date_trunc('day', (now() - interval '7 days') at time zone 'Asia/Ulaanbaatar') at time zone 'Asia/Ulaanbaatar') at time zone 'UTC'`,
+						sql`${SalesTable.createdAt} < (now() - interval '7 days') at time zone 'UTC'`,
+					),
+				);
+			return result[0] ?? { orders: 0, revenue: 0 };
 		},
 
 		// One row per Ulaanbaatar day for the home trend. created_at is stored as UTC.
