@@ -3,10 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+import { placedToday } from "@/lib/nav-counts";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-// Every paid order waiting to ship, as one shelf-picking list.
+// Today's paid orders waiting to ship, as one shelf-picking list. Today is the Ulaanbaatar day.
 // Ticks live in localStorage per order line, so both views share them.
 
 export const Route = createFileRoute("/_dash/pack")({
@@ -31,7 +32,8 @@ function useTicks() {
 }
 
 function PackComponent() {
-	const { data: orders } = useSuspenseQuery(trpc.order.getPendingOrders.queryOptions());
+	const { data: pending } = useSuspenseQuery(trpc.order.getPendingOrders.queryOptions());
+	const orders = placedToday(pending);
 	const [view, setView] = useState<"product" | "order">("product");
 	const [ticks, setTicks] = useTicks();
 
