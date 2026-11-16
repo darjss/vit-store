@@ -96,28 +96,28 @@ const RecentGrid = (props: { onSelect: (term: string) => void }) => {
 	);
 };
 
-const TrendingPills = (props: {
-	categories: Array<CategoryStock>;
-	onSelect: (term: string) => void;
-}) => (
+const categoryHref = (category: CategoryStock) => `/products/category/${category.slug}/1/`;
+
+// Pills open the category page. Typing a category name into the box ran a weak text search.
+const TrendingPills = (props: { categories: Array<CategoryStock>; onNavigate: () => void }) => (
 	<Show when={props.categories.length > 0}>
 		<section>
 			<SectionLabel>🔥 Түгээмэл хайлт</SectionLabel>
 			<div class="flex flex-wrap gap-2">
 				<For each={props.categories}>
 					{(category, index) => (
-						<button
+						<a
 							class={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97] ${
 								index() === 0
 									? "bg-primary shadow-lift"
 									: "border-border bg-card shadow-soft-sm hover:shadow-soft border"
 							}`}
-							onClick={() => props.onSelect(category.name)}
-							type="button"
+							href={categoryHref(category)}
+							onClick={() => props.onNavigate()}
 						>
 							<span class="font-display text-foreground/60 text-xs">{index() + 1}</span>
 							{category.name}
-						</button>
+						</a>
 					)}
 				</For>
 			</div>
@@ -132,7 +132,7 @@ const JumpList = (props: { categories: Array<CategoryStock>; onNavigate: () => v
 				{(category) => (
 					<a
 						class="border-border bg-card shadow-soft-sm hover:shadow-soft flex min-h-12 items-center gap-2.5 rounded-xl border px-3 transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97]"
-						href={`/products?category=${category.id}`}
+						href={categoryHref(category)}
 						onClick={() => props.onNavigate()}
 					>
 						<span class="bg-muted grid h-9 w-9 shrink-0 place-items-center rounded-lg">
@@ -270,7 +270,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 			fallback={
 				<div>
 					<RecentGrid onSelect={props.onSelectSuggestion} />
-					<TrendingPills categories={topCategories()} onSelect={props.onSelectSuggestion} />
+					<TrendingPills categories={topCategories()} onNavigate={props.onClose} />
 					<section>
 						<SectionLabel>Ангилал руу шууд</SectionLabel>
 						<JumpList categories={jumpCategories()} onNavigate={props.onClose} />
@@ -301,7 +301,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 							<SectionLabel>Ойролцоо ангилал</SectionLabel>
 							<JumpList categories={jumpCategories()} onNavigate={props.onClose} />
 						</section>
-						<TrendingPills categories={topCategories()} onSelect={props.onSelectSuggestion} />
+						<TrendingPills categories={topCategories()} onNavigate={props.onClose} />
 					</div>
 				</Match>
 

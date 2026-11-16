@@ -41,6 +41,7 @@ const CYRILLIC_TO_LATIN = {
 
 const LATIN_SEARCH_ALIASES = {
 	ahcc: ["ахцц"],
+	areds: ["preservision"],
 	ashwagandha: ["ashwaganda", "aswagandha", "ашваганда", "ашвагандха"],
 	berberine: ["берберин"],
 	betaine: ["бетаин", "betaine hcl"],
@@ -60,10 +61,11 @@ const LATIN_SEARCH_ALIASES = {
 	ginseng: ["женьшень", "ginzeng"],
 	glucosamine: ["глюкозамин", "glucosamin"],
 	glutathione: ["глутатион", "glutathion"],
+	gummies: ["gummy", "jelly", "гамми"],
 	hyaluronic: ["hyaluron", "hyaluronic acid", "гиалари", "гиул", "гиалурон"],
 	inositol: ["inofa", "inof", "inosto", "myo inositol", "инозитол", "инозит"],
 	iodine: ["iodine", "йод"],
-	iron: ["төмөр", "ferrum"],
+	iron: ["төмөр", "ferrum", "tomor", "tumur"],
 	lutein: ["лютеин"],
 	lysine: ["лизин"],
 	magnesium: ["magni", "магни", "магниум", "magnez", "магнези"],
@@ -74,8 +76,9 @@ const LATIN_SEARCH_ALIASES = {
 	oil: ["тос"],
 	omega: ["омега", "omeg"],
 	potassium: ["калий", "kalium"],
-	probiotic: ["пробиотик", "probiotics", "probiotik"],
+	probiotic: ["пробиотик", "probiotics", "probiotik", "bacteria", "bakteri", "бактери"],
 	protein: ["протеин", "whey"],
+	psyllium: ["physil", "psylium"],
 	pumpkin: ["pumpkin seed", "тыквенное"],
 	quercetin: ["кверцетин"],
 	reishi: ["рейши", "reishii"],
@@ -90,7 +93,8 @@ const LATIN_SEARCH_ALIASES = {
 	zinc: ["цинк", "zink"],
 };
 
-const BRAND_ALIASES = {
+// Whole-word query phrases rewritten to the term the catalog uses.
+const QUERY_PHRASE_ALIASES = {
 	"black more": "blackmores",
 	blackmore: "blackmores",
 	"black mores": "blackmores",
@@ -98,6 +102,8 @@ const BRAND_ALIASES = {
 	naturbell: "naturebell",
 	"nature bell": "naturebell",
 	"natures bell": "naturebell",
+	фолийн: "folate",
+	"фолийн хүчил": "folate",
 };
 
 const VITAMIN_LETTER_ALIASES = {
@@ -111,7 +117,13 @@ const VITAMIN_LETTER_ALIASES = {
 	е: "vitamin e",
 	к: "k2",
 	с: "vitamin c",
+	ц: "vitamin c",
 };
+
+const VITAMIN_WORDS = new Set(["vit", "vitamin", "витамин"]);
+
+// Cyrillic letters in codes like "д3" or "б12", read as the Latin vitamin letter.
+const CODE_LETTERS = { б: "b", д: "d", к: "k", с: "c", ц: "c" };
 
 const SYMPTOM_INGREDIENT_ALIASES = {
 	anxiety: ["ashwagandha", "l theanine", "magnesium"],
@@ -196,20 +208,19 @@ const productSearchStrings = (product: ProductSearchSourceDocument) => [
 	...toTextList(product.tags),
 ];
 
-export const buildProductAliases = (product: ProductSearchSourceDocument) => {
-	const productStrings = [
-		product.name,
-		product.nameMn,
-		product.brand,
-		`${product.brand} ${product.name}`,
-	];
-	const originals = new Set(uniqueText(productStrings));
+/**
+ * Transliterations cover the whole name. Spelling aliases come only from the
+ * primary name and brand, so "zink" finds zinc products, not elderberry
+ * gummies "with zinc".
+ */
+export const buildProductAliases = (names: Array<string>, primaryNames: Array<string>) => {
+	const originals = new Set(uniqueText(names));
 	const originalTokens = new Set(
 		[...originals].flatMap((value) => value.split(" ").filter(Boolean)),
 	);
 	const alternatives = uniqueText([
-		...productStrings.map((value) => transliterateCyrillicToLatin(value)),
-		...productStrings.flatMap((value) => expandLatinAliases(value)),
+		...names.map((value) => transliterateCyrillicToLatin(value)),
+		...primaryNames.flatMap((value) => expandLatinAliases(value)),
 	]);
 
 	return alternatives.filter((alias) => !originals.has(alias) && !originalTokens.has(alias));
@@ -230,41 +241,116 @@ export const buildProductIntentTerms = (product: ProductSearchSourceDocument) =>
 	);
 };
 
-export const expandBrandAliases = (value: string | null | undefined) => {
-	let normalized = normalizeSearchText(value);
-	if (!normalized) {
-		return "";
-	}
+// Longest phrase first so "black mores" is not clobbered by "black more".
+const phraseAliases = Object.entries(QUERY_PHRASE_ALIASES)
+	.toSorted(([a], [b]) => b.length - a.length)
+	.map(([phrase, canonical]) => [new RegExp(`(?<=^| )${phrase}(?= |$)`, "gu"), canonical] as const);
 
-	let changed = false;
-	// Longest phrase first so "black mores" is not clobbered by its prefix "black more".
-	const aliases = Object.entries(BRAND_ALIASES).toSorted(([a], [b]) => b.length - a.length);
-	for (const [phrase, canonical] of aliases) {
-		if (normalized.includes(phrase)) {
-			normalized = normalized.replaceAll(phrase, canonical);
-			changed = true;
-		}
+// "d35000" is "d3 5000". A lone letter joins the number after it, so "q 10" is "q10".
+// Glued codes split too: "d3k2" and "д3к2" are "d3 k2".
+const splitCodes = (token: string) => {
+	const latin = token.replaceAll(
+		/[бдксц](?=\d)/gu,
+		(letter) => lookup(CODE_LETTERS, letter) ?? letter,
+	);
+	if (/^(?:[a-z]\d{1,2}){2,}$/u.test(latin)) {
+		return latin.match(/[a-z]\d{1,2}/gu) ?? [latin];
 	}
-
-	return changed ? normalized : "";
+	return latin.replace(/^(d3|k2)(\d{3,})$/u, "$1 $2").split(" ");
 };
 
-export const expandVitaminLetters = (value: string | null | undefined) => {
-	const tokens = normalizeSearchText(value).split(" ").filter(Boolean);
-	let changed = false;
-	const expanded = tokens.map((token) => {
-		if ((token === "b" || token === "б") && tokens.length > 1) {
-			return token;
+const joinCodeTokens = (tokens: Array<string>) =>
+	tokens.flatMap(splitCodes).reduce<Array<string>>((joined, token) => {
+		const previous = joined.at(-1);
+		if (previous && /^\p{L}$/u.test(previous) && /^\d{1,2}$/u.test(token)) {
+			joined[joined.length - 1] = `${lookup(CODE_LETTERS, previous) ?? previous}${token}`;
+		} else {
+			joined.push(token);
 		}
-		const alias = lookup(VITAMIN_LETTER_ALIASES, token);
-		if (alias) {
-			changed = true;
-			return alias;
-		}
-		return token;
-	});
+		return joined;
+	}, []);
 
-	return changed ? expanded.join(" ") : "";
+// A lone vitamin letter means the vitamin only on its own or next to "vitamin",
+// so "d" in "myo d chiro inositol" and "b" in "b complex" stay letters.
+// "витамин ц" reads as "vitamin c".
+const expandVitaminLetters = (tokens: Array<string>) => {
+	const isVitaminLetter = (index: number) =>
+		lookup(VITAMIN_LETTER_ALIASES, tokens[index] ?? "") !== undefined &&
+		(tokens.length === 1 ||
+			VITAMIN_WORDS.has(tokens[index - 1] ?? "") ||
+			VITAMIN_WORDS.has(tokens[index + 1] ?? ""));
+	return tokens.flatMap((token, index) => {
+		if (isVitaminLetter(index)) {
+			return (lookup(VITAMIN_LETTER_ALIASES, token) ?? token).split(" ");
+		}
+		return VITAMIN_WORDS.has(token) && (isVitaminLetter(index - 1) || isVitaminLetter(index + 1))
+			? ["vitamin"]
+			: [token];
+	});
+};
+
+// Mongolian case endings customers add to product words, Latin and Cyrillic.
+const CASE_SUFFIXES = [
+	"iinhiig",
+	"ийнхийг",
+	"уудыг",
+	"nuud",
+	"iig",
+	"iin",
+	"nii",
+	"tai",
+	"tei",
+	"toi",
+	"uud",
+	"ийг",
+	"ийн",
+	"ний",
+	"тай",
+	"тэй",
+	"той",
+	"ууд",
+	"үүд",
+	"aa",
+	"ee",
+	"ii",
+	"oo",
+	"аа",
+	"ыг",
+	"ээ",
+	"оо",
+];
+
+/**
+ * Other spellings a query word also matches: its stem without a Mongolian case
+ * ending ("vitaminuud", "k2toi", "naturebelliin"), and for Cyrillic words of
+ * three or more letters the Latin transliteration the aliases carry, so "мүл"
+ * finds "Мулейны".
+ */
+export const searchSpellings = (token: string) => {
+	const ending =
+		token.length >= 5
+			? CASE_SUFFIXES.find((suffix) => token.endsWith(suffix) && token.length - suffix.length >= 2)
+			: undefined;
+	const forms = ending ? [token, token.slice(0, -ending.length)] : [token];
+	return Array.from(
+		new Set(
+			forms.flatMap((form) => {
+				const latin = transliterateCyrillicToLatin(form);
+				return latin !== form && form.length >= 3 ? [form, latin] : [form];
+			}),
+		),
+	);
+};
+
+export const parseSearchQuery = (query: string) => {
+	const phrase = phraseAliases.reduce(
+		(text, [pattern, canonical]) => text.replace(pattern, canonical),
+		normalizeSearchText(query),
+	);
+	const tokens = Array.from(
+		new Set(expandVitaminLetters(joinCodeTokens(phrase.split(" ").filter(Boolean)))),
+	);
+	return { phrase: tokens.join(" "), tokens };
 };
 
 export const expandSymptomIngredients = (value: string | null | undefined) => {
@@ -281,29 +367,4 @@ export const expandSymptomIngredients = (value: string | null | undefined) => {
 	}
 
 	return ingredients;
-};
-
-export const createSearchQueries = (query: string) => {
-	const normalized = normalizeSearchText(query);
-	const transliterated = transliterateCyrillicToLatin(query);
-	const expanded = expandLatinAliases(query).join(" ");
-	const vitaminExpanded = expandVitaminLetters(query);
-	const vitaminExpandedTranslit = expandVitaminLetters(transliterated);
-	const brandExpanded = expandBrandAliases(query);
-	const symptomExpanded = expandSymptomIngredients(query);
-
-	return Array.from(
-		new Set(
-			[
-				query.trim(),
-				normalized,
-				transliterated,
-				expanded,
-				vitaminExpanded,
-				vitaminExpandedTranslit,
-				brandExpanded,
-				...symptomExpanded,
-			].filter(Boolean),
-		),
-	);
 };

@@ -1,10 +1,10 @@
 import { type InferFilterFromSchema, Redis, s } from "@upstash/redis";
 import * as v from "valibot";
 import {
-	expandBrandAliases,
 	expandSymptomIngredients,
-	expandVitaminLetters,
 	normalizeSearchText,
+	parseSearchQuery,
+	searchSpellings,
 } from "~/lib/product-search/text";
 import type {
 	ProductSearchDocument,
@@ -27,6 +27,12 @@ const WRITE_BATCH_SIZE = 50;
 const STALE_GENERATION_TTL_SECONDS = 10 * 60;
 const REBUILD_LOCK_TTL_MS = 30_000;
 const REBUILD_LOCK_WAIT_MS = 10_000;
+// Below this many direct matches, the broad pass also runs.
+const MIN_DIRECT_RESULTS = 3;
+// The relaxed pass ranks this many candidates, then keeps those with most words.
+const RELAXED_POOL_SIZE = 100;
+// A relaxed match needs one word found in at most this share of the catalog.
+const RELAXED_RARE_SHARE = 0.1;
 
 const PRODUCT_SEARCH_SCHEMA = s.object({
 	aliases: s.string().noStem(),
@@ -150,96 +156,134 @@ export const withProductSearchRebuildLock = async <T>(
 	}
 };
 
-const prepareQuery = (query: string) => {
-	const normalized = normalizeSearchText(query);
-	const brandExpanded = expandBrandAliases(normalized) || normalized;
-	const vitaminExpanded = expandVitaminLetters(brandExpanded) || brandExpanded;
-	const phrase = normalizeSearchText(vitaminExpanded);
-	const tokens = Array.from(new Set(phrase.split(" ").filter(Boolean)));
-	return { phrase, tokens };
+type MatchScope = "direct" | "broad" | "relaxed";
+
+type TextMatch =
+	| { $eq: string }
+	| { $phrase: { prefix: true; value: string } }
+	| { $smart: string }
+	| { $fuzzy: { distance: 2; transpositionCostOne: true; value: string } };
+
+const fieldMatches = (
+	match: TextMatch,
+	includeIntent: boolean,
+	includeBroadFields: boolean,
+): Array<ProductSearchClause> => [
+	{ primaryName: { $boost: 18, ...match } },
+	{ primaryNameMn: { $boost: 18, ...match } },
+	{ brand: { $boost: 9, ...match } },
+	// Dosage text often lists secondary ingredients, so it takes only exact and prefix matches.
+	...("$eq" in match || "$phrase" in match ? [{ dosage: { $boost: 9, ...match } }] : []),
+	{ aliases: { $boost: 7, ...match } },
+	...(includeIntent ? [{ intentTerms: match }] : []),
+	...(includeBroadFields
+		? [
+				{ nameWithBrand: match },
+				{ nameMnWithBrand: match },
+				{ category: match },
+				{ ingredients: match },
+				{ tags: match },
+				...("$smart" in match ? [{ description: match }] : []),
+			]
+		: []),
+];
+
+/**
+ * The last word is still being typed, so it matches as a prefix at any length.
+ * Other words: a lone letter or a number is exact, 2 to 3 letters a prefix,
+ * longer words `$smart`. Outside the direct pass, long words also tolerate two
+ * typos, so "isonitol" finds inositol.
+ */
+const spellingMatches = (token: string, isLast: boolean, scope: MatchScope) => {
+	const isNumber = /^\d+$/u.test(token);
+	const exact = token.length === 1 || isNumber;
+	const matches: Array<TextMatch> = [];
+	if (isLast || (!exact && token.length <= 3)) {
+		matches.push({ $phrase: { prefix: true, value: token } });
+	} else if (exact) {
+		matches.push({ $eq: token });
+	}
+	if (token.length >= 4 && !isNumber) {
+		matches.push({ $smart: token });
+	}
+	if (scope !== "direct" && token.length >= 7) {
+		matches.push({ $fuzzy: { distance: 2, transpositionCostOne: true, value: token } });
+	}
+	return matches;
 };
 
-const exactTokenFilter = (
+const tokenFilter = (
 	token: string,
+	isLast: boolean,
+	scope: MatchScope,
 	includeIntent: boolean,
-	includeBroadFields: boolean,
 ): ProductSearchClause => ({
-	$should: [
-		{ primaryName: { $boost: 18, $eq: token } },
-		{ primaryNameMn: { $boost: 18, $eq: token } },
-		{ brand: { $eq: token } },
-		{ dosage: { $eq: token } },
-		{ aliases: { $eq: token } },
-		...(includeIntent ? [{ intentTerms: { $eq: token } }] : []),
-		...(includeBroadFields
-			? [
-					{ nameWithBrand: { $eq: token } },
-					{ nameMnWithBrand: { $eq: token } },
-					{ category: { $eq: token } },
-					{ ingredients: { $eq: token } },
-					{ tags: { $eq: token } },
-				]
-			: []),
-	],
+	$should: searchSpellings(token)
+		.flatMap((spelling) => spellingMatches(spelling, isLast, scope))
+		.flatMap((match) => fieldMatches(match, includeIntent, scope !== "direct")),
 });
 
-const prefixTokenFilter = (
-	token: string,
-	includeIntent: boolean,
-	includeBroadFields: boolean,
-): ProductSearchClause => ({
-	$should: [
-		{ primaryName: { $boost: 18, $phrase: { prefix: true, value: token } } },
-		{
-			primaryNameMn: { $boost: 18, $phrase: { prefix: true, value: token } },
-		},
-		{ brand: { $boost: 9, $phrase: { prefix: true, value: token } } },
-		{ dosage: { $boost: 9, $phrase: { prefix: true, value: token } } },
-		{ aliases: { $boost: 7, $phrase: { prefix: true, value: token } } },
-		...(includeIntent ? [{ intentTerms: { $phrase: { prefix: true, value: token } } }] : []),
-		...(includeBroadFields
-			? [
-					{ nameWithBrand: { $phrase: { prefix: true, value: token } } },
-					{ nameMnWithBrand: { $phrase: { prefix: true, value: token } } },
-					{ category: { $phrase: { prefix: true, value: token } } },
-					{ ingredients: { $phrase: { prefix: true, value: token } } },
-					{ tags: { $phrase: { prefix: true, value: token } } },
-				]
-			: []),
-	],
-});
+/** Most words: one may miss in a short query, 40% of a pasted product name. */
+const requiredTokenCount = (tokenCount: number) =>
+	tokenCount <= 3 ? tokenCount - 1 : Math.ceil(tokenCount * 0.6);
 
-const smartTokenFilter = (
-	token: string,
-	includeIntent: boolean,
-	includeBroadFields: boolean,
-): ProductSearchClause => ({
-	$should: [
-		{ primaryName: { $boost: 18, $smart: token } },
-		{ primaryNameMn: { $boost: 18, $smart: token } },
-		{ brand: { $boost: 9, $smart: token } },
-		{ aliases: { $boost: 7, $smart: token } },
-		...(includeIntent ? [{ intentTerms: { $smart: token } }] : []),
-		...(includeBroadFields
-			? [
-					{ nameWithBrand: { $smart: token } },
-					{ nameMnWithBrand: { $smart: token } },
-					{ category: { $smart: token } },
-					{ ingredients: { $smart: token } },
-					{ tags: { $smart: token } },
-					{ description: { $smart: token } },
-				]
-			: []),
-	],
-});
+const coveredTokens = (tokens: Array<string>, document: IndexedProductSearchDocument) => {
+	const words = normalizeSearchText(
+		[
+			document.nameWithBrand,
+			document.nameMn,
+			document.aliases,
+			document.dosage,
+			document.ingredients,
+			document.tags,
+			document.category,
+		].join(" "),
+	).split(" ");
+	return tokens.filter((token) =>
+		searchSpellings(token).some((spelling) => words.some((word) => word.startsWith(spelling))),
+	);
+};
 
+/**
+ * Keeps candidates that cover most words, one of them rare in the catalog,
+ * and ranks rare words above common ones. "nutricost creatin" shows creatine,
+ * not every Nutricost product, and "castor oil" does not show every oil.
+ */
+const rankRelaxedHits = <Hit extends { data: IndexedProductSearchDocument }>(
+	tokens: Array<string>,
+	hits: Array<Hit>,
+	catalogSize: number,
+	keepOrder: boolean,
+) => {
+	const covered = hits
+		.map((hit) => ({ hit, tokens: coveredTokens(tokens, hit.data) }))
+		.filter((entry) => entry.tokens.length >= requiredTokenCount(tokens.length));
+	const frequency = new Map<string, number>();
+	for (const token of covered.flatMap((entry) => entry.tokens)) {
+		frequency.set(token, (frequency.get(token) ?? 0) + 1);
+	}
+	const count = (token: string) => frequency.get(token) ?? 1;
+	const weight = (entry: (typeof covered)[number]) =>
+		entry.tokens.reduce((sum, token) => sum + 1 / count(token), 0);
+	const specific = covered.filter((entry) =>
+		entry.tokens.some((token) => count(token) <= catalogSize * RELAXED_RARE_SHARE),
+	);
+	const ranked = keepOrder ? specific : specific.toSorted((a, b) => weight(b) - weight(a));
+	return ranked.map((entry) => entry.hit);
+};
+
+/**
+ * "direct" requires every word in the name, brand, dosage or aliases. "broad"
+ * also reads ingredients, tags and description. "relaxed" lets any word match
+ * and leaves the most-words cut to the caller.
+ */
 export const buildProductSearchFilter = (
 	query: string,
 	generation: string,
 	filters?: ProductSearchFilters,
-	matchScope: "direct" | "broad" = "direct",
+	matchScope: MatchScope = "direct",
 ): ProductSearchFilter => {
-	const { phrase, tokens } = prepareQuery(query);
+	const { phrase, tokens } = parseSearchQuery(query);
 	const symptomIngredients = expandSymptomIngredients(query);
 	const symptomBoosts: Array<ProductSearchClause> = symptomIngredients.flatMap((term, index) => {
 		const boost = Math.max(16 - index * 2, 6);
@@ -250,18 +294,13 @@ export const buildProductSearchFilter = (
 		];
 	});
 	const includeIntent = symptomIngredients.length > 0;
-	const includeBroadFields = matchScope === "broad";
+	const tokenFilters = tokens.map((token, index) =>
+		tokenFilter(token, index === tokens.length - 1, matchScope, includeIntent),
+	);
 	const must: Array<ProductSearchClause> = [
 		{ generation: { $eq: generation } },
 		{ status: { $eq: "active" } },
-		...tokens.map((token) => {
-			if (token.length <= 1 || /^\d+$/.test(token)) {
-				return exactTokenFilter(token, includeIntent, includeBroadFields);
-			}
-			return token.length <= 3
-				? prefixTokenFilter(token, includeIntent, includeBroadFields)
-				: smartTokenFilter(token, includeIntent, includeBroadFields);
-		}),
+		...(matchScope === "relaxed" ? [{ $should: tokenFilters }] : tokenFilters),
 	];
 
 	if (filters?.brandId != null) {
@@ -278,10 +317,6 @@ export const buildProductSearchFilter = (
 	}
 	if (filters?.maxPrice != null) {
 		must.push({ price: { $lte: filters.maxPrice } });
-	}
-
-	if (!includeIntent) {
-		return { $must: must };
 	}
 
 	return {
@@ -379,7 +414,7 @@ const queryIndex = (
 		...base,
 		scoreFunc: {
 			field: "rankingScore",
-			scoreMode: "replace",
+			scoreMode: "multiply",
 		},
 	});
 };
@@ -572,14 +607,36 @@ export const createProductSearchEngine = (
 
 			const directFilter = buildProductSearchFilter(query, active.generation, input.filters);
 			let result = await runQuery(directFilter, rankByDemand);
-			if (result.count === 0 && rankByDemand) {
+			// Broad matches a superset of direct, so it replaces a thin direct page only when it finds more.
+			if (result.count < MIN_DIRECT_RESULTS && rankByDemand) {
 				const broadFilter = buildProductSearchFilter(
 					query,
 					active.generation,
 					input.filters,
 					"broad",
 				);
-				result = await runQuery(broadFilter, false);
+				const broad = await runQuery(broadFilter, false);
+				result = broad.count > result.count ? broad : result;
+			}
+			const { tokens } = parseSearchQuery(query);
+			if (result.count === 0 && tokens.length > 1) {
+				const relaxedFilter = buildProductSearchFilter(
+					query,
+					active.generation,
+					input.filters,
+					"relaxed",
+				);
+				const hits = await queryIndex(
+					redis,
+					namespace,
+					relaxedFilter,
+					RELAXED_POOL_SIZE,
+					0,
+					false,
+					input.sort,
+				);
+				const ranked = rankRelaxedHits(tokens, hits, active.productCount, input.sort !== undefined);
+				result = { count: ranked.length, hits: ranked.slice(offset, offset + pageSize) };
 			}
 			const totalPages = Math.ceil(result.count / pageSize);
 
