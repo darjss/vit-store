@@ -73,8 +73,17 @@ const transferReconciliation = DurableObjectNamespace<TransferReconciliationRpc>
 	},
 );
 
+// The PS_5 database has 25 connections and every Hyperdrive on it counts against them:
+// prod 12, amerik-vitamin 5, about 3 for PlanetScale's own processes, the rest for agent_ro.
+// Alchemy's Hyperdrive props lack origin_connection_limit but it sends every prop in its PUT,
+// so the spread keeps a later props change from resetting the cap.
+const connectionLimit = { origin_connection_limit: stage === "prod" ? 12 : 5 };
+
 const hyperdriveDB = await Hyperdrive("pscale-db", {
+	...connectionLimit,
 	adopt: true,
+	// Cached SELECTs went stale for up to 75 s, so the pay page kept polling a paid order as pending.
+	caching: { disabled: true },
 	origin: {
 		database: env.PLANETSCALE_DATABASE,
 		host: env.PLANETSCALE_HOST,
