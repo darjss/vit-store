@@ -61,10 +61,11 @@ const LATIN_SEARCH_ALIASES = {
 	ginseng: ["женьшень", "ginzeng"],
 	glucosamine: ["глюкозамин", "glucosamin"],
 	glutathione: ["глутатион", "glutathion"],
+	gummies: ["gummy", "jelly", "гамми"],
 	hyaluronic: ["hyaluron", "hyaluronic acid", "гиалари", "гиул", "гиалурон"],
 	inositol: ["inofa", "inof", "inosto", "myo inositol", "инозитол", "инозит"],
 	iodine: ["iodine", "йод"],
-	iron: ["төмөр", "ferrum"],
+	iron: ["төмөр", "ferrum", "tomor", "tumur"],
 	lutein: ["лютеин"],
 	lysine: ["лизин"],
 	magnesium: ["magni", "магни", "магниум", "magnez", "магнези"],
@@ -75,7 +76,7 @@ const LATIN_SEARCH_ALIASES = {
 	oil: ["тос"],
 	omega: ["омега", "omeg"],
 	potassium: ["калий", "kalium"],
-	probiotic: ["пробиотик", "probiotics", "probiotik"],
+	probiotic: ["пробиотик", "probiotics", "probiotik", "bacteria", "bakteri", "бактери"],
 	protein: ["протеин", "whey"],
 	psyllium: ["physil", "psylium"],
 	pumpkin: ["pumpkin seed", "тыквенное"],
@@ -246,23 +247,28 @@ const phraseAliases = Object.entries(QUERY_PHRASE_ALIASES)
 	.map(([phrase, canonical]) => [new RegExp(`(?<=^| )${phrase}(?= |$)`, "gu"), canonical] as const);
 
 // "d35000" is "d3 5000". A lone letter joins the number after it, so "q 10" is "q10".
+// Glued codes split too: "d3k2" and "д3к2" are "d3 k2".
+const splitCodes = (token: string) => {
+	const latin = token.replaceAll(
+		/[бдксц](?=\d)/gu,
+		(letter) => lookup(CODE_LETTERS, letter) ?? letter,
+	);
+	if (/^(?:[a-z]\d{1,2}){2,}$/u.test(latin)) {
+		return latin.match(/[a-z]\d{1,2}/gu) ?? [latin];
+	}
+	return latin.replace(/^(d3|k2)(\d{3,})$/u, "$1 $2").split(" ");
+};
+
 const joinCodeTokens = (tokens: Array<string>) =>
-	tokens
-		.flatMap((token) => token.replace(/^(d3|k2)(\d{3,})$/u, "$1 $2").split(" "))
-		.reduce<Array<string>>((joined, token) => {
-			const previous = joined.at(-1);
-			if (previous && /^\p{L}$/u.test(previous) && /^\d{1,2}$/u.test(token)) {
-				joined[joined.length - 1] = `${lookup(CODE_LETTERS, previous) ?? previous}${token}`;
-			} else {
-				joined.push(
-					token.replace(
-						/^[бдксц](?=\d{1,2}$)/u,
-						(letter) => lookup(CODE_LETTERS, letter) ?? letter,
-					),
-				);
-			}
-			return joined;
-		}, []);
+	tokens.flatMap(splitCodes).reduce<Array<string>>((joined, token) => {
+		const previous = joined.at(-1);
+		if (previous && /^\p{L}$/u.test(previous) && /^\d{1,2}$/u.test(token)) {
+			joined[joined.length - 1] = `${lookup(CODE_LETTERS, previous) ?? previous}${token}`;
+		} else {
+			joined.push(token);
+		}
+		return joined;
+	}, []);
 
 // A lone vitamin letter means the vitamin only on its own or next to "vitamin",
 // so "d" in "myo d chiro inositol" and "b" in "b complex" stay letters.
@@ -281,6 +287,59 @@ const expandVitaminLetters = (tokens: Array<string>) => {
 			? ["vitamin"]
 			: [token];
 	});
+};
+
+// Mongolian case endings customers add to product words, Latin and Cyrillic.
+const CASE_SUFFIXES = [
+	"iinhiig",
+	"ийнхийг",
+	"уудыг",
+	"nuud",
+	"iig",
+	"iin",
+	"nii",
+	"tai",
+	"tei",
+	"toi",
+	"uud",
+	"ийг",
+	"ийн",
+	"ний",
+	"тай",
+	"тэй",
+	"той",
+	"ууд",
+	"үүд",
+	"aa",
+	"ee",
+	"ii",
+	"oo",
+	"аа",
+	"ыг",
+	"ээ",
+	"оо",
+];
+
+/**
+ * Other spellings a query word also matches: its stem without a Mongolian case
+ * ending ("vitaminuud", "k2toi", "naturebelliin"), and for Cyrillic words of
+ * three or more letters the Latin transliteration the aliases carry, so "мүл"
+ * finds "Мулейны".
+ */
+export const searchSpellings = (token: string) => {
+	const ending =
+		token.length >= 5
+			? CASE_SUFFIXES.find((suffix) => token.endsWith(suffix) && token.length - suffix.length >= 2)
+			: undefined;
+	const forms = ending ? [token, token.slice(0, -ending.length)] : [token];
+	return Array.from(
+		new Set(
+			forms.flatMap((form) => {
+				const latin = transliterateCyrillicToLatin(form);
+				return latin !== form && form.length >= 3 ? [form, latin] : [form];
+			}),
+		),
+	);
 };
 
 export const parseSearchQuery = (query: string) => {

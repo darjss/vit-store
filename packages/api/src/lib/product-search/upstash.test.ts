@@ -109,6 +109,25 @@ describe("product search query", () => {
 		expect(JSON.stringify(split)).toContain('"prefix":true,"value":"5000"');
 	});
 
+	test("splits glued vitamin codes in either script", () => {
+		const latin = buildProductSearchFilter("d3k2", "generation");
+		const cyrillic = JSON.stringify(buildProductSearchFilter("д3к2", "generation"));
+
+		expect(latin.$must).toHaveLength(4);
+		expect(cyrillic).toContain('"value":"d3"');
+		expect(cyrillic).toContain('"value":"k2"');
+	});
+
+	test("also matches the stem and the Latin spelling of a word", () => {
+		const suffixed = JSON.stringify(buildProductSearchFilter("k2toi", "generation"));
+		const cyrillic = JSON.stringify(buildProductSearchFilter("мүл", "generation"));
+
+		expect(suffixed).toContain('"prefix":true,"value":"k2"');
+		expect(suffixed).toContain('"prefix":true,"value":"k2toi"');
+		expect(cyrillic).toContain('"prefix":true,"value":"мүл"');
+		expect(cyrillic).toContain('"prefix":true,"value":"mul"');
+	});
+
 	test("reads Cyrillic vitamin letters next to the vitamin word", () => {
 		const serialized = JSON.stringify(buildProductSearchFilter("витамин ц", "generation"));
 

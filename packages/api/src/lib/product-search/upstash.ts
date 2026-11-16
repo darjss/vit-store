@@ -4,7 +4,7 @@ import {
 	expandSymptomIngredients,
 	normalizeSearchText,
 	parseSearchQuery,
-	transliterateCyrillicToLatin,
+	searchSpellings,
 } from "~/lib/product-search/text";
 import type {
 	ProductSearchDocument,
@@ -189,15 +189,6 @@ const fieldMatches = (
 ];
 
 /**
- * A Cyrillic word of three or more letters also matches its Latin spelling,
- * which the aliases carry for every Mongolian name. "мүл" finds "Мулейны".
- */
-const spellings = (token: string) => {
-	const latin = transliterateCyrillicToLatin(token);
-	return latin !== token && token.length >= 3 ? [token, latin] : [token];
-};
-
-/**
  * The last word is still being typed, so it matches as a prefix at any length.
  * Other words: a lone letter or a number is exact, 2 to 3 letters a prefix,
  * longer words `$smart`. Outside the direct pass, long words also tolerate two
@@ -227,7 +218,7 @@ const tokenFilter = (
 	scope: MatchScope,
 	includeIntent: boolean,
 ): ProductSearchClause => ({
-	$should: spellings(token)
+	$should: searchSpellings(token)
 		.flatMap((spelling) => spellingMatches(spelling, isLast, scope))
 		.flatMap((match) => fieldMatches(match, includeIntent, scope !== "direct")),
 });
@@ -249,7 +240,7 @@ const coveredTokens = (tokens: Array<string>, document: IndexedProductSearchDocu
 		].join(" "),
 	).split(" ");
 	return tokens.filter((token) =>
-		spellings(token).some((spelling) => words.some((word) => word.startsWith(spelling))),
+		searchSpellings(token).some((spelling) => words.some((word) => word.startsWith(spelling))),
 	);
 };
 
