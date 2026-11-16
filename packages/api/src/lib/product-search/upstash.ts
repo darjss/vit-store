@@ -4,6 +4,7 @@ import {
 	expandSymptomIngredients,
 	normalizeSearchText,
 	parseSearchQuery,
+	transliterateCyrillicToLatin,
 } from "~/lib/product-search/text";
 import type {
 	ProductSearchDocument,
@@ -26,6 +27,8 @@ const WRITE_BATCH_SIZE = 50;
 const STALE_GENERATION_TTL_SECONDS = 10 * 60;
 const REBUILD_LOCK_TTL_MS = 30_000;
 const REBUILD_LOCK_WAIT_MS = 10_000;
+// Below this many direct matches, the broad pass also runs.
+const MIN_DIRECT_RESULTS = 3;
 // The relaxed pass ranks this many candidates, then keeps those with most words.
 const RELAXED_POOL_SIZE = 100;
 // A relaxed match needs one word found in at most this share of the catalog.
@@ -186,17 +189,21 @@ const fieldMatches = (
 ];
 
 /**
+ * A Cyrillic word of three or more letters also matches its Latin spelling,
+ * which the aliases carry for every Mongolian name. "мүл" finds "Мулейны".
+ */
+const spellings = (token: string) => {
+	const latin = transliterateCyrillicToLatin(token);
+	return latin !== token && token.length >= 3 ? [token, latin] : [token];
+};
+
+/**
  * The last word is still being typed, so it matches as a prefix at any length.
  * Other words: a lone letter or a number is exact, 2 to 3 letters a prefix,
  * longer words `$smart`. Outside the direct pass, long words also tolerate two
  * typos, so "isonitol" finds inositol.
  */
-const tokenFilter = (
-	token: string,
-	isLast: boolean,
-	scope: MatchScope,
-	includeIntent: boolean,
-): ProductSearchClause => {
+const spellingMatches = (token: string, isLast: boolean, scope: MatchScope) => {
 	const isNumber = /^\d+$/u.test(token);
 	const exact = token.length === 1 || isNumber;
 	const matches: Array<TextMatch> = [];
@@ -211,10 +218,19 @@ const tokenFilter = (
 	if (scope !== "direct" && token.length >= 7) {
 		matches.push({ $fuzzy: { distance: 2, transpositionCostOne: true, value: token } });
 	}
-	return {
-		$should: matches.flatMap((match) => fieldMatches(match, includeIntent, scope !== "direct")),
-	};
+	return matches;
 };
+
+const tokenFilter = (
+	token: string,
+	isLast: boolean,
+	scope: MatchScope,
+	includeIntent: boolean,
+): ProductSearchClause => ({
+	$should: spellings(token)
+		.flatMap((spelling) => spellingMatches(spelling, isLast, scope))
+		.flatMap((match) => fieldMatches(match, includeIntent, scope !== "direct")),
+});
 
 /** Most words: one may miss in a short query, 40% of a pasted product name. */
 const requiredTokenCount = (tokenCount: number) =>
@@ -232,7 +248,9 @@ const coveredTokens = (tokens: Array<string>, document: IndexedProductSearchDocu
 			document.category,
 		].join(" "),
 	).split(" ");
-	return tokens.filter((token) => words.some((word) => word.startsWith(token)));
+	return tokens.filter((token) =>
+		spellings(token).some((spelling) => words.some((word) => word.startsWith(spelling))),
+	);
 };
 
 /**
@@ -598,14 +616,16 @@ export const createProductSearchEngine = (
 
 			const directFilter = buildProductSearchFilter(query, active.generation, input.filters);
 			let result = await runQuery(directFilter, rankByDemand);
-			if (result.count === 0 && rankByDemand) {
+			// Broad matches a superset of direct, so it replaces a thin direct page only when it finds more.
+			if (result.count < MIN_DIRECT_RESULTS && rankByDemand) {
 				const broadFilter = buildProductSearchFilter(
 					query,
 					active.generation,
 					input.filters,
 					"broad",
 				);
-				result = await runQuery(broadFilter, false);
+				const broad = await runQuery(broadFilter, false);
+				result = broad.count > result.count ? broad : result;
 			}
 			const { tokens } = parseSearchQuery(query);
 			if (result.count === 0 && tokens.length > 1) {
