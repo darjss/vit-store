@@ -28,6 +28,8 @@ const REBUILD_LOCK_TTL_MS = 30_000;
 const REBUILD_LOCK_WAIT_MS = 10_000;
 // The relaxed pass ranks this many candidates, then keeps those with most words.
 const RELAXED_POOL_SIZE = 100;
+// A relaxed match needs one word found in at most this share of the catalog.
+const RELAXED_RARE_SHARE = 0.1;
 
 const PRODUCT_SEARCH_SCHEMA = s.object({
 	aliases: s.string().noStem(),
@@ -167,7 +169,8 @@ const fieldMatches = (
 	{ primaryName: { $boost: 18, ...match } },
 	{ primaryNameMn: { $boost: 18, ...match } },
 	{ brand: { $boost: 9, ...match } },
-	{ dosage: { $boost: 9, ...match } },
+	// Dosage text often lists secondary ingredients, so it takes only exact and prefix matches.
+	...("$eq" in match || "$phrase" in match ? [{ dosage: { $boost: 9, ...match } }] : []),
 	{ aliases: { $boost: 7, ...match } },
 	...(includeIntent ? [{ intentTerms: match }] : []),
 	...(includeBroadFields
@@ -233,12 +236,14 @@ const coveredTokens = (tokens: Array<string>, document: IndexedProductSearchDocu
 };
 
 /**
- * Keeps candidates that cover most words and ranks rare words above common
- * ones, so "nutricost creatin" shows creatine before every Nutricost product.
+ * Keeps candidates that cover most words, one of them rare in the catalog,
+ * and ranks rare words above common ones. "nutricost creatin" shows creatine,
+ * not every Nutricost product, and "castor oil" does not show every oil.
  */
 const rankRelaxedHits = <Hit extends { data: IndexedProductSearchDocument }>(
 	tokens: Array<string>,
 	hits: Array<Hit>,
+	catalogSize: number,
 	keepOrder: boolean,
 ) => {
 	const covered = hits
@@ -248,9 +253,13 @@ const rankRelaxedHits = <Hit extends { data: IndexedProductSearchDocument }>(
 	for (const token of covered.flatMap((entry) => entry.tokens)) {
 		frequency.set(token, (frequency.get(token) ?? 0) + 1);
 	}
+	const count = (token: string) => frequency.get(token) ?? 1;
 	const weight = (entry: (typeof covered)[number]) =>
-		entry.tokens.reduce((sum, token) => sum + 1 / (frequency.get(token) ?? 1), 0);
-	const ranked = keepOrder ? covered : covered.toSorted((a, b) => weight(b) - weight(a));
+		entry.tokens.reduce((sum, token) => sum + 1 / count(token), 0);
+	const specific = covered.filter((entry) =>
+		entry.tokens.some((token) => count(token) <= catalogSize * RELAXED_RARE_SHARE),
+	);
+	const ranked = keepOrder ? specific : specific.toSorted((a, b) => weight(b) - weight(a));
 	return ranked.map((entry) => entry.hit);
 };
 
@@ -615,7 +624,7 @@ export const createProductSearchEngine = (
 					false,
 					input.sort,
 				);
-				const ranked = rankRelaxedHits(tokens, hits, input.sort !== undefined);
+				const ranked = rankRelaxedHits(tokens, hits, active.productCount, input.sort !== undefined);
 				result = { count: ranked.length, hits: ranked.slice(offset, offset + pageSize) };
 			}
 			const totalPages = Math.ceil(result.count / pageSize);
