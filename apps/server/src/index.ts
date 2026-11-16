@@ -1,5 +1,6 @@
 import { trpcServer } from "@hono/trpc-server";
 import { adminRouter, botRouter, finalizeCatalogCacheHeaders, storeRouter } from "@vit/api";
+import { withDb } from "@vit/api/db/client";
 import { ensureProductSearchIndex } from "@vit/api/lib/product-search/client";
 import { createLogger } from "evlog";
 import { Hono } from "hono";
@@ -130,57 +131,61 @@ app.route("/webhooks", webhookRoutes);
 app.route("/admin", adminRoutes);
 
 export default {
-	fetch: app.fetch,
-	scheduled: async (controller: ScheduledController, env: Env) => {
-		const log = createLogger({
-			operation: "scheduled.jobs",
-			request_id: crypto.randomUUID(),
-			user_type: "system",
-		});
+	fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
+		withDb(() => app.fetch(request, env, ctx)),
+	scheduled: (controller: ScheduledController, env: Env) =>
+		withDb(() => runScheduled(controller, env)),
+};
 
-		if (controller.cron === "0 2 * * *") {
-			try {
-				await runMorningOrderBrief();
-				log.info("scheduled.morning_brief_complete");
-				log.emit();
-			} catch (error) {
-				log.error(error instanceof Error ? error : new Error(String(error)), {
-					event: "scheduled.morning_brief_failed",
-				});
-				log.emit();
-				throw error;
-			}
-			return;
-		}
+async function runScheduled(controller: ScheduledController, env: Env) {
+	const log = createLogger({
+		operation: "scheduled.jobs",
+		request_id: crypto.randomUUID(),
+		user_type: "system",
+	});
 
-		const [restockResult, paymentNotificationResult, searchIndexResult] = await Promise.allSettled([
-			runRestockNotifier(env),
-			runPaymentNotificationOutbox(),
-			ensureProductSearchIndex(),
-		]);
-		const jobs = {
-			payment_notification_outbox: paymentNotificationResult.status,
-			product_search_index:
-				searchIndexResult.status === "fulfilled" ? searchIndexResult.value : "rejected",
-			restock_notifier: restockResult.status,
-		};
-		const failures = [
-			scheduledJobFailure("restock_notifier", restockResult),
-			scheduledJobFailure("payment_notification_outbox", paymentNotificationResult),
-			scheduledJobFailure("product_search_index", searchIndexResult),
-		].filter((failure) => failure !== undefined);
-
-		if (failures.length > 0) {
-			log.error(new Error("Scheduled jobs failed"), {
-				event: "scheduled.jobs_complete",
-				failures,
-				jobs,
+	if (controller.cron === "0 2 * * *") {
+		try {
+			await runMorningOrderBrief();
+			log.info("scheduled.morning_brief_complete");
+			log.emit();
+		} catch (error) {
+			log.error(error instanceof Error ? error : new Error(String(error)), {
+				event: "scheduled.morning_brief_failed",
 			});
 			log.emit();
-			throw new Error(`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`);
+			throw error;
 		}
+		return;
+	}
 
-		log.info("scheduled.jobs_complete", { jobs });
+	const [restockResult, paymentNotificationResult, searchIndexResult] = await Promise.allSettled([
+		runRestockNotifier(env),
+		runPaymentNotificationOutbox(),
+		ensureProductSearchIndex(),
+	]);
+	const jobs = {
+		payment_notification_outbox: paymentNotificationResult.status,
+		product_search_index:
+			searchIndexResult.status === "fulfilled" ? searchIndexResult.value : "rejected",
+		restock_notifier: restockResult.status,
+	};
+	const failures = [
+		scheduledJobFailure("restock_notifier", restockResult),
+		scheduledJobFailure("payment_notification_outbox", paymentNotificationResult),
+		scheduledJobFailure("product_search_index", searchIndexResult),
+	].filter((failure) => failure !== undefined);
+
+	if (failures.length > 0) {
+		log.error(new Error("Scheduled jobs failed"), {
+			event: "scheduled.jobs_complete",
+			failures,
+			jobs,
+		});
 		log.emit();
-	},
-};
+		throw new Error(`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`);
+	}
+
+	log.info("scheduled.jobs_complete", { jobs });
+	log.emit();
+}
