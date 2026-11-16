@@ -1,330 +1,344 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-	ArrowRight,
-	ArrowUpRight,
-	ChevronDown,
-	ChevronUp,
-	Clock,
-	DollarSign,
-	Eye,
-	MapPin,
-	Package,
-	Phone,
-	ShoppingBag,
-	TrendingUp,
-} from "lucide-react";
+import { ChevronRight, ClipboardCheck, Search, Truck } from "lucide-react";
 import { useState } from "react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { Badge } from "@/components/ui/badge";
-import { chartTooltipNumber } from "@/lib/chart-tooltip";
-import { formatCurrency, formatDateToText, getRevenueData } from "@/lib/utils";
-import { trpc } from "@/utils/trpc";
+import { StockStepper } from "@/components/product/stock-stepper";
 import { DashboardPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+import { cn } from "@/lib/utils";
+import { trpc } from "@/utils/trpc";
+
+const seriesQuery = trpc.sales.dailySeries.queryOptions({ days: 62 });
+const shippedQuery = trpc.order.getPaginatedOrders.queryOptions({
+	orderStatus: "shipped",
+	page: 1,
+	pageSize: 1,
+});
+const topQuery = trpc.sales.topProducts.queryOptions({ productCount: 5, timeRange: "weekly" });
+const inventoryQuery = trpc.sales.inventoryValue.queryOptions();
 
 export const Route = createFileRoute("/_dash/")({
 	component: HomeComponent,
 	loader: ({ context: ctx }) => {
-		void ctx.queryClient.prefetchQuery(ctx.trpc.sales.analytics.queryOptions());
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.sales.topProducts.queryOptions({
-				productCount: 5,
-				timeRange: "daily",
-			}),
-		);
+		void ctx.queryClient.prefetchQuery(seriesQuery);
+		void ctx.queryClient.prefetchQuery(ctx.trpc.sales.sameTimeLastWeek.queryOptions());
 		void ctx.queryClient.prefetchQuery(ctx.trpc.order.getPendingOrders.queryOptions());
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getWebAnalytics.queryOptions({ timeRange: "daily" }),
-		);
+		void ctx.queryClient.prefetchQuery(shippedQuery);
+		void ctx.queryClient.prefetchQuery(topQuery);
+		void ctx.queryClient.prefetchQuery(inventoryQuery);
 	},
 	pendingComponent: DashboardPageSkeleton,
 });
 
+const money = (value: number) => `${value.toLocaleString("en-US")}₮`;
+const short = (value: number) =>
+	value >= 1_000_000 ? `${(value / 1_000_000).toFixed(1)} сая₮` : `${Math.round(value / 1000)}k₮`;
+const weekdays = ["Ням", "Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба"];
+const ubDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ulaanbaatar" });
+const dayKey = (offset: number) => ubDay.format(new Date(Date.now() + offset * 86_400_000));
+const weekdayOf = (key: string) => weekdays[new Date(`${key}T12:00:00`).getDay()];
+
+type Day = { orders: number; profit: number; revenue: number };
+const empty: Day = { orders: 0, profit: 0, revenue: 0 };
+const add = (a: Day, b: Day) => ({
+	orders: a.orders + b.orders,
+	profit: a.profit + b.profit,
+	revenue: a.revenue + b.revenue,
+});
+
 function HomeComponent() {
-	const { data: stats } = useSuspenseQuery(trpc.sales.analytics.queryOptions());
-	const { data: orders } = useSuspenseQuery(trpc.order.getPendingOrders.queryOptions());
-	const { data: topProducts } = useSuspenseQuery(
-		trpc.sales.topProducts.queryOptions({
-			productCount: 5,
-			timeRange: "daily",
-		}),
-	);
-	const { data: webAnalytics } = useSuspenseQuery(
-		trpc.analytics.getWebAnalytics.queryOptions({
-			timeRange: "daily",
-		}),
-	);
+	const { data: series } = useSuspenseQuery(seriesQuery);
+	const { data: sameTime } = useSuspenseQuery(trpc.sales.sameTimeLastWeek.queryOptions());
+	const { data: pending } = useSuspenseQuery(trpc.order.getPendingOrders.queryOptions());
+	const { data: shipped } = useSuspenseQuery(shippedQuery);
+	const { data: top } = useSuspenseQuery(topQuery);
+	const { data: inventory } = useSuspenseQuery(inventoryQuery);
+	const [picked, setPicked] = useState<string>();
 
-	const [ordersExpanded, setOrdersExpanded] = useState(false);
-	const displayedOrders = ordersExpanded ? orders : orders.slice(0, 3);
+	const byDay = new Map(series.map((row) => [row.day, row]));
+	const at = (offset: number): Day => byDay.get(dayKey(offset)) ?? empty;
+	const sum = (from: number, to: number) => {
+		let total = empty;
+		for (let offset = from; offset >= to; offset--) {
+			total = add(total, at(offset));
+		}
+		return total;
+	};
 
-	const revenueData = getRevenueData("daily");
+	const todayKey = dayKey(0);
+	const [year = 0, month = 0, date = 0] = todayKey.split("-").map(Number);
+	const today = at(0);
+	const week = sum(0, -6);
+	const prevWeek = sum(-7, -13);
+	const monthToDate = sum(0, -(date - 1));
+	const prevMonthDays = new Date(year, month - 1, 0).getDate();
+	const prevMonthStart = -(date - 1) - prevMonthDays;
+	const prevMonthToDate = sum(prevMonthStart + Math.min(date, prevMonthDays) - 1, prevMonthStart);
+
+	const bars = Array.from({ length: 30 }, (_, i) => {
+		const key = dayKey(i - 29);
+		return { key, ...(byDay.get(key) ?? empty) };
+	});
+	const maxRevenue = Math.max(1, ...bars.map((bar) => bar.revenue));
+	const pickedBar = bars.find((bar) => bar.key === picked);
+
+	const items = pending.reduce(
+		(total, order) => total + order.products.reduce((n, product) => n + product.quantity, 0),
+		0,
+	);
 
 	return (
-		<div className="space-y-3 pb-6">
-			{/* Compact Hero - Pending Orders */}
-			<Link
-				className="block"
-				search={{
-					orderStatus: "pending",
-					page: 1,
-					pageSize: 10,
-					searchTerm: "",
-					sortDirection: "desc",
-					sortField: "createdAt",
-				}}
-				to="/orders"
-			>
-				<div className="border-border bg-primary shadow-hard-sm flex items-center justify-between border-2 p-3 active:translate-y-0.5 active:shadow-none">
-					<div className="flex items-center gap-3">
-						<div className="border-primary-foreground/30 bg-primary-foreground/10 flex h-10 w-10 items-center justify-center border-2">
-							<ShoppingBag className="text-primary-foreground h-5 w-5" />
-						</div>
-						<div>
-							<p className="font-heading text-primary-foreground text-2xl leading-none font-black">
-								{orders.length}
-							</p>
-							<p className="text-primary-foreground/80 text-xs font-medium">хүлээгдэж буй</p>
-						</div>
-					</div>
-					<div className="text-primary-foreground flex items-center gap-1 text-sm font-bold">
-						Харах
-						<ArrowRight className="h-4 w-4" />
-					</div>
-				</div>
-			</Link>
-
-			{/* Today's Stats - 2x2 Grid */}
-			<div className="grid grid-cols-2 gap-2">
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
-					<div className="text-muted-foreground flex items-center gap-1.5">
-						<DollarSign className="h-3.5 w-3.5" />
-						<span className="text-[10px] font-bold tracking-wide uppercase">Орлого</span>
-					</div>
-					<p className="font-heading mt-1 text-lg leading-tight font-black">
-						{formatCurrency(stats.daily.revenue)}
+		<div className="mx-auto grid max-w-5xl grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start lg:gap-4">
+			<section className="border bg-white lg:col-start-1 lg:row-start-1">
+				<div className="px-4 pt-3">
+					<p className="text-muted-foreground text-xs">
+						Өнөөдөр, {weekdayOf(todayKey)} {month}/{date}
 					</p>
-					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
-						<span className="flex items-center font-medium text-green-600">
-							<ArrowUpRight className="h-2.5 w-2.5" />
-							12%
-						</span>
-						<span className="text-muted-foreground">өчигдөрөөс</span>
+					<div className="mt-1 flex items-end gap-3">
+						<p className="text-3xl leading-none font-bold tabular-nums">{money(today.revenue)}</p>
+						<Delta base={sameTime.revenue} value={today.revenue} />
 					</div>
-				</div>
-
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
-					<div className="text-muted-foreground flex items-center gap-1.5">
-						<Package className="h-3.5 w-3.5" />
-						<span className="text-[10px] font-bold tracking-wide uppercase">Захиалга</span>
-					</div>
-					<p className="font-heading mt-1 text-lg leading-tight font-black">
-						{stats.daily.salesCount}
+					<p className="text-muted-foreground mt-1.5 text-sm">
+						{today.orders} захиалга · ашиг {money(today.profit)}
 					</p>
-					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
-						<span className="flex items-center font-medium text-green-600">
-							<ArrowUpRight className="h-2.5 w-2.5" />
-							8%
-						</span>
-						<span className="text-muted-foreground">өчигдөрөөс</span>
-					</div>
-				</div>
-
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
-					<div className="text-muted-foreground flex items-center gap-1.5">
-						<Eye className="h-3.5 w-3.5" />
-						<span className="text-[10px] font-bold tracking-wide uppercase">Зочин</span>
-					</div>
-					<p className="font-heading mt-1 text-lg leading-tight font-black">
-						{webAnalytics.current.uniqueVisitors.toLocaleString()}
+					<p className="text-muted-foreground text-xs">
+						Өнгөрсөн {weekdayOf(dayKey(-7))} энэ цаг хүртэл {money(sameTime.revenue)},{" "}
+						{sameTime.orders} захиалга
 					</p>
-					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
-						<span
-							className={`flex items-center font-medium ${webAnalytics.changes.visitors >= 0 ? "text-green-600" : "text-red-600"}`}
-						>
-							<ArrowUpRight className="h-2.5 w-2.5" />
-							{Math.abs(webAnalytics.changes.visitors)}%
-						</span>
-						<span className="text-muted-foreground">өчигдөрөөс</span>
-					</div>
 				</div>
 
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
-					<div className="text-muted-foreground flex items-center gap-1.5">
-						<TrendingUp className="h-3.5 w-3.5" />
-						<span className="text-[10px] font-bold tracking-wide uppercase">Ашиг</span>
-					</div>
-					<p className="font-heading mt-1 text-lg leading-tight font-black">
-						{formatCurrency(stats.daily.profit)}
-					</p>
-					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
-						<span className="flex items-center font-medium text-green-600">
-							<ArrowUpRight className="h-2.5 w-2.5" />
-							15%
-						</span>
-						<span className="text-muted-foreground">өчигдөрөөс</span>
-					</div>
-				</div>
-			</div>
-
-			{/* Mini Chart */}
-			<div className="border-border bg-card shadow-hard-sm border-2 p-3">
-				<div className="mb-2 flex items-center justify-between">
-					<span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
-						Сүүлийн 7 өдөр
-					</span>
-				</div>
-				<div className="h-[80px] w-full">
-					<ResponsiveContainer height="100%" width="100%">
-						<BarChart data={revenueData} margin={{ bottom: 0, left: 0, right: 0, top: 0 }}>
-							<XAxis
-								axisLine={false}
-								dataKey="date"
-								dy={5}
-								tick={{ fontSize: 9, fontWeight: 600 }}
-								tickLine={false}
-							/>
-							<Tooltip
-								content={({ active, label, payload }) => {
-									if (!active || !payload?.length) {
-										return null;
-									}
-									return (
-										<div className="border-border bg-card shadow-hard-sm border-2 p-1.5 text-[10px]">
-											<p className="font-bold">{label}</p>
-											<p className="font-mono">
-												₮
-												{new Intl.NumberFormat("mn-MN").format(
-													chartTooltipNumber(payload[0]?.value),
-												)}
-											</p>
-										</div>
-									);
-								}}
-								cursor={{ fill: "var(--color-muted)", opacity: 0.3 }}
-							/>
-							<Bar
-								dataKey="revenue"
-								fill="var(--color-primary)"
-								radius={0}
-								stroke="var(--color-border)"
-								strokeWidth={1.5}
-							/>
-						</BarChart>
-					</ResponsiveContainer>
-				</div>
-			</div>
-
-			{/* Pending Orders - Inline Expandable */}
-			<div className="border-border bg-card shadow-hard-sm border-2">
-				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
-					<div className="flex items-center gap-2">
-						<Clock className="text-muted-foreground h-4 w-4" />
-						<span className="text-sm font-bold">Хүлээгдэж буй</span>
-					</div>
-					<Badge className="font-mono text-xs" variant="secondary">
-						{orders.length}
-					</Badge>
-				</div>
-
-				{orders.length === 0 ? (
-					<div className="text-muted-foreground p-6 text-center text-sm">Шинэ захиалга байхгүй</div>
-				) : (
-					<>
-						<div className="divide-border divide-y">
-							{displayedOrders.map((order) => (
-								<Link
-									className="active:bg-muted/20 flex items-center justify-between p-3"
-									key={order.id}
-									params={{ id: String(order.id) }}
-									to="/orders/$id"
-								>
-									<div className="min-w-0 flex-1">
-										<div className="flex items-center gap-2">
-											<Badge className="shrink-0 font-mono text-[10px]" variant="surface">
-												#{String(order.id).slice(-4)}
-											</Badge>
-											<span className="text-muted-foreground truncate text-xs">
-												{formatDateToText(order.createdAt)}
-											</span>
-										</div>
-										<div className="mt-1 flex items-center gap-3 text-xs">
-											<span className="flex items-center gap-1">
-												<Phone className="text-muted-foreground h-3 w-3" />
-												{order.customerPhone}
-											</span>
-										</div>
-										<div className="text-muted-foreground mt-1 flex items-center gap-1 text-[10px]">
-											<MapPin className="h-2.5 w-2.5 shrink-0" />
-											<span className="truncate">{order.address}</span>
-										</div>
-									</div>
-									<div className="ml-2 text-right">
-										<p className="font-heading text-sm font-black">
-											₮{order.total.toLocaleString()}
-										</p>
-										<p className="text-muted-foreground text-[10px]">
-											{order.products?.length || 0} бараа
-										</p>
-									</div>
-								</Link>
-							))}
-						</div>
-
-						{orders.length > 3 && (
+				<div className="px-4 pt-4">
+					<div className="flex h-16 items-end gap-[3px]">
+						{bars.map((bar) => (
 							<button
-								className="border-border bg-muted/20 active:bg-muted/40 flex w-full items-center justify-center gap-1 border-t-2 py-2.5 text-xs font-bold"
-								onClick={() => setOrdersExpanded(!ordersExpanded)}
+								aria-label={`${bar.key} ${money(bar.revenue)}`}
+								className="flex h-full flex-1 items-end"
+								key={bar.key}
+								onClick={() => setPicked(bar.key === picked ? undefined : bar.key)}
 								type="button"
 							>
-								{ordersExpanded ? (
-									<>
-										Хураах
-										<ChevronUp className="h-3.5 w-3.5" />
-									</>
-								) : (
-									<>
-										Бүгдийг харах ({orders.length - 3})
-										<ChevronDown className="h-3.5 w-3.5" />
-									</>
-								)}
+								<span
+									className={cn(
+										"w-full",
+										bar.key === todayKey ? "bg-foreground" : "bg-input",
+										bar.key === picked && "bg-primary outline outline-1 outline-black",
+									)}
+									style={{ height: `${Math.max(3, (bar.revenue / maxRevenue) * 100)}%` }}
+								/>
 							</button>
-						)}
-					</>
-				)}
-			</div>
-
-			{/* Top Products - Compact */}
-			<div className="border-border bg-card shadow-hard-sm border-2">
-				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
-					<div className="flex items-center gap-2">
-						<TrendingUp className="text-muted-foreground h-4 w-4" />
-						<span className="text-sm font-bold">Топ бараа</span>
-					</div>
-					<span className="text-muted-foreground text-xs">Өнөөдөр</span>
-				</div>
-
-				{topProducts.length === 0 ? (
-					<div className="text-muted-foreground p-6 text-center text-sm">Борлуулалт алга</div>
-				) : (
-					<div className="divide-border divide-y">
-						{topProducts.map((product, index) => (
-							<div className="flex items-center gap-3 p-2.5" key={product.name}>
-								<div className="border-border bg-muted/50 font-heading flex h-7 w-7 shrink-0 items-center justify-center border-2 text-sm font-bold">
-									{index + 1}
-								</div>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm leading-tight font-bold">{product.name}</p>
-									<p className="text-muted-foreground text-[10px]">{product.totalSold} ширхэг</p>
-								</div>
-								<span className="shrink-0 font-mono text-xs font-bold">
-									₮{(product.revenue / 1000).toFixed(0)}k
-								</span>
-							</div>
 						))}
 					</div>
-				)}
+					<p className="text-muted-foreground mt-1.5 h-5 text-xs">
+						{pickedBar
+							? `${pickedBar.key.slice(5).replace("-", "/")} ${weekdayOf(pickedBar.key)} · ${money(pickedBar.revenue)} · ${pickedBar.orders} захиалга`
+							: "Сүүлийн 30 хоног, баганыг дарж өдрийг харна"}
+					</p>
+				</div>
+
+				<div className="mt-2 grid grid-cols-2 divide-x border-t">
+					<Period base={prevWeek} label="7 хоног" note="өмнөх 7 хоногоос" value={week} />
+					<Period
+						base={prevMonthToDate}
+						label="Энэ сар"
+						note={`өмнөх сарын ${Math.min(date, prevMonthDays)} хүртэлхээс`}
+						value={monthToDate}
+					/>
+				</div>
+			</section>
+
+			{/* Mom's two jobs sit right under today on a phone, and in the right column on a laptop. */}
+			<div className="space-y-3 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:space-y-4">
+				<section className="border bg-white p-4">
+					<p className="text-base font-semibold">
+						{pending.length} захиалга илгээхэд бэлэн
+						<span className="text-muted-foreground font-normal"> · {items} бараа</span>
+					</p>
+					<div className="mt-3 grid grid-cols-2 gap-2">
+						<Link
+							className="bg-primary flex h-12 items-center justify-center gap-2 border border-black font-semibold"
+							to="/pack"
+						>
+							<ClipboardCheck className="size-5" />
+							Савлах
+						</Link>
+						<Link
+							className="flex h-12 items-center justify-center gap-2 border border-black bg-white font-semibold"
+							search={{ orderStatus: "pending" }}
+							to="/orders"
+						>
+							<Truck className="size-5" />
+							Илгээх
+						</Link>
+					</div>
+					<Link
+						className="text-muted-foreground mt-3 flex items-center text-sm"
+						search={{ orderStatus: "shipped" }}
+						to="/orders"
+					>
+						<span className="flex-1">
+							{Number(shipped.pagination.totalCount)} захиалга хүргэлтэд явж байна
+						</span>
+						<ChevronRight className="size-4" />
+					</Link>
+				</section>
+
+				<section className="border bg-white">
+					<Link className="flex items-start gap-3 px-4 pt-3" to="/products">
+						<div className="flex-1">
+							<p className="text-muted-foreground text-xs">Агуулахад байгаа барааны үнэ</p>
+							<p className="mt-1 text-2xl leading-none font-bold tabular-nums">
+								{money(inventory.retail)}
+							</p>
+						</div>
+						<ChevronRight className="text-muted-foreground mt-1 size-4" />
+					</Link>
+					<div className="mt-3 grid grid-cols-3 divide-x border-t text-center">
+						<Stat label="ширхэг" value={inventory.units.toLocaleString("en-US")} />
+						<Stat label="төрөл" value={String(inventory.skus)} />
+						{/* Products have no cost column, so cost comes from each product's last sale. */}
+						<Stat
+							label={`өртөг, ${inventory.costed}/${inventory.skus} төрөл`}
+							value={short(inventory.cost)}
+						/>
+					</div>
+				</section>
+
+				<StockFixer />
 			</div>
+
+			<section className="border bg-white lg:col-start-1 lg:row-start-2">
+				<h2 className="text-muted-foreground border-b px-4 py-2 text-xs font-medium tracking-wide uppercase">
+					7 хоногт их зарагдсан
+				</h2>
+				<ul className="divide-y">
+					{top.map((product) => (
+						<li key={product.productId}>
+							<Link
+								className="active:bg-muted flex items-center gap-3 px-4 py-2"
+								params={{ id: String(product.productId) }}
+								to="/products/$id"
+							>
+								<img
+									alt=""
+									className="size-10 object-contain"
+									src={product.imageUrl ?? undefined}
+								/>
+								<p className="min-w-0 flex-1 truncate text-sm">{product.name}</p>
+								<span className="text-sm font-semibold tabular-nums">×{product.totalSold}</span>
+								<span className="text-muted-foreground w-16 text-right text-xs tabular-nums">
+									{short(Number(product.revenue))}
+								</span>
+							</Link>
+						</li>
+					))}
+				</ul>
+			</section>
 		</div>
+	);
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="px-2 py-2">
+			<p className="text-base font-semibold tabular-nums">{value}</p>
+			<p className="text-muted-foreground text-xs">{label}</p>
+		</div>
+	);
+}
+
+function Delta({ base, value }: { base: number; value: number }) {
+	if (base === 0) {
+		return null;
+	}
+	const change = Math.round(((value - base) / base) * 100);
+	return (
+		<span
+			className={cn(
+				"mb-0.5 text-sm font-semibold tabular-nums",
+				change >= 0 ? "text-emerald-700" : "text-red-700",
+			)}
+		>
+			{change >= 0 ? "↑" : "↓"}
+			{Math.abs(change)}%
+		</span>
+	);
+}
+
+function Period({
+	base,
+	label,
+	note,
+	value,
+}: {
+	base: Day;
+	label: string;
+	note: string;
+	value: Day;
+}) {
+	return (
+		<div className="px-4 py-3">
+			<p className="text-muted-foreground text-xs">{label}</p>
+			<div className="flex items-baseline gap-2">
+				<p className="text-lg font-bold tabular-nums">{short(value.revenue)}</p>
+				<Delta base={base.revenue} value={value.revenue} />
+			</div>
+			<p className="text-muted-foreground text-xs">
+				{value.orders} захиалга · {note}
+			</p>
+		</div>
+	);
+}
+
+function StockFixer() {
+	const [term, setTerm] = useState("");
+	const results = useQuery({
+		...trpc.product.searchProductByName.queryOptions({ searchTerm: term.trim() }),
+		enabled: term.trim().length >= 2,
+	});
+
+	return (
+		<section className="border bg-white">
+			<h2 className="text-muted-foreground px-4 pt-3 text-xs font-medium tracking-wide uppercase">
+				Үлдэгдэл засах
+			</h2>
+			<div className="relative px-4 py-2">
+				<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-7 size-4 -translate-y-1/2" />
+				<input
+					className="focus:border-foreground border-input h-11 w-full border pl-9 text-[15px] outline-none"
+					onChange={(e) => setTerm(e.target.value)}
+					placeholder="Барааны нэрээр хайх"
+					type="search"
+					value={term}
+				/>
+			</div>
+			{results.data?.length ? (
+				<ul className="divide-y border-t">
+					{results.data.map((product) => (
+						<li className="flex gap-3 px-4 py-3" key={product.id}>
+							<img
+								alt=""
+								className="size-16 shrink-0 border object-contain p-1"
+								src={product.images[0]?.url}
+							/>
+							<div className="min-w-0 flex-1 space-y-2">
+								<Link
+									className="line-clamp-2 text-sm leading-snug"
+									params={{ id: String(product.id) }}
+									to="/products/$id"
+								>
+									{product.name}
+								</Link>
+								<StockStepper key={product.stock} productId={product.id} stock={product.stock} />
+							</div>
+						</li>
+					))}
+				</ul>
+			) : (
+				<p className="text-muted-foreground px-4 pb-3 text-xs">
+					{term.trim().length >= 2 && !results.isFetching
+						? "Олдсонгүй"
+						: "Тоолсон бараагаа хайгаад тоог нь засна"}
+				</p>
+			)}
+		</section>
 	);
 }

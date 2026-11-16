@@ -5,7 +5,7 @@ import { Eye, Package } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
 import { invalidateProductCaches, patchProductInCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
@@ -193,13 +193,11 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 					</div>
 				</DialogContent>
 			</Dialog>
-			<Card className="border-border bg-card overflow-hidden border-2 shadow-none transition-all hover:shadow-none">
-				<CardContent className="p-0">
+			<div className="bg-card border-b">
+				<div className="flex items-center gap-2 py-3 pr-1 pl-3">
 					<ProductSummary
 						brandName={brand?.name}
 						categoryName={category?.name}
-						currentPrice={displayPrice}
-						currentStock={displayStock}
 						isOutOfStock={isOutOfStock}
 						onOpen={openProductDetails}
 						onRequestActivateConfirm={
@@ -209,142 +207,172 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 						product={product}
 						statusLabel={statusLabel}
 					/>
-					<AlertDialog onOpenChange={setIsActivateConfirmOpen} open={isActivateConfirmOpen}>
-						<AlertDialogContent className="border-border bg-background shadow-shadow border-2">
-							<AlertDialogHeader>
-								<AlertDialogTitle className="font-heading text-lg">
-									Бүтээгдэхүүнийг идэвхжүүлэх
-								</AlertDialogTitle>
-								<AlertDialogDescription>
-									«{product.name}»-ийг идэвхтэй төлөвт оруулах уу? Дэлгүүрт харагдана.
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter className="mt-6 flex gap-3">
-								<AlertDialogCancel asChild>
-									<Button className="flex-1" variant="outline">
-										Цуцлах
-									</Button>
-								</AlertDialogCancel>
-								<AlertDialogAction asChild>
-									<Button
-										className="flex-1"
-										disabled={isUpdateFieldPending}
-										onClick={handleConfirmActivateProduct}
-									>
-										Идэвхжүүлэх
-									</Button>
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-
-					<div className="border-border border-t-2 p-3" data-no-nav>
-						<div className="flex flex-wrap items-center justify-between gap-2">
+					<div className="flex shrink-0 flex-col items-end gap-1">
+						<button
+							aria-label="Үлдэгдэл засах"
+							className={cn(
+								"h-9 min-w-16 border px-2 text-sm font-semibold tabular-nums",
+								isOutOfStock
+									? "border-red-200 bg-red-50 text-red-700"
+									: "bg-muted border-transparent",
+								isStockEditing && "border-foreground",
+							)}
+							onClick={() => {
+								setIsPriceEditing(false);
+								setStockDraft(product.stock);
+								setIsStockEditing(true);
+							}}
+							type="button"
+						>
+							{isOutOfStock ? "дууссан" : `${displayStock} ш`}
+						</button>
+						<button
+							aria-label="Үнэ засах"
+							className={cn(
+								"h-8 px-1 text-sm font-medium tabular-nums hover:underline",
+								isPriceEditing && "underline",
+							)}
+							onClick={() => {
+								setIsStockEditing(false);
+								setPriceDraft(product.price);
+								setIsPriceEditing(true);
+							}}
+							type="button"
+						>
+							₮{displayPrice.toLocaleString()}
+						</button>
+					</div>
+					<RowActions
+						compact
+						deleteMutation={(id) => deleteProduct({ id })}
+						extraActions={
+							<>
+								<AlertDialog onOpenChange={setIsOutOfStockAlertOpen} open={isOutOfStockAlertOpen}>
+									<AlertDialogTrigger asChild>
+										<DropdownMenuItem
+											className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
+											disabled={isSetStockPending || product.stock === 0}
+											onSelect={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setIsOutOfStockAlertOpen(true);
+											}}
+										>
+											<Package className="h-4 w-4" />
+											<span>Үлдэгдэл тэглэх</span>
+										</DropdownMenuItem>
+									</AlertDialogTrigger>
+									<AlertDialogContent className="border-border bg-background border">
+										<AlertDialogHeader>
+											<AlertDialogTitle className="font-heading text-lg">
+												Үлдэгдэл тэглэх
+											</AlertDialogTitle>
+											<AlertDialogDescription>
+												Бүтээгдэхүүний үлдэгдлийг 0 болгоно.
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter className="mt-6 flex gap-3">
+											<AlertDialogCancel asChild>
+												<Button className="flex-1" variant="outline">
+													Цуцлах
+												</Button>
+											</AlertDialogCancel>
+											<AlertDialogAction asChild>
+												<Button
+													className="flex-1"
+													disabled={isSetStockPending}
+													onClick={handleMarkOutOfStock}
+												>
+													Тэглэх
+												</Button>
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
+								<DropdownMenuSeparator className="bg-border" />
+								<DropdownMenuItem
+									className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
+									onSelect={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										openProductDetailsInNewPage();
+									}}
+								>
+									<Eye className="h-4 w-4" />
+									<span>Шинэ цонхонд нээх</span>
+								</DropdownMenuItem>
+							</>
+						}
+						id={product.id}
+						isDeletePending={isDeletePending}
+						setIsEditDialogOpen={setIsEditDialogOpen}
+					/>
+				</div>
+				{isStockEditing || isPriceEditing ? (
+					<div className="bg-muted/40 flex items-center gap-2 border-t px-3 py-2">
+						<span className="text-muted-foreground flex-1 text-sm">
+							{isStockEditing ? "Үлдэгдэл" : "Үнэ"}
+						</span>
+						{isStockEditing ? (
 							<ProductStockEditor
-								isEditing={isStockEditing}
+								isEditing
 								isPending={isSetStockPending}
 								onCancel={() => {
 									setStockDraft(null);
 									setIsStockEditing(false);
 								}}
-								onEdit={() => {
-									setStockDraft(product.stock);
-									setIsStockEditing(true);
-								}}
+								onEdit={() => setIsStockEditing(true)}
 								onSave={handleSaveStock}
 								onValueChange={setStockDraft}
 								stock={product.stock}
 								value={stockValue}
 							/>
-
+						) : (
 							<ProductPriceEditor
-								isEditing={isPriceEditing}
+								isEditing
 								isPending={isSetPricePending}
 								onCancel={() => {
 									setPriceDraft(null);
 									setIsPriceEditing(false);
 								}}
-								onEdit={() => {
-									setPriceDraft(product.price);
-									setIsPriceEditing(true);
-								}}
+								onEdit={() => setIsPriceEditing(true)}
 								onSave={handleSavePrice}
 								onValueChange={setPriceDraft}
 								price={product.price}
 								value={priceValue}
 							/>
-
-							<RowActions
-								deleteMutation={(id) => deleteProduct({ id })}
-								extraActions={
-									<>
-										<AlertDialog
-											onOpenChange={setIsOutOfStockAlertOpen}
-											open={isOutOfStockAlertOpen}
-										>
-											<AlertDialogTrigger asChild>
-												<DropdownMenuItem
-													className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
-													disabled={isSetStockPending || product.stock === 0}
-													onSelect={(e) => {
-														e.stopPropagation();
-														e.preventDefault();
-														setIsOutOfStockAlertOpen(true);
-													}}
-												>
-													<Package className="h-4 w-4" />
-													<span>Үлдэгдэл тэглэх</span>
-												</DropdownMenuItem>
-											</AlertDialogTrigger>
-											<AlertDialogContent className="border-border bg-background shadow-shadow border-2">
-												<AlertDialogHeader>
-													<AlertDialogTitle className="font-heading text-lg">
-														Үлдэгдэл тэглэх
-													</AlertDialogTitle>
-													<AlertDialogDescription>
-														Бүтээгдэхүүний үлдэгдлийг 0 болгоно.
-													</AlertDialogDescription>
-												</AlertDialogHeader>
-												<AlertDialogFooter className="mt-6 flex gap-3">
-													<AlertDialogCancel asChild>
-														<Button className="flex-1" variant="outline">
-															Цуцлах
-														</Button>
-													</AlertDialogCancel>
-													<AlertDialogAction asChild>
-														<Button
-															className="flex-1"
-															disabled={isSetStockPending}
-															onClick={handleMarkOutOfStock}
-														>
-															Тэглэх
-														</Button>
-													</AlertDialogAction>
-												</AlertDialogFooter>
-											</AlertDialogContent>
-										</AlertDialog>
-										<DropdownMenuSeparator className="bg-border" />
-										<DropdownMenuItem
-											className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
-											onSelect={(e) => {
-												e.stopPropagation();
-												e.preventDefault();
-												openProductDetailsInNewPage();
-											}}
-										>
-											<Eye className="h-4 w-4" />
-											<span>Шинэ цонхонд нээх</span>
-										</DropdownMenuItem>
-									</>
-								}
-								id={product.id}
-								isDeletePending={isDeletePending}
-								setIsEditDialogOpen={setIsEditDialogOpen}
-							/>
-						</div>
+						)}
 					</div>
-				</CardContent>
-			</Card>
+				) : null}
+				<AlertDialog onOpenChange={setIsActivateConfirmOpen} open={isActivateConfirmOpen}>
+					<AlertDialogContent className="border-border bg-background border">
+						<AlertDialogHeader>
+							<AlertDialogTitle className="font-heading text-lg">
+								Бүтээгдэхүүнийг идэвхжүүлэх
+							</AlertDialogTitle>
+							<AlertDialogDescription>
+								«{product.name}»-ийг идэвхтэй төлөвт оруулах уу? Дэлгүүрт харагдана.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter className="mt-6 flex gap-3">
+							<AlertDialogCancel asChild>
+								<Button className="flex-1" variant="outline">
+									Цуцлах
+								</Button>
+							</AlertDialogCancel>
+							<AlertDialogAction asChild>
+								<Button
+									className="flex-1"
+									disabled={isUpdateFieldPending}
+									onClick={handleConfirmActivateProduct}
+								>
+									Идэвхжүүлэх
+								</Button>
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			</div>
 		</>
 	);
 };

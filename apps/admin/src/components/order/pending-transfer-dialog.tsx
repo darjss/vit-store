@@ -141,7 +141,7 @@ export default function PendingTransferDialog({ onOpenChange, open }: PendingTra
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-hidden border-2 p-0 sm:max-w-2xl">
+			<DialogContent className="border-border bg-card max-h-[85vh] max-w-[95vw] overflow-hidden border p-0 sm:max-w-2xl">
 				<DialogHeader className="border-border border-b px-4 py-4 sm:px-6">
 					<DialogTitle>Шилжүүлэг баталгаажуулах</DialogTitle>
 					<DialogDescription>Хэрэглэгч төлсөн гэж мэдэгдсэн дансны шилжүүлгүүд</DialogDescription>
@@ -161,16 +161,15 @@ export default function PendingTransferDialog({ onOpenChange, open }: PendingTra
 									(confirmTransfer.isPending || rejectTransfer.isPending);
 
 								return (
-									<div
-										className="border-border bg-background shadow-hard-sm border-2 p-4"
-										key={claim.paymentNumber}
-									>
+									<div className="border-border bg-background border p-4" key={claim.paymentNumber}>
 										<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 											<div className="min-w-0 space-y-2">
 												<div className="flex flex-wrap items-center gap-2">
 													<span className="font-heading font-black">#{claim.orderNumber}</span>
 													<span className="text-muted-foreground text-xs">
-														{new Date(claim.updatedAt ?? claim.createdAt).toLocaleString("mn-MN")}
+														{new Date(claim.updatedAt ?? claim.createdAt).toLocaleString("mn-MN", {
+															timeZone: "Asia/Ulaanbaatar",
+														})}
 													</span>
 												</div>
 												<div className="flex items-center gap-1.5 text-sm">

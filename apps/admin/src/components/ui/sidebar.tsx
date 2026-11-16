@@ -336,7 +336,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-header"
 			data-sidebar="header"
 			className={cn(
-				"flex flex-col gap-2 border-b-2 border-b-border p-2",
+				"flex flex-col gap-2 border-b border-b-border p-2",
 				className,
 			)}
 			{...props}
@@ -350,7 +350,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-footer"
 			data-sidebar="footer"
 			className={cn(
-				"flex flex-col gap-2 border-t-2 border-t-border p-2",
+				"flex flex-col gap-2 border-t border-t-border p-2",
 				className,
 			)}
 			{...props}
@@ -378,7 +378,7 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
 			data-slot="sidebar-group"
 			data-sidebar="group"
 			className={cn(
-				"relative flex w-full min-w-0 flex-col border-b-2 border-b-border p-2 last:border-b-0",
+				"relative flex w-full min-w-0 flex-col border-b border-b-border p-2 last:border-b-0",
 				className,
 			)}
 			{...props}
@@ -625,7 +625,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
 			data-slot="sidebar-menu-sub"
 			data-sidebar="menu-sub"
 			className={cn(
-				"mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-2 border-l-foreground/50 px-2.5 py-0.5",
+				"mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-l-foreground/50 px-2.5 py-0.5",
 				"group-data-[collapsible=icon]:hidden",
 				className,
 			)}

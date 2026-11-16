@@ -12,9 +12,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
 					description:
 						"group-[.toast]:text-muted-foreground ml-2 text-sm font-sans",
 					actionButton:
-						"group-[.toast]:bg-secondary group-[.toast]:text-secondary-foreground py-1 px-2 bg-secondary border-border shadow border-2 ml-auto h-fit min-w-fit",
+						"group-[.toast]:bg-secondary group-[.toast]:text-secondary-foreground py-1 px-2 bg-secondary border-border shadow border ml-auto h-fit min-w-fit",
 					cancelButton:
-						"group-[.toast]:bg-accent group-[.toast]:text-accent-foreground py-1 px-2 text-sm bg-accent border-border shadow border-2 ml-auto h-fit min-w-fit",
+						"group-[.toast]:bg-accent group-[.toast]:text-accent-foreground py-1 px-2 text-sm bg-accent border-border shadow border ml-auto h-fit min-w-fit",
 					title: "ml-2 font-sans",
 					closeButton: "absolute bg-accent -top-1 -left-1 rounded-full p-0.5",
 				},

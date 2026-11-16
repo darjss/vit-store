@@ -358,7 +358,7 @@ export default function PurchaseForm({
 				</div>
 			</div>
 
-			<div className="rounded-base border-border bg-card border-2 p-4">
+			<div className="rounded-base border-border bg-card border p-4">
 				<div className="flex items-center justify-between text-sm">
 					<span className="text-muted-foreground">Барааны дүн</span>
 					<span>{formatCurrency(subtotal)}</span>

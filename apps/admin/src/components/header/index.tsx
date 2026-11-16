@@ -1,98 +1,80 @@
-import { useNavigate } from "@tanstack/react-router";
-import { Search, UserRound } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { ChevronLeft, Search } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "../ui/button";
+import { labelForBreadcrumb } from "@/lib/constants";
 import { SidebarTrigger } from "../ui/sidebar";
-import BreadCrumbs from "./breadcrumb";
 import SearchBar from "./search-bar";
-import UserData from "./user-data";
 
 const Header = () => {
 	const navigate = useNavigate();
+	const pathname = useLocation({ select: (location) => location.pathname });
+	const [section, detail] = pathname.split("/").filter(Boolean);
+	const title = section ? (labelForBreadcrumb(section) ?? section) : "Өнөөдөр";
+	// Record pages like /orders/150 show their own number, so the header only needs the way back.
+	const detailLabel = detail === undefined ? undefined : labelForBreadcrumb(detail);
 
 	const handleSelectProduct = (productId: number) => {
-		navigate({
-			params: { id: String(productId) },
-			to: "/products/$id",
-		});
+		navigate({ params: { id: String(productId) }, to: "/products/$id" });
 	};
 
 	const handleSelectOrder = (orderId: number) => {
-		navigate({
-			params: { id: String(orderId) },
-			to: "/orders/$id",
-		});
+		navigate({ params: { id: String(orderId) }, to: "/orders/$id" });
 	};
 
 	return (
-		<header className="border-border shadow-shadow sticky top-0 z-40 w-full border-b-4 bg-transparent">
-			<div className="flex h-16 items-center justify-between px-3 sm:px-4">
-				<div className="flex items-center gap-2 sm:gap-3">
-					<SidebarTrigger
-						aria-label="Хажуугийн цэс нээх"
-						className="rounded-base border-border bg-background text-foreground/70 shadow-shadow ring-offset-background hover:text-foreground focus-visible:ring-ring border-2 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
-					/>
-
-					<div className="select-none">
-						<BreadCrumbs />
+		<header className="sticky top-0 z-40 w-full border-b bg-white">
+			<div className="flex h-12 items-center gap-2 px-3 md:px-4">
+				<SidebarTrigger
+					aria-label="Хажуугийн цэс"
+					className="text-muted-foreground hover:bg-muted -ml-1 hidden size-8 border-0 bg-transparent shadow-none md:flex"
+				/>
+				{detail === undefined ? (
+					<h1 className="flex-1 truncate text-base font-semibold">{title}</h1>
+				) : (
+					<div className="flex min-w-0 flex-1 items-center gap-1">
+						<Link
+							className="text-muted-foreground hover:text-foreground -ml-1 flex h-9 items-center pr-1 text-[15px]"
+							to={`/${section}`}
+						>
+							<ChevronLeft className="size-5" />
+							{title}
+						</Link>
+						{detailLabel ? (
+							<>
+								<span className="text-muted-foreground">/</span>
+								<h1 className="truncate text-[15px] font-semibold">{detailLabel}</h1>
+							</>
+						) : null}
 					</div>
+				)}
+
+				<div className="hidden w-80 md:block">
+					<SearchBar
+						onSelectOrder={handleSelectOrder}
+						onSelectProduct={handleSelectProduct}
+						placeholder="Бараа, захиалга, утас хайх"
+					/>
 				</div>
 
-				<div className="hidden min-w-0 flex-1 px-4 md:block">
-					<div className="mx-auto w-full max-w-xl">
+				<Popover>
+					<PopoverTrigger asChild className="md:hidden">
+						<button
+							aria-label="Хайх"
+							className="text-foreground -mr-2 flex size-10 items-center justify-center"
+							type="button"
+						>
+							<Search className="size-5" />
+						</button>
+					</PopoverTrigger>
+					<PopoverContent align="end" className="w-screen max-w-sm border p-2" sideOffset={6}>
 						<SearchBar
+							autoFocus
 							onSelectOrder={handleSelectOrder}
 							onSelectProduct={handleSelectProduct}
-							placeholder="Бүтээгдэхүүн, захиалга хайх..."
+							placeholder="Бараа, захиалга, утас хайх"
 						/>
-					</div>
-				</div>
-
-				<div className="flex items-center gap-2">
-					<Popover>
-						<PopoverTrigger asChild className="md:hidden">
-							<Button
-								aria-label="Хайх"
-								className="rounded-base border-border bg-background text-foreground shadow-shadow ring-offset-background focus-visible:ring-ring border-2 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
-								size="icon"
-								variant="secondary"
-							>
-								<Search className="h-6 w-6" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent
-							align="end"
-							className="rounded-base border-border bg-background text-foreground shadow-shadow w-screen max-w-sm border-2 p-3 sm:p-4"
-							sideOffset={8}
-						>
-							<h4 className="mb-3 text-base font-medium">Хайх</h4>
-							<SearchBar
-								autoFocus
-								onSelectOrder={handleSelectOrder}
-								onSelectProduct={handleSelectProduct}
-								placeholder="Бүтээгдэхүүн, захиалга хайх..."
-							/>
-						</PopoverContent>
-					</Popover>
-
-					<Popover>
-						<PopoverTrigger asChild>
-							<Button
-								aria-label="Хэрэглэгчийн цэс нээх"
-								className="rounded-base border-border bg-background shadow-shadow ring-offset-background focus-visible:ring-ring flex h-12 w-12 items-center justify-center border-2 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
-							>
-								<UserRound className="text-foreground h-7 w-7" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent
-							align="end"
-							className="rounded-base border-border bg-background text-foreground shadow-shadow w-64 border-2 p-2"
-							sideOffset={8}
-						>
-							<UserData />
-						</PopoverContent>
-					</Popover>
-				</div>
+					</PopoverContent>
+				</Popover>
 			</div>
 		</header>
 	);

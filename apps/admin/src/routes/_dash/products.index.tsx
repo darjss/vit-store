@@ -1,20 +1,13 @@
 import { useInfiniteQuery, useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { status as productStatuses } from "@vit/shared/constants";
-import { ChevronDown, ChevronUp, Loader2, PlusCircle, RotateCcw, Search, X } from "lucide-react";
+import { Loader2, Plus, PlusCircle, RotateCcw, Search, X } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { integer, minValue, number, object, optional, picklist, pipe, string } from "valibot";
+import { FilterChip } from "@/components/filter-chip";
 import ProductCard from "@/components/product/product-card";
 import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	DEFAULT_PRODUCTS_PAGE_SIZE,
@@ -26,7 +19,6 @@ import {
 	type ProductListStatus,
 	type ProductsSearch,
 } from "@/features/products/list/products-list.helpers";
-import { parsePicklistValue } from "@/lib/parse-select";
 import type { RouterOutputs } from "@/lib/types";
 import { trpc, trpcClient } from "@/utils/trpc";
 
@@ -180,19 +172,18 @@ function RouteComponent() {
 				categoryId: undefined,
 				page: 1,
 				searchTerm: undefined,
-				sortDirection: "asc",
+				sortDirection: undefined,
 				sortField: undefined,
 				status: undefined,
 			}),
 			to: "/products",
 		});
 	};
-	const handleSort = (field: string) => {
-		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
+	const handleSortChange = (field: string | undefined, direction: "asc" | "desc") => {
 		navigate({
 			search: (prev: ProductsSearch) => ({
 				...prev,
-				sortDirection: newDirection,
+				sortDirection: field ? direction : undefined,
 				sortField: field,
 			}),
 			to: "/products",
@@ -202,17 +193,19 @@ function RouteComponent() {
 	return (
 		<div className="space-y-3">
 			<div className="relative">
-				<Search className="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2" />
-				<Input
-					className="rounded-base border-border bg-background h-12 w-full border-2 pr-14 pl-14 shadow-none focus:translate-y-0 focus:shadow-none"
+				<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+				<input
+					className="focus:border-foreground border-input h-11 w-full border bg-white pr-20 pl-9 text-[15px] outline-none"
+					enterKeyHint="search"
 					onChange={(e) => handleSearchChange(e.target.value)}
-					placeholder="Бүтээгдэхүүн хайх..."
+					placeholder="Барааны нэр эсвэл брэнд"
+					type="search"
 					value={searchInput}
 				/>
 				{searchInput && (
 					<button
 						aria-label="Хайлт цэвэрлэх"
-						className="rounded-base border-border bg-secondary text-secondary-foreground hover:bg-muted absolute top-1/2 right-14 z-10 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center border-2 transition-colors"
+						className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 z-10 flex size-9 -translate-y-1/2 items-center justify-center"
 						onClick={handleClearSearch}
 						type="button"
 					>
@@ -220,8 +213,8 @@ function RouteComponent() {
 					</button>
 				)}
 				{(isSearching || isTypingSearch) && (
-					<div className="pointer-events-none absolute top-1/2 right-1 flex h-10 w-12 -translate-y-1/2 items-center justify-center">
-						<Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+					<div className="pointer-events-none absolute top-1/2 right-10 flex size-9 -translate-y-1/2 items-center justify-center">
+						<Loader2 className="text-muted-foreground size-4 animate-spin" />
 					</div>
 				)}
 			</div>
@@ -229,9 +222,9 @@ function RouteComponent() {
 			<Suspense
 				fallback={
 					<div className="flex w-full flex-row flex-wrap gap-2">
-						<Skeleton className="rounded-base border-border h-10 w-full min-w-[140px] border-2 sm:w-[160px]" />
-						<Skeleton className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[160px]" />
-						<Skeleton className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[140px]" />
+						<Skeleton className="rounded-base border-border h-10 w-full min-w-[140px] border sm:w-[160px]" />
+						<Skeleton className="rounded-base border-border h-10 w-full min-w-[120px] border sm:w-[160px]" />
+						<Skeleton className="rounded-base border-border h-10 w-full min-w-[120px] border sm:w-[140px]" />
 					</div>
 				}
 			>
@@ -241,7 +234,7 @@ function RouteComponent() {
 					hasActiveFilters={hasActiveFilters}
 					onFilterChange={handleFilterChange}
 					onResetFilters={handleResetFilters}
-					onSort={handleSort}
+					onSortChange={handleSortChange}
 					onStatusChange={handleStatusChange}
 					sortDirection={sortDirection}
 					sortField={sortField}
@@ -275,7 +268,7 @@ function RouteComponent() {
 								</Button>
 							</div>
 							<div
-								className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 xl:grid-cols-3 ${isSearching ? "opacity-50" : "opacity-100"}`}
+								className={`grid grid-cols-1 border transition-opacity duration-200 xl:grid-cols-2 ${isSearching ? "opacity-50" : "opacity-100"}`}
 							>
 								{instantSearchQuery.data?.map((product) => (
 									<ProductCard
@@ -288,7 +281,7 @@ function RouteComponent() {
 							</div>
 						</>
 					) : !isSearching && !isTypingSearch ? (
-						<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
+						<div className="rounded-base border-border text-muted-foreground border p-8 text-center">
 							&ldquo;{normalizedDebouncedSearch}&rdquo; хайлтаар үр дүн олдсонгүй
 						</div>
 					) : null}
@@ -317,7 +310,7 @@ function ProductsFilters({
 	hasActiveFilters,
 	onFilterChange,
 	onResetFilters,
-	onSort,
+	onSortChange,
 	onStatusChange,
 	sortDirection,
 	sortField,
@@ -328,7 +321,7 @@ function ProductsFilters({
 	hasActiveFilters: boolean;
 	onFilterChange: (field: "brandId" | "categoryId", value: number | undefined) => void;
 	onResetFilters: () => void;
-	onSort: (field: string) => void;
+	onSortChange: (field: string | undefined, direction: "asc" | "desc") => void;
 	onStatusChange: (value: ProductListStatus) => void;
 	sortDirection?: "asc" | "desc";
 	sortField?: string;
@@ -341,130 +334,91 @@ function ProductsFilters({
 		],
 	});
 
+	const sortValue = sortField && sortDirection ? `${sortField}:${sortDirection}` : "default";
 	return (
-		<>
-			<div className="flex w-full flex-row gap-2">
-				<Select
-					onValueChange={(value) =>
-						onFilterChange("categoryId", value === "all" ? undefined : Number.parseInt(value, 10))
-					}
-					value={categoryId === undefined ? "all" : categoryId.toString()}
-				>
-					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[140px] border-2 sm:w-[160px]">
-						<SelectValue placeholder="Бүх ангилал" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">Бүх ангилал</SelectItem>
-						{categories.map((category) => (
-							<SelectItem key={category.id} value={category.id.toString()}>
-								{category.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Select
-					onValueChange={(value) =>
-						onFilterChange("brandId", value === "all" ? undefined : Number.parseInt(value, 10))
-					}
-					value={brandId === undefined ? "all" : brandId.toString()}
-				>
-					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[160px]">
-						<SelectValue placeholder="Бүх брэнд" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">Бүх брэнд</SelectItem>
-						{brands.map((brand) => (
-							<SelectItem key={brand.id} value={brand.id.toString()}>
-								{brand.name}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Select
-					onValueChange={(value) => {
-						const parsed = parsePicklistValue(productStatuses, value);
-						if (parsed) {
-							onStatusChange(parsed);
-						}
-					}}
+		<div className="flex items-center gap-2">
+			<div className="-mx-3 flex min-w-0 flex-1 [scrollbar-width:none] items-center gap-2 overflow-x-auto px-3 md:mx-0 md:px-0">
+				<FilterChip
+					idle="active"
+					label="Төлөв"
+					onChange={onStatusChange}
+					options={[
+						{ label: "Идэвхтэй", value: "active" },
+						{ label: "Ноорог", value: "draft" },
+						{ label: "Дууссан", value: "out_of_stock" },
+					]}
 					value={status}
-				>
-					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[140px]">
-						<SelectValue placeholder="Төлөв" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="active">Идэвхтэй</SelectItem>
-						<SelectItem value="draft">Ноорог</SelectItem>
-						<SelectItem value="out_of_stock">Дууссан</SelectItem>
-					</SelectContent>
-				</Select>
+				/>
+				<FilterChip
+					idle="all"
+					label="Ангилал"
+					onChange={(value) =>
+						onFilterChange("categoryId", value === "all" ? undefined : Number(value))
+					}
+					options={[
+						{ label: "Бүх ангилал", value: "all" },
+						...categories.map((category) => ({ label: category.name, value: String(category.id) })),
+					]}
+					value={categoryId === undefined ? "all" : String(categoryId)}
+				/>
+				<FilterChip
+					idle="all"
+					label="Брэнд"
+					onChange={(value) =>
+						onFilterChange("brandId", value === "all" ? undefined : Number(value))
+					}
+					options={[
+						{ label: "Бүх брэнд", value: "all" },
+						...brands.map((brand) => ({ label: brand.name, value: String(brand.id) })),
+					]}
+					value={brandId === undefined ? "all" : String(brandId)}
+				/>
+				<FilterChip
+					idle="default"
+					label="Эрэмбэ"
+					onChange={(value) => {
+						const [field, direction] = value.split(":");
+						onSortChange(
+							field && direction ? field : undefined,
+							direction === "asc" ? "asc" : "desc",
+						);
+					}}
+					options={[
+						{ label: "Анхдагч", value: "default" },
+						{ label: "Сүүлд зассан", value: "updatedAt:desc" },
+						{ label: "Үлдэгдэл багаас", value: "stock:asc" },
+						{ label: "Үлдэгдэл ихээс", value: "stock:desc" },
+						{ label: "Хямдаас", value: "price:asc" },
+						{ label: "Үнэтэйгээс", value: "price:desc" },
+					]}
+					value={sortValue}
+				/>
+				{hasActiveFilters && (
+					<button
+						className="text-muted-foreground hover:text-foreground flex h-9 shrink-0 items-center gap-1.5 px-2 text-sm"
+						onClick={onResetFilters}
+						type="button"
+					>
+						<RotateCcw className="size-3.5" />
+						Цэвэрлэх
+					</button>
+				)}
 			</div>
 
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex flex-wrap gap-2">
-					{(hasActiveFilters || sortField !== "") && (
-						<Button
-							className="rounded-base border-border h-10 border-2 px-3"
-							onClick={onResetFilters}
-							size="sm"
-							variant="outline"
-						>
-							<RotateCcw className="mr-1 h-4 w-4" />
-						</Button>
-					)}
-					<Button
-						className="rounded-base border-border h-10 border-2 px-3"
-						onClick={() => onSort("stock")}
-						size="sm"
-						variant={sortField === "stock" ? "default" : "outline"}
-					>
-						үлдэгдэл
-						{sortField === "stock" &&
-							(sortDirection === "asc" ? (
-								<ChevronUp className="ml-1 h-4 w-4" />
-							) : (
-								<ChevronDown className="ml-1 h-4 w-4" />
-							))}
-					</Button>
-					<Button
-						className="rounded-base border-border h-10 border-2 px-3"
-						onClick={() => onSort("price")}
-						size="sm"
-						variant={sortField === "price" ? "default" : "outline"}
-					>
-						Үнэ
-						{sortField === "price" &&
-							(sortDirection === "asc" ? (
-								<ChevronUp className="ml-1 h-4 w-4" />
-							) : (
-								<ChevronDown className="ml-1 h-4 w-4" />
-							))}
-					</Button>
-					<Button
-						className="rounded-base border-border h-10 border-2 px-3"
-						onClick={() => onSort("updatedAt")}
-						size="sm"
-						variant={sortField === "updatedAt" ? "default" : "outline"}
-					>
-						Огноо
-						{sortField === "updatedAt" &&
-							(sortDirection === "asc" ? (
-								<ChevronUp className="ml-1 h-4 w-4" />
-							) : (
-								<ChevronDown className="ml-1 h-4 w-4" />
-							))}
-					</Button>
-				</div>
-
-				<Link to="/products/add">
-					<Button className="rounded-base border-border bg-primary shadow-shadow hover:bg-primary/90 h-10 gap-2 border-2 px-4">
-						<PlusCircle className="h-5 w-5" />
-						<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
-						<span className="sm:hidden">Нэмэх</span>
-					</Button>
-				</Link>
-			</div>
-		</>
+			<Link className="hidden md:block" to="/products/add">
+				<Button className="h-10 gap-2 px-4 text-sm">
+					<PlusCircle className="size-4" />
+					Бараа нэмэх
+				</Button>
+			</Link>
+			<Link
+				aria-label="Бараа нэмэх"
+				className="bg-primary border-foreground fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 flex size-14 items-center justify-center rounded-full border shadow-lg md:hidden"
+				to="/products/add"
+			>
+				<Plus className="size-6" />
+			</Link>
+		</div>
 	);
 }
 
@@ -558,7 +512,7 @@ function ProductsList({
 
 	if (products.length === 0) {
 		return (
-			<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
+			<div className="rounded-base border-border text-muted-foreground border p-8 text-center">
 				{searchTerm
 					? `"${searchTerm}" олдсонгүй`
 					: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
@@ -568,7 +522,7 @@ function ProductsList({
 
 	return (
 		<div className="space-y-4">
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+			<div className="grid grid-cols-1 border xl:grid-cols-2">
 				{products.map((product) => (
 					<ProductCard brands={brands} categories={categories} key={product.id} product={product} />
 				))}
@@ -586,14 +540,14 @@ function ProductsList({
 
 function SearchResultsSkeleton() {
 	return (
-		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+		<div className="grid grid-cols-1 border xl:grid-cols-2">
 			{Array.from({ length: 6 }).map((_, index) => (
 				<div
-					className="rounded-base border-border bg-card overflow-hidden border-2 shadow-none"
+					className="rounded-base border-border bg-card overflow-hidden border shadow-none"
 					key={index}
 				>
 					<div className="flex flex-row">
-						<div className="border-border bg-background flex h-20 w-20 shrink-0 items-center justify-center border-r-2 p-2">
+						<div className="border-border bg-background flex h-20 w-20 shrink-0 items-center justify-center border-r p-2">
 							<Skeleton className="rounded-base h-full w-full" />
 						</div>
 						<div className="flex flex-1 flex-col p-3">

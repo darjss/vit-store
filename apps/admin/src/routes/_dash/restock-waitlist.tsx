@@ -56,7 +56,7 @@ function RestockWaitlistPage() {
 				</div>
 
 				{data.length === 0 ? (
-					<div className="border-border bg-card shadow-hard-sm flex flex-col items-center justify-center gap-3 border-2 p-10 text-center">
+					<div className="border-border bg-card flex flex-col items-center justify-center gap-3 border p-10 text-center">
 						<Package className="text-muted-foreground h-10 w-10" />
 						<p className="font-heading text-base">Хүлээлт байхгүй</p>
 						<p className="text-muted-foreground text-sm">
@@ -67,22 +67,22 @@ function RestockWaitlistPage() {
 					<div className="space-y-3">
 						{data.map((row, index) => (
 							<Link
-								className="border-border bg-card shadow-hard-sm hover:bg-muted/40 flex items-center gap-3 border-2 p-3 transition-colors sm:gap-4 sm:p-4"
+								className="border-border bg-card hover:bg-muted/40 flex items-center gap-3 border p-3 transition-colors sm:gap-4 sm:p-4"
 								key={row.productId}
 								params={{ id: String(row.productId) }}
 								to="/products/$id"
 							>
-								<div className="border-border bg-primary/15 font-heading flex h-10 w-10 shrink-0 items-center justify-center border-2 text-sm">
+								<div className="border-border bg-primary/15 font-heading flex h-10 w-10 shrink-0 items-center justify-center border text-sm">
 									{index + 1}
 								</div>
 								{row.image ? (
 									<img
 										alt=""
-										className="border-border h-14 w-14 shrink-0 border-2 object-contain"
+										className="border-border h-14 w-14 shrink-0 border object-contain"
 										src={row.image}
 									/>
 								) : (
-									<div className="border-border bg-muted flex h-14 w-14 shrink-0 items-center justify-center border-2">
+									<div className="border-border bg-muted flex h-14 w-14 shrink-0 items-center justify-center border">
 										<Package className="text-muted-foreground h-5 w-5" />
 									</div>
 								)}

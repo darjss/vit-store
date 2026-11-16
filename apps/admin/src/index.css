@@ -6,7 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-	--color-background: oklch(0.99 0 0);
+	--color-background: oklch(0.975 0.014 90);
 	--color-foreground: oklch(0.15 0 0);
 	--color-card: oklch(1 0 0);
 	--color-card-foreground: oklch(0.15 0 0);
@@ -16,7 +16,7 @@
 	--color-primary-foreground: oklch(0.15 0 0);
 	--color-secondary: oklch(0.15 0 0);
 	--color-secondary-foreground: oklch(0.99 0 0);
-	--color-muted: oklch(0.95 0 0);
+	--color-muted: oklch(0.955 0.018 88);
 	--color-muted-foreground: oklch(0.45 0 0);
 	--color-accent: oklch(0.92 0.15 95);
 	--color-accent-foreground: oklch(0.15 0 0);
@@ -24,9 +24,9 @@
 	--color-destructive-foreground: oklch(0.99 0 0);
 	--color-error: oklch(0.92 0.18 15);
 	--color-error-foreground: oklch(0.15 0 0);
-	--color-border: oklch(0.15 0 0);
-	--color-input: oklch(0.922 0 0);
-	--color-ring: oklch(0.15 0 0);
+	--color-border: oklch(0.88 0.016 85);
+	--color-input: oklch(0.8 0.02 85);
+	--color-ring: oklch(0.5 0 0);
 	--color-chart-1: oklch(0.92 0.15 95);
 	--color-chart-2: oklch(0.75 0.12 85);
 	--color-chart-3: oklch(0.65 0.18 105);
@@ -311,22 +311,6 @@
 }
 
 @layer utilities {
-	.shadow-hard {
-		box-shadow: 4px 4px 0px 0px var(--color-border);
-	}
-	.shadow-hard-sm {
-		box-shadow: 2px 2px 0px 0px var(--color-border);
-	}
-	.shadow-hard-lg {
-		box-shadow: 8px 8px 0px 0px var(--color-border);
-	}
-	.shadow-hard-xl {
-		box-shadow: 12px 12px 0px 0px var(--color-border);
-	}
-	.shadow-hard-reverse {
-		box-shadow: -4px 4px 0px 0px var(--color-border);
-	}
-
 	.text-stroke {
 		-webkit-text-stroke: 1px var(--color-foreground);
 	}
@@ -347,17 +331,5 @@
 	.bg-dots-pattern {
 		background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
 		background-size: 20px 20px;
-	}
-}
-
-@layer components {
-	.brutal-btn {
-		@apply bg-background border-border border-2 px-6 py-3 font-bold tracking-wider uppercase transition-all hover:translate-y-1 hover:shadow-none active:translate-y-1 active:shadow-none;
-		box-shadow: 4px 4px 0px 0px var(--color-border);
-	}
-
-	.brutal-card {
-		@apply bg-background border-border border-2 p-4;
-		box-shadow: 4px 4px 0px 0px var(--color-border);
 	}
 }

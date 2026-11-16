@@ -16,6 +16,7 @@ import { Route as DashAnalyticsRouteImport } from './routes/_dash/analytics'
 import { Route as DashBrandsRouteImport } from './routes/_dash/brands'
 import { Route as DashCategoriesRouteImport } from './routes/_dash/categories'
 import { Route as DashCustomersRouteImport } from './routes/_dash/customers'
+import { Route as DashPackRouteImport } from './routes/_dash/pack'
 import { Route as DashRestockWaitlistRouteImport } from './routes/_dash/restock-waitlist'
 import { Route as DashReviewProductsRouteImport } from './routes/_dash/review-products'
 import { Route as DashSandboxRouteImport } from './routes/_dash/sandbox'
@@ -61,6 +62,11 @@ const DashCategoriesRoute = DashCategoriesRouteImport.update({
 const DashCustomersRoute = DashCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashPackRoute = DashPackRouteImport.update({
+  id: '/pack',
+  path: '/pack',
   getParentRoute: () => DashRouteRoute,
 } as any)
 const DashRestockWaitlistRoute = DashRestockWaitlistRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/brands': typeof DashBrandsRoute
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
+  '/pack': typeof DashPackRoute
   '/restock-waitlist': typeof DashRestockWaitlistRoute
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/brands': typeof DashBrandsRoute
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
+  '/pack': typeof DashPackRoute
   '/restock-waitlist': typeof DashRestockWaitlistRoute
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/_dash/brands': typeof DashBrandsRoute
   '/_dash/categories': typeof DashCategoriesRoute
   '/_dash/customers': typeof DashCustomersRoute
+  '/_dash/pack': typeof DashPackRoute
   '/_dash/restock-waitlist': typeof DashRestockWaitlistRoute
   '/_dash/review-products': typeof DashReviewProductsRoute
   '/_dash/sandbox': typeof DashSandboxRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/brands'
     | '/categories'
     | '/customers'
+    | '/pack'
     | '/restock-waitlist'
     | '/review-products'
     | '/sandbox'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/brands'
     | '/categories'
     | '/customers'
+    | '/pack'
     | '/restock-waitlist'
     | '/review-products'
     | '/sandbox'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/_dash/brands'
     | '/_dash/categories'
     | '/_dash/customers'
+    | '/_dash/pack'
     | '/_dash/restock-waitlist'
     | '/_dash/review-products'
     | '/_dash/sandbox'
@@ -305,6 +317,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/customers'
       preLoaderRoute: typeof DashCustomersRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/pack': {
+      id: '/_dash/pack'
+      path: '/pack'
+      fullPath: '/pack'
+      preLoaderRoute: typeof DashPackRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/restock-waitlist': {
@@ -399,6 +418,7 @@ interface DashRouteRouteChildren {
   DashBrandsRoute: typeof DashBrandsRoute
   DashCategoriesRoute: typeof DashCategoriesRoute
   DashCustomersRoute: typeof DashCustomersRoute
+  DashPackRoute: typeof DashPackRoute
   DashRestockWaitlistRoute: typeof DashRestockWaitlistRoute
   DashReviewProductsRoute: typeof DashReviewProductsRoute
   DashSandboxRoute: typeof DashSandboxRoute
@@ -418,6 +438,7 @@ const DashRouteRouteChildren: DashRouteRouteChildren = {
   DashBrandsRoute: DashBrandsRoute,
   DashCategoriesRoute: DashCategoriesRoute,
   DashCustomersRoute: DashCustomersRoute,
+  DashPackRoute: DashPackRoute,
   DashRestockWaitlistRoute: DashRestockWaitlistRoute,
   DashReviewProductsRoute: DashReviewProductsRoute,
   DashSandboxRoute: DashSandboxRoute,

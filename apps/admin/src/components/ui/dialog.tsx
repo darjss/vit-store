@@ -47,7 +47,7 @@ const DialogBackdrop = React.forwardRef<HTMLDivElement, IDialogBackgroupProps>(
 DialogBackdrop.displayName = "DialogBackdrop";
 
 const dialogVariants = cva(
-	`fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded border-2 bg-background shadow-lg duration-200
+	`fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded border bg-background shadow-lg duration-200
   data-[state=open]:animate-in
   data-[state=open]:fade-in-0
   data-[state=open]:zoom-in-95
@@ -126,7 +126,7 @@ const DialogDescription = ({
 };
 
 const dialogFooterVariants = cva(
-	"flex min-h-12 items-center justify-end gap-4 border-t-2 px-4 py-2",
+	"flex min-h-12 items-center justify-end gap-4 border-t px-4 py-2",
 	{
 		variants: {
 			variant: {
@@ -165,7 +165,7 @@ const DialogFooter = ({
 };
 
 const dialogHeaderVariants = cva(
-	"flex min-h-12 items-start justify-between gap-2 border-b-2 px-0 py-3",
+	"flex min-h-12 items-start justify-between gap-2 border-b px-0 py-3",
 	{
 		variants: {
 			variant: {

@@ -4,7 +4,7 @@ import {
 	PRODUCT_PER_PAGE,
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
-import { PlusCircle, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Plus, PlusCircle, Search, X } from "lucide-react";
 import { Suspense, useState } from "react";
 import {
 	type InferOutput,
@@ -18,9 +18,7 @@ import {
 	pipe,
 	string,
 } from "valibot";
-import SubmitButton from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrdersPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import OrdersFilters from "@/components/order/orders-filters";
@@ -77,10 +75,9 @@ function RouteComponent() {
 
 	const effectivePaymentStatus = paymentStatus;
 	const [inputValue, setInputValue] = useState(searchTerm || "");
-	const [filtersOpen, setFiltersOpen] = useState(false);
 
+	// Status is a tab, not a filter, so it doesn't light up Цэвэрлэх.
 	const hasActiveFilters =
-		orderStatus !== "active" ||
 		paymentStatus !== undefined ||
 		sortField !== undefined ||
 		sortDirection !== undefined ||
@@ -148,24 +145,23 @@ function RouteComponent() {
 				page: 1,
 				paymentStatus: undefined,
 				searchTerm: undefined,
-				sortDirection: "asc",
+				sortDirection: undefined,
 				sortField: undefined,
 			},
 			to: "/orders",
 		});
 	};
 
-	const handleSort = (field: string) => {
-		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
+	const handleSortChange = (field: string, direction: "asc" | "desc") => {
 		navigate({
 			search: {
 				date,
 				orderStatus,
-				page,
+				page: 1,
 				pageSize,
 				paymentStatus,
 				searchTerm,
-				sortDirection: newDirection,
+				sortDirection: direction,
 				sortField: field,
 			},
 			to: "/orders",
@@ -173,102 +169,67 @@ function RouteComponent() {
 	};
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-5 px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
-			{/* Header */}
-			<div className="flex items-center justify-between gap-4">
-				<div>
-					<h1 className="font-heading text-2xl font-black tracking-tight sm:text-3xl">
-						Захиалгууд
-					</h1>
-					<p className="text-muted-foreground mt-0.5 text-sm">
-						Захиалгыг удирдах, илгээх, хүргэлтийн мэдээлэл оруулах
-					</p>
+		<div className="mx-auto max-w-7xl space-y-3">
+			<Link
+				aria-label="Захиалга нэмэх"
+				className="bg-primary border-foreground fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 flex size-14 items-center justify-center rounded-full border shadow-lg md:hidden"
+				to="/orders/add"
+			>
+				<Plus className="size-6" />
+			</Link>
+
+			<div className="flex gap-2">
+				<div className="relative flex-1">
+					<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+					<input
+						className="focus:border-foreground border-input h-11 w-full border bg-white pr-10 pl-9 text-[15px] outline-none"
+						enterKeyHint="search"
+						onBlur={() => inputValue !== (searchTerm ?? "") && handleSearch()}
+						onChange={(e) => setInputValue(e.target.value)}
+						onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+						placeholder="Захиалгын дугаар эсвэл утас"
+						type="search"
+						value={inputValue}
+					/>
+					{inputValue && (
+						<button
+							aria-label="Хайлтыг цэвэрлэх"
+							className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center"
+							onClick={clearSearch}
+							type="button"
+						>
+							<X className="size-4" />
+						</button>
+					)}
 				</div>
-				<Button asChild className="shadow-hard h-11 gap-2">
+				<Button asChild className="hidden h-11 gap-2 px-4 text-sm md:flex">
 					<Link to="/orders/add">
-						<PlusCircle className="h-4 w-4" />
-						<span className="hidden sm:inline">Захиалга нэмэх</span>
-						<span className="sm:hidden">Нэмэх</span>
+						<PlusCircle className="size-4" />
+						Захиалга нэмэх
 					</Link>
 				</Button>
 			</div>
 
-			{/* Search */}
-			<div className="relative">
-				<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-				<Input
-					className="border-border bg-card shadow-hard-sm h-12 border-2 pr-24 pl-10 text-base"
-					onChange={(e) => setInputValue(e.target.value)}
-					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-					placeholder="Захиалгын дугаар, утас хайх..."
-					value={inputValue}
-				/>
-				<div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
-					{inputValue && (
-						<Button
-							aria-label="Хайлтыг цэвэрлэх"
-							className="h-8 w-8"
-							onClick={clearSearch}
-							size="icon"
-							variant="ghost"
-						>
-							<X className="h-4 w-4" />
-						</Button>
-					)}
-					<SubmitButton aria-label="Хайх" className="h-9 px-3 text-xs" onClick={handleSearch}>
-						<Search className="h-4 w-4" />
-					</SubmitButton>
-				</div>
-			</div>
-
-			{/* Filters */}
-			<div className="space-y-3">
-				<div className="flex items-center gap-2 sm:hidden">
-					<Button
-						className="h-10 gap-2"
-						onClick={() => setFiltersOpen(!filtersOpen)}
-						size="sm"
-						variant={filtersOpen ? "default" : "outline"}
-					>
-						<SlidersHorizontal className="h-4 w-4" />
-						Шүүлтүүр
-						{hasActiveFilters && (
-							<span className="bg-primary-foreground text-primary ml-1 flex h-5 w-5 items-center justify-center text-[10px] font-bold">
-								!
-							</span>
-						)}
-					</Button>
-					{hasActiveFilters && (
-						<Button className="h-10 gap-1.5" onClick={handleResetFilters} size="sm" variant="ghost">
-							<RotateCcw className="h-3.5 w-3.5" />
-							Цэвэрлэх
-						</Button>
-					)}
-				</div>
-
-				<div className={`space-y-3 ${filtersOpen ? "block" : "hidden sm:block"}`}>
-					<OrdersFilters
-						date={date}
-						filtersActive={hasActiveFilters}
-						onFilterChange={handleFilterChange}
-						onResetFilters={handleResetFilters}
-						onSort={handleSort}
-						orderStatus={orderStatus}
-						pageSize={pageSize}
-						paymentStatus={paymentStatus}
-						searchTerm={searchTerm}
-						sortDirection={sortDirection}
-						sortField={sortField}
-					/>
-				</div>
-			</div>
+			<OrdersFilters
+				date={date}
+				filtersActive={hasActiveFilters}
+				onFilterChange={handleFilterChange}
+				onResetFilters={handleResetFilters}
+				onSortChange={handleSortChange}
+				orderStatus={orderStatus}
+				pageSize={pageSize}
+				paymentStatus={paymentStatus}
+				searchTerm={searchTerm}
+				sortDirection={sortDirection}
+				sortField={sortField}
+			/>
 
 			{/* Orders list */}
 			<Suspense
 				fallback={
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						{Array.from({ length: 6 }).map((_, i) => (
-							<Skeleton className="border-border shadow-hard-sm h-56 border-2" key={i} />
+							<Skeleton className="border-border h-56 border" key={i} />
 						))}
 					</div>
 				}

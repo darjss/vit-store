@@ -108,7 +108,7 @@ function BatchShipOrderDialogContent({
 	};
 
 	return (
-		<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-y-auto border-2 sm:max-w-2xl">
+		<DialogContent className="border-border bg-card max-h-[85vh] max-w-[95vw] overflow-y-auto border sm:max-w-2xl">
 			<DialogHeader className="px-4 sm:px-6">
 				<DialogTitle>TU хүргэлтийн бүс сонгох</DialogTitle>
 				<DialogDescription>Захиалга бүрт хаягт нь тохирох бүс сонгоно уу</DialogDescription>
@@ -144,7 +144,7 @@ function BatchShipOrderDialogContent({
 				) : null}
 
 				{orders.map((order) => (
-					<div className="border-border bg-background space-y-3 border-2 p-4" key={order.id}>
+					<div className="border-border bg-background space-y-3 border p-4" key={order.id}>
 						<div>
 							<p className="font-heading font-black">#{order.orderNumber}</p>
 							<p className="text-muted-foreground mt-1 text-sm">

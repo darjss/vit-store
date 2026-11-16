@@ -110,7 +110,7 @@ const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () =
 														</Button>
 														<Image
 															alt={brandName || "Брэндийн лого"}
-															className="border-border bg-background h-28 w-28 rounded-lg border-2 object-contain p-3 shadow-sm"
+															className="border-border bg-background h-28 w-28 rounded-lg border object-contain p-3 shadow-sm"
 															height={120}
 															layout="constrained"
 															src={currentImageUrl}
@@ -118,7 +118,7 @@ const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () =
 														/>
 													</div>
 												) : (
-													<div className="border-border bg-muted/30 flex h-28 w-28 items-center justify-center rounded-lg border-2 border-dashed">
+													<div className="border-border bg-muted/30 flex h-28 w-28 items-center justify-center rounded-lg border border-dashed">
 														<div className="text-center">
 															<ImagePlaceholderIcon className="text-muted-foreground mx-auto h-10 w-10" />
 															<p className="text-muted-foreground mt-2 text-xs">Лого байршуулах</p>
@@ -181,7 +181,7 @@ const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () =
 														</Button>
 														<Image
 															alt="Баннер"
-															className="border-border bg-background h-24 w-full rounded-lg border-2 object-cover shadow-sm"
+															className="border-border bg-background h-24 w-full rounded-lg border object-cover shadow-sm"
 															height={120}
 															layout="constrained"
 															src={bannerImageUrl}
@@ -189,7 +189,7 @@ const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () =
 														/>
 													</div>
 												) : (
-													<div className="border-border bg-muted/30 flex h-24 w-full items-center justify-center rounded-lg border-2 border-dashed">
+													<div className="border-border bg-muted/30 flex h-24 w-full items-center justify-center rounded-lg border border-dashed">
 														<div className="text-center">
 															<ImagePlaceholderIcon className="text-muted-foreground mx-auto h-10 w-10" />
 															<p className="text-muted-foreground mt-2 text-xs">

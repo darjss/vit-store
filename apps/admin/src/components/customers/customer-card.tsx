@@ -37,7 +37,7 @@ const CustomerCard = ({ customer }: { customer: Customer }) => {
 				</DialogContent>
 			</Dialog>
 
-			<Card className="rounded-base border-border border-2">
+			<Card className="rounded-base border-border border">
 				<CardContent className="p-3">
 					<div className="flex items-start justify-between gap-2">
 						<div className="min-w-0 flex-1">
@@ -49,7 +49,11 @@ const CustomerCard = ({ customer }: { customer: Customer }) => {
 							</div>
 							<div className="text-muted-foreground mt-1 inline-flex items-center gap-1 text-xs">
 								<Calendar className="h-3.5 w-3.5" />
-								<span>{new Date(customer.createdAt).toLocaleDateString()}</span>
+								<span>
+									{new Date(customer.createdAt).toLocaleDateString(undefined, {
+										timeZone: "Asia/Ulaanbaatar",
+									})}
+								</span>
 							</div>
 						</div>
 						<RowAction

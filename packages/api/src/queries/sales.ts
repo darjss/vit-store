@@ -19,6 +19,35 @@ export const salesQueries = {
 			return result;
 		},
 
+		// What the shelf is worth now. Cost uses each product's most recent sale cost,
+		// because products have no cost column; `costed` says how many in-stock products had one.
+		async getInventoryValue() {
+			const result = await db().execute<{
+				cost: number;
+				costed: number;
+				retail: number;
+				skus: number;
+				units: number;
+			}>(sql`
+				select
+					count(*)::int as skus,
+					coalesce(sum(${ProductsTable.stock}), 0)::int as units,
+					coalesce(sum(${ProductsTable.price} * ${ProductsTable.stock}), 0)::float8 as retail,
+					coalesce(sum(last_sale.cost * ${ProductsTable.stock}), 0)::float8 as cost,
+					count(last_sale.cost)::int as costed
+				from ${ProductsTable}
+				left join lateral (
+					select ${SalesTable.productCost} as cost from ${SalesTable}
+					where ${SalesTable.productId} = ${ProductsTable.id} and ${SalesTable.deletedAt} is null
+					order by ${SalesTable.createdAt} desc limit 1
+				) last_sale on true
+				where ${ProductsTable.deletedAt} is null and ${ProductsTable.stock} > 0
+			`);
+			return result[0] ?? { cost: 0, costed: 0, retail: 0, skus: 0, units: 0 };
+		},
+
+		// Last week's same weekday, from Ulaanbaatar midnight up to this time of day,
+		// so a morning check isn't compared against a whole finished day.
 		async getAnalyticsForHome(timeRange: "daily" | "weekly" | "monthly" = "daily") {
 			try {
 				const result = await db()
@@ -46,6 +75,44 @@ export const salesQueries = {
 				logger.error("getAnalyticsForHome", parseCaught(error));
 				return { profit: 0, revenue: 0, salesCount: 0 };
 			}
+		},
+
+		async getSameTimeLastWeek() {
+			const result = await db()
+				.select({
+					orders: sql<number>`count(distinct ${SalesTable.orderId})::int`,
+					revenue: sql<number>`coalesce(sum(${SalesTable.sellingPrice} * ${SalesTable.quantitySold}), 0)::int`,
+				})
+				.from(SalesTable)
+				.where(
+					and(
+						isNull(SalesTable.deletedAt),
+						sql`${SalesTable.createdAt} >= (date_trunc('day', (now() - interval '7 days') at time zone 'Asia/Ulaanbaatar') at time zone 'Asia/Ulaanbaatar') at time zone 'UTC'`,
+						sql`${SalesTable.createdAt} < (now() - interval '7 days') at time zone 'UTC'`,
+					),
+				);
+			return result[0] ?? { orders: 0, revenue: 0 };
+		},
+
+		// One row per Ulaanbaatar day for the home trend. created_at is stored as UTC.
+		async getDailySeries(days: number) {
+			const day = sql<string>`to_char(((${SalesTable.createdAt} at time zone 'UTC') at time zone 'Asia/Ulaanbaatar')::date, 'YYYY-MM-DD')`;
+			return db()
+				.select({
+					day,
+					orders: sql<number>`count(distinct ${SalesTable.orderId})::int`,
+					profit: sql<number>`sum((${SalesTable.sellingPrice} - ${SalesTable.productCost}) * ${SalesTable.quantitySold})::int`,
+					revenue: sql<number>`sum(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})::int`,
+				})
+				.from(SalesTable)
+				.where(
+					and(
+						gte(SalesTable.createdAt, sql`now() - make_interval(days => ${days})`),
+						isNull(SalesTable.deletedAt),
+					),
+				)
+				.groupBy(day)
+				.orderBy(day);
 		},
 
 		async getMostSoldProducts(timeRange: timeRangeType, productCount = 5) {

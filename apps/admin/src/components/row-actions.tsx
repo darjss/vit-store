@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface RowActionProps {
+	/** Quiet icon trigger for dense rows. */
+	compact?: boolean;
 	deleteMutation: (id: number) => void;
 	extraActions?: ReactNode;
 	id: number;
@@ -29,6 +31,7 @@ interface RowActionProps {
 }
 
 const RowAction = ({
+	compact,
 	deleteMutation,
 	extraActions,
 	id,
@@ -41,11 +44,16 @@ const RowAction = ({
 		<DropdownMenu data-no-nav modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
+					className={
+						compact
+							? "text-muted-foreground hover:text-foreground h-8 w-8 border-0 bg-transparent shadow-none"
+							: undefined
+					}
 					onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
 					onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
 					onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) => e.stopPropagation()}
 					size="icon"
-					variant="default"
+					variant={compact ? "ghost" : "default"}
 				>
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Цэс нээх</span>
@@ -53,7 +61,7 @@ const RowAction = ({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"
-				className="border-border bg-background shadow-shadow w-32 border-2"
+				className="border-border bg-background w-32 border"
 				data-no-nav
 				onClick={(e) => e.stopPropagation()}
 				onMouseDown={(e) => e.stopPropagation()}
@@ -95,7 +103,7 @@ const RowAction = ({
 							<span>Устгах</span>
 						</DropdownMenuItem>
 					</AlertDialogTrigger>
-					<AlertDialogContent className="border-border bg-background shadow-shadow border-2">
+					<AlertDialogContent className="border-border bg-background border">
 						<AlertDialogHeader>
 							<AlertDialogTitle className="font-heading text-lg">
 								Устгахыг баталгаажуулах

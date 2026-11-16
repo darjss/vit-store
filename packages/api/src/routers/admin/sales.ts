@@ -48,6 +48,9 @@ export function buildSalesRouter<P extends typeof baseProcedure>(cachedProc: P) 
 					});
 				}
 			}),
+		dailySeries: cachedProc
+			.input(v.object({ days: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(400)) }))
+			.query(({ input }) => salesQueries.admin.getDailySeries(input.days)),
 		dashboard: cachedProc.query(async ({ ctx }) => {
 			try {
 				const [
@@ -103,6 +106,7 @@ export function buildSalesRouter<P extends typeof baseProcedure>(cachedProc: P) 
 				});
 			}
 		}),
+		inventoryValue: cachedProc.query(() => salesQueries.admin.getInventoryValue()),
 		orderCount: cachedProc
 			.input(
 				v.object({
@@ -137,6 +141,7 @@ export function buildSalesRouter<P extends typeof baseProcedure>(cachedProc: P) 
 				});
 			}
 		}),
+		sameTimeLastWeek: cachedProc.query(() => salesQueries.admin.getSameTimeLastWeek()),
 		topProducts: cachedProc
 			.input(
 				v.object({

@@ -38,9 +38,9 @@ export default function AppError({ error }: AppErrorProps) {
 					opacity: 0.6,
 				}}
 			/>
-			<div className="rounded-base border-border bg-card shadow-shadow relative z-10 w-full max-w-2xl space-y-4 border-2 p-6">
+			<div className="rounded-base border-border bg-card relative z-10 w-full max-w-2xl space-y-4 border p-6">
 				<div className="flex items-start gap-3">
-					<div className="rounded-base border-border border-2 bg-red-300 p-2 text-red-900">
+					<div className="rounded-base border-border border bg-red-300 p-2 text-red-900">
 						<TriangleAlert className="h-6 w-6" />
 					</div>
 					<div className="space-y-1">
@@ -84,12 +84,12 @@ export default function AppError({ error }: AppErrorProps) {
 							<DropdownMenuSeparator />
 							<div className="space-y-2">
 								{raw && (
-									<div className="rounded-base border-border bg-background border-2 p-2">
+									<div className="rounded-base border-border bg-background border p-2">
 										<Text className="font-mono text-sm">{raw}</Text>
 									</div>
 								)}
 								{stack && (
-									<div className="rounded-base border-border border-2">
+									<div className="rounded-base border-border border">
 										<ScrollArea className="h-60 w-full">
 											<pre className="p-3 font-mono text-xs whitespace-pre-wrap">{stack}</pre>
 										</ScrollArea>

@@ -563,7 +563,7 @@ export const orderQueries = {
 		async getRecentOrdersByProductId(productId: number) {
 			const orderDetails = await db().query.OrderDetailsTable.findMany({
 				limit: 5,
-				orderBy: [asc(OrdersTable.createdAt)],
+				orderBy: [desc(OrderDetailsTable.createdAt)],
 				where: eq(OrderDetailsTable.productId, productId),
 				with: {
 					order: {

@@ -117,7 +117,7 @@ export function WebAnalytics({
 		<div className="space-y-3">
 			{/* Overview Cards - 2x2 */}
 			<div className="grid grid-cols-2 gap-2">
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+				<div className="border-border bg-card border p-3">
 					<div className="text-muted-foreground flex items-center gap-1.5">
 						<Users className="h-3.5 w-3.5" />
 						<span className="text-[10px] font-bold tracking-wide uppercase">Зочин</span>
@@ -128,7 +128,7 @@ export function WebAnalytics({
 					<ChangeIndicator value={changes.visitors} />
 				</div>
 
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+				<div className="border-border bg-card border p-3">
 					<div className="text-muted-foreground flex items-center gap-1.5">
 						<Eye className="h-3.5 w-3.5" />
 						<span className="text-[10px] font-bold tracking-wide uppercase">Хуудас үзэлт</span>
@@ -139,7 +139,7 @@ export function WebAnalytics({
 					<ChangeIndicator value={changes.pageviews} />
 				</div>
 
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+				<div className="border-border bg-card border p-3">
 					<div className="text-muted-foreground flex items-center gap-1.5">
 						<ShoppingBag className="h-3.5 w-3.5" />
 						<span className="text-[10px] font-bold tracking-wide uppercase">Захиалга</span>
@@ -150,7 +150,7 @@ export function WebAnalytics({
 					<ChangeIndicator value={changes.orders} />
 				</div>
 
-				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+				<div className="border-border bg-card border p-3">
 					<div className="text-muted-foreground flex items-center gap-1.5">
 						<Search className="h-3.5 w-3.5" />
 						<span className="text-[10px] font-bold tracking-wide uppercase">Хайлт</span>
@@ -163,8 +163,8 @@ export function WebAnalytics({
 
 			{/* Daily Trend Chart */}
 			{chartData.length > 0 && (
-				<div className="border-border bg-card shadow-hard-sm border-2">
-					<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
+				<div className="border-border bg-card border">
+					<div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
 						<div className="flex items-center gap-2">
 							<Eye className="text-muted-foreground h-4 w-4" />
 							<span className="text-sm font-bold">Зочин болон захиалгын чиг хандлага</span>
@@ -188,7 +188,7 @@ export function WebAnalytics({
 												return null;
 											}
 											return (
-												<div className="border-border bg-card shadow-hard-sm border-2 p-1.5 text-[10px]">
+												<div className="border-border bg-card border p-1.5 text-[10px]">
 													<p className="font-bold">{label}</p>
 													<p>
 														<span className="text-muted-foreground">Зочин: </span>
@@ -241,8 +241,8 @@ export function WebAnalytics({
 			)}
 
 			{/* Conversion Funnel */}
-			<div className="border-border bg-card shadow-hard-sm border-2">
-				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
+			<div className="border-border bg-card border">
+				<div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
 					<div className="flex items-center gap-2">
 						<Target className="text-muted-foreground h-4 w-4" />
 						<span className="text-sm font-bold">Хөрвүүлэлтийн юүлүүр</span>
@@ -262,7 +262,7 @@ export function WebAnalytics({
 								/>
 								<div className="relative flex items-center justify-between">
 									<div className="flex items-center gap-2.5">
-										<div className="border-border bg-card flex h-6 w-6 shrink-0 items-center justify-center border-2">
+										<div className="border-border bg-card flex h-6 w-6 shrink-0 items-center justify-center border">
 											<Icon className="h-3 w-3" />
 										</div>
 										<div>
@@ -283,7 +283,7 @@ export function WebAnalytics({
 					})}
 				</div>
 				{funnel.visitors > 0 && (
-					<div className="border-border bg-muted/20 border-t-2 px-3 py-2">
+					<div className="border-border bg-muted/20 border-t px-3 py-2">
 						<div className="flex items-center justify-between text-xs">
 							<span className="text-muted-foreground font-medium">
 								Нийт хөрвүүлэлт (Зочин → Захиалга)
@@ -298,7 +298,7 @@ export function WebAnalytics({
 
 			{/* Quick Event Stats */}
 			<div className="grid grid-cols-3 gap-2">
-				<div className="border-border bg-card shadow-hard-sm border-2 p-2.5">
+				<div className="border-border bg-card border p-2.5">
 					<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 						Бараа үзэлт
 					</p>
@@ -306,7 +306,7 @@ export function WebAnalytics({
 						{current.productViews.toLocaleString()}
 					</p>
 				</div>
-				<div className="border-border bg-card shadow-hard-sm border-2 p-2.5">
+				<div className="border-border bg-card border p-2.5">
 					<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 						Сагсанд нэмсэн
 					</p>
@@ -314,7 +314,7 @@ export function WebAnalytics({
 						{current.addToCarts.toLocaleString()}
 					</p>
 				</div>
-				<div className="border-border bg-card shadow-hard-sm border-2 p-2.5">
+				<div className="border-border bg-card border p-2.5">
 					<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 						Төлбөр баталсан
 					</p>

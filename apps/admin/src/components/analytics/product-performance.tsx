@@ -30,8 +30,8 @@ export function ProductPerformance({
 	return (
 		<div className="space-y-3">
 			{/* Most Viewed Products */}
-			<div className="border-border bg-card shadow-hard-sm border-2">
-				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
+			<div className="border-border bg-card border">
+				<div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
 					<div className="flex items-center gap-2">
 						<Eye className="text-muted-foreground h-4 w-4" />
 						<span className="text-sm font-bold">Хамгийн их үзэгдсэн бүтээгдэхүүн</span>
@@ -55,7 +55,7 @@ export function ProductPerformance({
 									/>
 									<div className="relative flex items-center justify-between">
 										<div className="flex items-center gap-2.5">
-											<div className="border-border bg-card font-heading flex h-6 w-6 shrink-0 items-center justify-center border-2 text-xs font-bold">
+											<div className="border-border bg-card font-heading flex h-6 w-6 shrink-0 items-center justify-center border text-xs font-bold">
 												{index + 1}
 											</div>
 											<div className="min-w-0">
@@ -91,8 +91,8 @@ export function ProductPerformance({
 			</div>
 
 			{/* Top Searches */}
-			<div className="border-border bg-card shadow-hard-sm border-2">
-				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
+			<div className="border-border bg-card border">
+				<div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
 					<div className="flex items-center gap-2">
 						<Search className="text-muted-foreground h-4 w-4" />
 						<span className="text-sm font-bold">Топ хайлтууд</span>
@@ -112,7 +112,7 @@ export function ProductPerformance({
 									/>
 									<div className="relative flex items-center justify-between">
 										<div className="flex items-center gap-2.5">
-											<div className="border-border bg-card font-heading flex h-6 w-6 shrink-0 items-center justify-center border-2 text-xs font-bold">
+											<div className="border-border bg-card font-heading flex h-6 w-6 shrink-0 items-center justify-center border text-xs font-bold">
 												{index + 1}
 											</div>
 											<div className="min-w-0">

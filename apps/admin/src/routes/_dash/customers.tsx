@@ -127,7 +127,7 @@ function RouteComponent() {
 			<div className="relative">
 				<Search className="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2" />
 				<Input
-					className="rounded-base border-border bg-background shadow-shadow h-12 w-full border-2 pr-14 pl-14"
+					className="rounded-base border-border bg-background h-12 w-full border pr-14 pl-14"
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 					placeholder="Хэрэглэгч хайх (утас, хаяг)..."
@@ -136,7 +136,7 @@ function RouteComponent() {
 				{inputValue && (
 					<Button
 						aria-label="Хайлт цэвэрлэх"
-						className="rounded-base border-border hover:bg-muted absolute top-1/2 right-14 h-8 w-8 -translate-y-1/2 border-2"
+						className="rounded-base border-border hover:bg-muted absolute top-1/2 right-14 h-8 w-8 -translate-y-1/2 border"
 						onClick={handleClearSearch}
 						size="icon"
 						variant="secondary"
@@ -146,7 +146,7 @@ function RouteComponent() {
 				)}
 				<Button
 					aria-label="Хайх"
-					className="rounded-base border-border shadow-shadow absolute top-1/2 right-1 h-10 w-12 -translate-y-1/2 border-2 transition-shadow hover:shadow-md"
+					className="rounded-base border-border absolute top-1/2 right-1 h-10 w-12 -translate-y-1/2 border transition-shadow hover:shadow-md"
 					disabled={!inputValue.trim()}
 					onClick={handleSearch}
 				>
@@ -158,7 +158,7 @@ function RouteComponent() {
 				fallback={
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 						{Array.from({ length: 8 }).map((_, index) => (
-							<Skeleton className="rounded-base border-border h-32 border-2" key={index} />
+							<Skeleton className="rounded-base border-border h-32 border" key={index} />
 						))}
 					</div>
 				}
@@ -218,7 +218,7 @@ function CustomersList({
 	if (paginated.length === 0) {
 		return (
 			<>
-				<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
+				<div className="rounded-base border-border text-muted-foreground border p-8 text-center">
 					{searchTerm ? `"${searchTerm}" олдсонгүй` : "Хэрэглэгч олдсонгүй."}
 				</div>
 				<div>

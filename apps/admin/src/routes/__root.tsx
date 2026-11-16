@@ -56,8 +56,11 @@ function RootComponent() {
 				<Outlet />
 			</div>
 			<Toaster richColors />
-			<TanStackRouterDevtools position="bottom-left" />
-			<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+			{/* Opt-in with VITE_DEVTOOLS: the devtools buttons cover the phone tab bar. */}
+			{import.meta.env.VITE_DEVTOOLS && <TanStackRouterDevtools position="bottom-left" />}
+			{import.meta.env.VITE_DEVTOOLS && (
+				<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+			)}
 		</>
 	);
 }
