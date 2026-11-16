@@ -18,11 +18,11 @@ import type {
 } from "~/lib/product-search/types";
 import { thrownErrorWireSchema } from "~/lib/logging";
 
-const PRODUCT_SEARCH_INDEX = "vit-products-v4";
-const PRODUCT_KEY_PREFIX = "search:vit:v4:product:";
-const ACTIVE_GENERATION_KEY = "search:vit:v4:active";
-const STATUS_KEY = "search:vit:v4:status";
-const REBUILD_LOCK_KEY = "search:vit:v4:rebuild-lock";
+const PRODUCT_SEARCH_INDEX = "vit-products-v5";
+const PRODUCT_KEY_PREFIX = "search:vit:v5:product:";
+const ACTIVE_GENERATION_KEY = "search:vit:v5:active";
+const STATUS_KEY = "search:vit:v5:status";
+const REBUILD_LOCK_KEY = "search:vit:v5:rebuild-lock";
 const WRITE_BATCH_SIZE = 50;
 const STALE_GENERATION_TTL_SECONDS = 10 * 60;
 const REBUILD_LOCK_TTL_MS = 30_000;
