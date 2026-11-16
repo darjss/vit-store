@@ -86,6 +86,79 @@ describe("product search query", () => {
 		expect(serialized).toContain('"ingredients"');
 		expect(serialized).toContain('"description"');
 	});
+
+	test("matches the last word as a prefix at any length", () => {
+		const short = JSON.stringify(buildProductSearchFilter("magnesium g", "generation"));
+		const long = JSON.stringify(buildProductSearchFilter("nutricost creatin", "generation"));
+
+		expect(short).toContain('"prefix":true,"value":"g"');
+		expect(short).not.toContain('"$eq":"g"');
+		expect(short).not.toContain('"prefix":true,"value":"magnesium"');
+		expect(long).toContain('"prefix":true,"value":"creatin"');
+		expect(long).toContain('"$smart":"creatin"');
+	});
+
+	test("joins a lone letter to its number and splits a glued dose", () => {
+		const joined = JSON.stringify(buildProductSearchFilter("q 10", "generation"));
+		const split = buildProductSearchFilter("d35000", "generation");
+
+		expect(joined).toContain('"prefix":true,"value":"q10"');
+		expect(joined).not.toContain('"$eq":"q"');
+		expect(split.$must).toHaveLength(4);
+		expect(JSON.stringify(split)).toContain('"prefix":true,"value":"d3"');
+		expect(JSON.stringify(split)).toContain('"prefix":true,"value":"5000"');
+	});
+
+	test("reads Cyrillic vitamin letters next to the vitamin word", () => {
+		const serialized = JSON.stringify(buildProductSearchFilter("витамин ц", "generation"));
+
+		expect(serialized).toContain('"$smart":"vitamin"');
+		expect(serialized).toContain('"prefix":true,"value":"c"');
+		expect(serialized).not.toContain("витамин");
+	});
+
+	test("keeps a lone letter literal away from the vitamin word", () => {
+		const serialized = JSON.stringify(
+			buildProductSearchFilter("myo d chiro inositol", "generation"),
+		);
+
+		expect(serialized).toContain('"$eq":"d"');
+		expect(serialized).not.toContain('"d3"');
+	});
+
+	test("rewrites alias phrases on whole words only", () => {
+		const serialized = JSON.stringify(buildProductSearchFilter("blackmores", "generation"));
+		const folate = JSON.stringify(buildProductSearchFilter("фолийн хүчил", "generation"));
+
+		expect(serialized).toContain('"$smart":"blackmores"');
+		expect(serialized).not.toContain("blackmoress");
+		expect(folate).toContain('"$smart":"folate"');
+		expect(folate).not.toContain("хүчил");
+	});
+
+	test("tolerates two typos in long words outside the direct pass", () => {
+		const direct = JSON.stringify(buildProductSearchFilter("isonitol", "generation"));
+		const broad = JSON.stringify(
+			buildProductSearchFilter("isonitol", "generation", undefined, "broad"),
+		);
+
+		expect(direct).not.toContain('"$fuzzy"');
+		expect(broad).toContain(
+			'"$fuzzy":{"distance":2,"transpositionCostOne":true,"value":"isonitol"}',
+		);
+	});
+
+	test("lets any word match in the relaxed pass", () => {
+		const filter = buildProductSearchFilter(
+			"micro ingredients myo inositol veggie capsules",
+			"generation",
+			undefined,
+			"relaxed",
+		);
+
+		expect(filter.$must).toHaveLength(3);
+		expect(JSON.stringify(filter.$must)).toContain('"$should":[{"$should"');
+	});
 });
 
 describe("product search document", () => {
@@ -98,6 +171,18 @@ describe("product search document", () => {
 		expect(document.intentTerms).toContain("нойр");
 		expect(document.intentTerms).toContain("stress");
 		expect(document.ingredientPreviewJson).toBe(JSON.stringify(["Magnesium glycinate"]));
+	});
+
+	test("takes spelling aliases from the primary name only", () => {
+		const gummies = buildProductSearchDocument(
+			sourceProduct({ name: "Nutricost, Elderberry Gummies with Vitamin C & Zinc, 120 Gummies" }),
+		);
+		const zinc = buildProductSearchDocument(
+			sourceProduct({ name: "Nutricost, Zinc Picolinate, 50 mg, 240 Capsules" }),
+		);
+
+		expect(gummies.aliases).not.toContain("zink");
+		expect(zinc.aliases).toContain("zink");
 	});
 
 	test("keeps secondary ingredients out of the primary product name", () => {

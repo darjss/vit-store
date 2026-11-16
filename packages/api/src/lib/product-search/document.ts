@@ -86,10 +86,15 @@ function buildProductSearchTextFields(
 	product: ProductSearchSourceDocument,
 	ingredients: Array<string>,
 	tags: Array<string>,
-	aliases: Array<string>,
 	intentTerms: Array<string>,
 ) {
 	const nameMn = product.nameMn ?? "";
+	const primary = primaryName(product.name, product.brand);
+	const primaryMn = nameMn ? primaryName(nameMn, product.brand) : "";
+	const aliases = buildProductAliases(
+		[product.name, nameMn, product.brand, `${product.brand} ${product.name}`],
+		[primary, primaryMn, product.brand],
+	);
 	return {
 		aliases: aliases.join(" "),
 		amount: product.amount ?? "",
@@ -105,8 +110,8 @@ function buildProductSearchTextFields(
 		nameMnWithBrand: nameMn ? withBrand(product.brand, nameMn) : "",
 		nameWithBrand: withBrand(product.brand, product.name),
 		potency: product.potency ?? "",
-		primaryName: primaryName(product.name, product.brand),
-		primaryNameMn: nameMn ? primaryName(nameMn, product.brand) : "",
+		primaryName: primary,
+		primaryNameMn: primaryMn,
 		tags: tags.join(" "),
 	};
 }
@@ -117,12 +122,11 @@ export const buildProductSearchDocument = (
 ): ProductSearchDocument => {
 	const ingredients = toTextList(product.ingredients);
 	const tags = toTextList(product.tags);
-	const aliases = buildProductAliases(product);
 	const intentTerms = buildProductIntentTerms(product);
 	const createdAt = new Date(product.createdAt).toISOString();
 
 	return {
-		...buildProductSearchTextFields(product, ingredients, tags, aliases, intentTerms),
+		...buildProductSearchTextFields(product, ingredients, tags, intentTerms),
 		brandId: product.brandId ?? -1,
 		categoryId: product.categoryId ?? -1,
 		compareAtPrice: product.compareAtPrice ?? 0,
