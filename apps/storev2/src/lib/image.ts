@@ -1,4 +1,4 @@
-type ProductImageVariant = "thumb" | "card" | "feature" | "hero" | "sm" | "md";
+type ProductImageVariant = "thumb" | "cutout" | "card" | "feature" | "hero" | "sm" | "md";
 
 const CDN_HOST = "https://cdn.amerikvitamin.mn";
 
@@ -8,6 +8,13 @@ const PRODUCT_IMAGE_VARIANTS = {
 		sizes: "(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 50vw",
 		transform: "width=360,quality=75,fit=contain,format=auto",
 		width: 360,
+	},
+	// segment=foreground cuts the white studio background out, for photos on dark surfaces.
+	cutout: {
+		height: 160,
+		sizes: "80px",
+		transform: "width=160,quality=75,segment=foreground,format=auto",
+		width: 160,
 	},
 	feature: {
 		height: 480,
