@@ -39,11 +39,9 @@ export function buildOrderConfirmationSmsMessage(input: {
 	return `Захиалга #${input.orderNumber} баталгаажлаа. Нийт: ${amount}. Хянах: ${trackUrl}`;
 }
 
-// Owner-approved wording. Without the scheme the text is 195 UCS-2
-// characters, 3 SMS parts. Do not reword.
+// Owner-approved wording, 175 UCS-2 characters, 3 SMS parts. Do not reword.
 export function buildUnpaidReminderSmsMessage(payLinkCode: string): string {
-	const link = `${new URL(getStorefrontBaseUrl()).host}/pay/${payLinkCode}`;
-	return `Сайн уу, Америк хүнс бараагаас холбогдож байна. Таны захиалгад зөвхөн төлбөр л үлдлээ. Апп нээгдээгүй бол энэ линкээр дахин оролдоорой: ${link} Асуух зүйл байвал 9999-3950`;
+	return `Сайн уу, Америк хүнс бараагаас холбогдож байна. Таны захиалгад зөвхөн төлбөр л үлдлээ. Апп нээгдээгүй бол энэ линкээр дахин оролдоорой: ${getStorefrontBaseUrl()}/pay/${payLinkCode}`;
 }
 
 export async function sendPaymentSms(input: {
