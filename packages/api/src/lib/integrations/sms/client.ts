@@ -208,6 +208,32 @@ export const smsClient = new Client(
 	smsGatewayBaseUrl,
 );
 
+/** The gateway has no record of the message, so it was never queued and is safe to send again. */
+export class SmsNotAcceptedError extends Error {
+	readonly code: string;
+	constructor(cause: unknown) {
+		const message = cause instanceof Error ? cause.message : String(cause);
+		super(message, { cause });
+		this.code = /^sms_provider_http_\d+$/.test(message)
+			? message.replace("sms_provider_", "provider_")
+			: cause instanceof Error && cause.name === "TimeoutError"
+				? "provider_timeout"
+				: "provider_unreachable";
+	}
+}
+
+/** The message's state, or null when the gateway answers 404 for that id. */
+async function findMessageState(id: string) {
+	try {
+		return await smsClient.getState(id);
+	} catch (error) {
+		if (error instanceof Error && error.message === "sms_provider_http_404") {
+			return null;
+		}
+		throw error;
+	}
+}
+
 const smsGatewayAuthHeaders = () =>
 	({
 		Authorization: `Basic ${btoa(`${smsGatewayConfig.login}:${smsGatewayConfig.password}`)}`,
@@ -239,7 +265,7 @@ export const smsGateway = {
 
 	/**
 	 * Send an SMS and wait until it's actually sent (not just queued)
-	 * Polls the message state until it changes from "Pending"
+	 * Polls the message state while it is "Pending" or "Processed"
 	 *
 	 * @param message - The SMS message to send
 	 * @param options - Send options
@@ -267,17 +293,32 @@ export const smsGateway = {
 		},
 	): Promise<MessageState> {
 		const { intervalMs = 1000, maxAttempts = 10, skipPhoneValidation } = options ?? {};
+		// Our own id lets us ask the gateway whether a failed POST landed anyway.
+		const id = message.id ?? crypto.randomUUID();
 
-		const result = await smsClient.send(
-			{ ...message, ttl: message.ttl ?? DEFAULT_SMS_TTL_SECONDS },
-			{ skipPhoneValidation },
-		);
+		let state: MessageState;
+		try {
+			state = await smsClient.send(
+				{ ...message, id, ttl: message.ttl ?? DEFAULT_SMS_TTL_SECONDS },
+				{ skipPhoneValidation },
+			);
+		} catch (error) {
+			const landed = await findMessageState(id);
+			if (!landed) {
+				throw new SmsNotAcceptedError(error);
+			}
+			state = landed;
+		}
 
-		// Poll until status changes from Pending
-		let state = await smsClient.getState(result.id);
-		for (let attempt = 0; state.state === "Pending" && attempt < maxAttempts; attempt++) {
+		// Pending: the phone has not fetched it. Processed: the phone has it
+		// but the SIM has not sent it yet. Both usually clear within ~15s.
+		for (
+			let attempt = 0;
+			(state.state === "Pending" || state.state === "Processed") && attempt < maxAttempts;
+			attempt++
+		) {
 			await new Promise((resolve) => setTimeout(resolve, intervalMs));
-			state = await smsClient.getState(result.id);
+			state = await smsClient.getState(id);
 		}
 
 		if (state.state === "Pending") {
