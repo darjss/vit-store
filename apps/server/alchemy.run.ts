@@ -98,6 +98,14 @@ const directDbUrl =
 		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
 		: "";
 
+// SMS links point here. payment-sms.ts requires an https origin, so dev has none.
+const storePublicUrl =
+	stage === "prod"
+		? "https://amerikvitamin.mn"
+		: stage === "staging"
+			? "https://staging.amerikvitamin.mn"
+			: undefined;
+
 export const server = await Worker("api", {
 	cache: { enabled: true },
 	compatibility: "node",
@@ -114,6 +122,7 @@ export const server = await Worker("api", {
 			service: `storev2-front-${stage}`,
 		}),
 		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
+		...(storePublicUrl ? { STORE_PUBLIC_URL: storePublicUrl } : {}),
 		CORS_ORIGIN: env.CORS_ORIGIN,
 		DASH_URL: env.DASH_URL,
 		DOMAIN: env.DOMAIN,

@@ -366,7 +366,7 @@ export const PaymentNotificationOutboxTable = createTable(
 		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		purpose: varchar("purpose", { length: 64 }).notNull(),
 		status: text("status", {
-			enum: ["pending", "claimed", "sent", "failed", "unknown"],
+			enum: ["pending", "claimed", "sent", "skipped", "failed", "unknown"],
 		})
 			.notNull()
 			.default("pending"),

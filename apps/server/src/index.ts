@@ -15,6 +15,7 @@ import { logTrpcError, operatorTrpcError, type OperatorProjectedError } from "./
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
+import payRoutes from "./routes/pay";
 import paymentRoutes from "./routes/payments";
 import uploadRoutes from "./routes/uploads";
 import webhookRoutes from "./routes/webhooks";
@@ -125,6 +126,7 @@ app.use(
 
 app.route("/", healthRoutes);
 app.route("/admin", authRoutes);
+app.route("/pay", payRoutes);
 app.route("/upload", uploadRoutes);
 app.route("/webhooks", paymentRoutes);
 app.route("/webhooks", webhookRoutes);

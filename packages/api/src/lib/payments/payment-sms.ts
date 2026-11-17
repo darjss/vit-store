@@ -4,13 +4,6 @@ import { logger } from "~/lib/logger";
 const MN_PHONE_RE = /^[6-9]\d{7}$/;
 const SMS_SUCCESS_STATES = new Set(["Sent", "Delivered"]);
 
-export type OrderConfirmationSmsInput = {
-	customerPhone: number;
-	orderNumber: string;
-	paymentNumber: string;
-	total: number;
-};
-
 export class SmsRetryableError extends Error {
 	constructor(readonly code: string) {
 		super(code);
@@ -23,7 +16,9 @@ export class SmsAmbiguousError extends Error {
 	}
 }
 
-function getStorefrontBaseUrl(): string {
+export const isMongolianMobile = (phone: number) => MN_PHONE_RE.test(String(phone));
+
+export function getStorefrontBaseUrl(): string {
 	const value = process.env.STORE_PUBLIC_URL;
 	if (!value) {
 		throw new Error("STORE_PUBLIC_URL is required");
@@ -44,22 +39,27 @@ export function buildOrderConfirmationSmsMessage(input: {
 	return `Захиалга #${input.orderNumber} баталгаажлаа. Нийт: ${amount}. Хянах: ${trackUrl}`;
 }
 
-export async function sendOrderConfirmationSms(input: OrderConfirmationSmsInput): Promise<void> {
-	const phone = String(input.customerPhone);
-	if (!MN_PHONE_RE.test(phone)) {
+// Owner-approved wording, 175 UCS-2 characters, 3 SMS parts. Do not reword.
+export function buildUnpaidReminderSmsMessage(payLinkCode: string): string {
+	return `Сайн уу, Америк хүнс бараагаас холбогдож байна. Таны захиалгад зөвхөн төлбөр л үлдлээ. Апп нээгдээгүй бол энэ линкээр дахин оролдоорой: ${getStorefrontBaseUrl()}/pay/${payLinkCode}`;
+}
+
+export async function sendPaymentSms(input: {
+	customerPhone: number;
+	event: string;
+	message: string;
+	orderNumber: string;
+	paymentNumber: string;
+}): Promise<void> {
+	if (!isMongolianMobile(input.customerPhone)) {
 		throw new SmsRetryableError("invalid_phone");
 	}
-
-	const message = buildOrderConfirmationSmsMessage({
-		orderNumber: input.orderNumber,
-		total: input.total,
-	});
 
 	let finalState: { state: string };
 	try {
 		finalState = await smsGateway.sendSmsAndWait({
-			message,
-			phoneNumbers: [`+976${phone}`],
+			message: input.message,
+			phoneNumbers: [`+976${input.customerPhone}`],
 		});
 	} catch {
 		// The gateway may have accepted the request before its response was lost.
@@ -73,7 +73,7 @@ export async function sendOrderConfirmationSms(input: OrderConfirmationSmsInput)
 		throw new SmsAmbiguousError();
 	}
 
-	logger.info("order.sms_confirmation_sent", {
+	logger.info(input.event, {
 		orderNumber: input.orderNumber,
 		paymentNumber: input.paymentNumber,
 		smsState: finalState.state,

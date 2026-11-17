@@ -23,6 +23,7 @@ import {
 	trackQpayInvoiceCreatedServerSide,
 } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
+import { enqueueUnpaidReminder } from "~/lib/payments/notification-outbox";
 import { createQpayInvoice } from "~/lib/payments/qpay";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
@@ -96,6 +97,12 @@ async function prepareOrderCheckout(ctx: Context, normalizedProducts: Array<Cart
 }
 
 type CheckoutTx = Parameters<Parameters<Context["db"]["transaction"]>[0]>[0];
+
+type OrderSource = "messenger" | "web";
+
+// The Messenger bot's store client sends this header (apps/messenger/src/store.ts).
+const orderSource = (ctx: Context): OrderSource =>
+	ctx.c.req.header("x-vit-client") === "messenger" ? "messenger" : "web";
 
 async function upsertCheckoutCustomer(
 	tx: CheckoutTx,
@@ -287,6 +294,7 @@ async function executeCheckoutTransaction(
 		orderNumber: string;
 		paymentNumberGenerated: string;
 		productById: Map<number, CheckoutProduct>;
+		source: OrderSource;
 		submittedFingerprint: string;
 		total: number;
 	},
@@ -316,7 +324,11 @@ async function executeCheckoutTransaction(
 		) {
 			await cancelStalePendingCheckout(ctx, tx, params.customerPhone, pendingOrder, openPayment);
 		}
-		return insertFreshCheckout(tx, input, { ...params, customer });
+		const fresh = await insertFreshCheckout(tx, input, { ...params, customer });
+		if (params.source === "web" && fresh.paymentNumber) {
+			await enqueueUnpaidReminder(tx, fresh.paymentNumber);
+		}
+		return fresh;
 	});
 }
 
@@ -393,12 +405,14 @@ export const order = router({
 			const paymentNumberGenerated = generatePaymentNumber();
 			const customerPhone = Number(input.phoneNumber);
 			const submittedFingerprint = cartFingerprint(normalizedProducts);
+			const source = orderSource(ctx);
 			const txResult = await executeCheckoutTransaction(ctx, input, {
 				customerPhone,
 				normalizedProducts,
 				orderNumber,
 				paymentNumberGenerated,
 				productById,
+				source,
 				submittedFingerprint,
 				total,
 			});
@@ -431,8 +445,7 @@ export const order = router({
 					orderNumber: resolvedOrderNumber,
 					paymentNumber,
 					phone: input.phoneNumber,
-					// The Messenger bot's store client sends this header (apps/messenger/src/store.ts).
-					source: ctx.c.req.header("x-vit-client") === "messenger" ? "messenger" : "web",
+					source,
 					total,
 				});
 			}
