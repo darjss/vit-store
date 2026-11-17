@@ -1,8 +1,13 @@
 import { DangerCircleIcon as IconErrorWarning } from "@solar-icons/solid/bold";
-import { QrCodeIcon as IconQrCode, Wallet2Icon as IconWallet } from "@solar-icons/solid/linear";
+import {
+	AltArrowDownIcon as IconArrowDown,
+	AltArrowRightIcon as IconArrowRight,
+	QrCodeIcon as IconQrCode,
+	Wallet2Icon as IconWallet,
+} from "@solar-icons/solid/linear";
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { BANK_TRANSFER_ENABLED, supportPhone } from "@vit/shared/constants";
-import { createEffect, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { WorkingStatus } from "@/components/ui/working-status";
 import {
@@ -22,7 +27,7 @@ import {
 	trackPaymentRecoverySheetShown,
 	trackQpayError,
 } from "@/lib/analytics";
-import { resolveBankLogo } from "@/lib/bank-logos";
+import { rankBankLinks, resolveBankLogo } from "@/lib/bank-logos";
 import {
 	HandoffState,
 	type HandoffState as HandoffStateType,
@@ -241,6 +246,8 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	};
 
 	const invoiceData = () => mutation.data;
+	const banks = createMemo(() => rankBankLinks(invoiceData()?.urls ?? [], detectInAppBrowser()));
+	const [showOthers, setShowOthers] = createSignal(false);
 
 	const failedHandoffBank = () => {
 		if (recoveryReason() !== "no_handoff") {
@@ -382,22 +389,90 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 							</Show>
 						</div>
 
-						{/* Bank deeplinks grid — scheme links are dead clicks on desktop
-					    (no protocol handler), so desktop leads with QR only. */}
+						{/* Bank deeplinks: Khan hero, featured grid, the rest collapsed.
+						    Scheme links are dead clicks on desktop (no protocol
+						    handler), so desktop leads with QR only. */}
 						<Show when={(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()}>
 							<div class="space-y-3">
 								<p class="text-muted-foreground text-xs font-semibold">Банкаа сонгоно уу</p>
-								<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-									<For each={invoiceData()?.urls ?? []}>
-										{(link) => (
-											<BankTile
-												href={link.link}
-												link={link}
-												onSelect={() => handleBankClick(link)}
+								<Show when={banks().hero}>
+									{(hero) => (
+										<a
+											class="border-border bg-background shadow-soft-sm flex items-center gap-3 rounded-2xl border p-3 transition-[background-color,transform] duration-[140ms] ease-out active:scale-[0.98]"
+											href={hero().link}
+											onClick={() => handleBankClick(hero())}
+										>
+											<div class="border-border size-12 shrink-0 overflow-hidden rounded-xl border">
+												<BankLogo
+													description={hero().description}
+													logo={hero().logo}
+													name={hero().name}
+												/>
+											</div>
+											<div class="min-w-0 flex-1">
+												<p class="text-foreground text-sm font-semibold">Хаан банк</p>
+												<p class="text-muted-foreground text-xs">Апп руу шууд орно</p>
+											</div>
+											<IconArrowRight aria-hidden="true" class="text-foreground size-5 shrink-0" />
+										</a>
+									)}
+								</Show>
+								<Show when={banks().featured.length > 0}>
+									<div class="grid grid-cols-2 gap-2">
+										<For each={banks().featured}>
+											{(link) => (
+												<a
+													class="border-border bg-background flex items-center gap-2 rounded-xl border p-2 transition-[background-color,transform] duration-[140ms] ease-out odd:last:col-span-2 active:scale-[0.98]"
+													href={link.link}
+													onClick={() => handleBankClick(link)}
+												>
+													<div class="size-9 shrink-0 overflow-hidden rounded-lg">
+														<BankLogo
+															description={link.description}
+															logo={link.logo}
+															name={link.name}
+														/>
+													</div>
+													<span class="text-foreground line-clamp-2 text-xs leading-tight font-medium">
+														{link.name || link.description || "Банк"}
+													</span>
+												</a>
+											)}
+										</For>
+									</div>
+								</Show>
+								<Show when={banks().others.length > 0}>
+									<div class="border-border rounded-xl border">
+										<button
+											aria-expanded={showOthers()}
+											class="text-foreground flex h-11 w-full items-center justify-between px-3 text-xs font-semibold"
+											onClick={() => setShowOthers((v) => !v)}
+											type="button"
+										>
+											Бусад банк, апп ({banks().others.length})
+											<IconArrowDown
+												aria-hidden="true"
+												class={cn(
+													"size-4 transition-transform duration-[140ms] ease-out",
+													showOthers() && "rotate-180",
+												)}
 											/>
-										)}
-									</For>
-								</div>
+										</button>
+										<Show when={showOthers()}>
+											<div class="grid grid-cols-3 gap-2.5 px-2 pb-2">
+												<For each={banks().others}>
+													{(link) => (
+														<BankTile
+															href={link.link}
+															link={link}
+															onSelect={() => handleBankClick(link)}
+														/>
+													)}
+												</For>
+											</div>
+										</Show>
+									</div>
+								</Show>
 								<Show when={isHandoffState(handoff(), "opening")}>
 									<p class="animate-handoff-reveal text-muted-foreground flex items-center justify-center gap-2 text-xs">
 										<span
