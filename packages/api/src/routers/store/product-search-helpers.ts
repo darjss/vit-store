@@ -1,3 +1,4 @@
+import { LOW_STOCK_THRESHOLD } from "@vit/shared/domain/product";
 import { brandQueries } from "~/queries/brands";
 import { categoryQueries } from "~/queries/categories";
 import { searchProductPage, searchProducts } from "~/lib/product-search/client";
@@ -37,7 +38,7 @@ export const mapStockStatus = (
 		return "out_of_stock";
 	}
 
-	if (stock <= 5) {
+	if (stock <= LOW_STOCK_THRESHOLD) {
 		return "low_stock";
 	}
 

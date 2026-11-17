@@ -3,7 +3,7 @@
  * Single source of truth shared by the catalog card, SSR cards, home shelf,
  * search result row, and PDP so stock labels stay consistent across surfaces.
  */
-export const LOW_STOCK_THRESHOLD = 5;
+export const LOW_STOCK_THRESHOLD = 2;
 
 export type StockState = "out" | "low" | "in";
 
