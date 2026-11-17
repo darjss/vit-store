@@ -1,8 +1,11 @@
 import { smsGateway } from "~/lib/integrations";
+import { SmsNotAcceptedError } from "~/lib/integrations/sms/client";
 import { logger } from "~/lib/logger";
 
 const MN_PHONE_RE = /^[6-9]\d{7}$/;
 const SMS_SUCCESS_STATES = new Set(["Sent", "Delivered"]);
+// The cron has time to wait for the phone: about 30s, against ~15s seen on 11-17.
+const SMS_WAIT_POLLS = 30;
 
 export class SmsRetryableError extends Error {
 	constructor(readonly code: string) {
@@ -55,21 +58,36 @@ export async function sendPaymentSms(input: {
 		throw new SmsRetryableError("invalid_phone");
 	}
 
-	let finalState: { state: string };
+	let finalState: { recipients: Array<{ error?: string | null }>; state: string };
 	try {
-		finalState = await smsGateway.sendSmsAndWait({
-			message: input.message,
-			phoneNumbers: [`+976${input.customerPhone}`],
+		finalState = await smsGateway.sendSmsAndWait(
+			{ message: input.message, phoneNumbers: [`+976${input.customerPhone}`] },
+			{ maxAttempts: SMS_WAIT_POLLS },
+		);
+	} catch (error) {
+		logger.error("sms.send_failed", error instanceof Error ? error.message : String(error), {
+			event: input.event,
+			paymentNumber: input.paymentNumber,
 		});
-	} catch {
-		// The gateway may have accepted the request before its response was lost.
+		if (error instanceof SmsNotAcceptedError) {
+			throw new SmsRetryableError(error.code);
+		}
+		// The gateway may hold the message, but we could not confirm it either way.
 		throw new SmsAmbiguousError();
 	}
 
 	if (finalState.state === "Failed") {
+		logger.warn("sms.provider_failed", {
+			error: finalState.recipients[0]?.error ?? "unknown",
+			paymentNumber: input.paymentNumber,
+		});
 		throw new SmsRetryableError("provider_failed");
 	}
 	if (!SMS_SUCCESS_STATES.has(finalState.state)) {
+		logger.warn("sms.not_sent_yet", {
+			paymentNumber: input.paymentNumber,
+			smsState: finalState.state,
+		});
 		throw new SmsAmbiguousError();
 	}
 
