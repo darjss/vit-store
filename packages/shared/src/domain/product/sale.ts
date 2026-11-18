@@ -31,8 +31,6 @@ export const SALE_CAMPAIGN = {
 	name: "Black Friday",
 	path: "/black-friday",
 	percent: 20,
-	productIds: [
-		7173, 7327, 7184, 7043, 7608, 7634, 7264, 7308, 7061, 7779, 7310, 7003, 7000, 7325,
-	],
+	productIds: [7173, 7327, 7184, 7043, 7608, 7634, 7264, 7308, 7061, 7779, 7310, 7003, 7000, 7325],
 	start: "2026-11-14T00:00:00+08:00",
 } as const;
