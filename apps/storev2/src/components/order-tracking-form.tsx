@@ -1,6 +1,6 @@
 import { lookup } from "@vit/shared/lookup";
 import { useMutation, useQuery, type UseMutationResult } from "@tanstack/solid-query";
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createSignal, For, Match, onMount, Show, Switch, untrack } from "solid-js";
 import { orderStatusLabels } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
 import { queryClient } from "@/lib/query";
@@ -138,6 +138,23 @@ const OrderTrackingForm = () => {
 		}),
 		() => queryClient,
 	);
+
+	// A /pay/<code> link lands here with ?order=<n> and a session for that order.
+	onMount(() => {
+		const linkedOrder = new URLSearchParams(window.location.search).get("order");
+		if (linkedOrder) {
+			setOrderNumber(linkedOrder);
+			trackMutation.mutate({ orderNumber: linkedOrder });
+			setStep("result");
+		}
+	});
+
+	createEffect(() => {
+		const user = authQuery.data;
+		if (user && !untrack(phone)) {
+			setPhone(user.phone.toString());
+		}
+	});
 
 	const handleSearch = () => {
 		if (!orderNumber().trim() || !phone().trim()) {

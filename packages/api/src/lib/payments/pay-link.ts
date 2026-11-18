@@ -8,17 +8,24 @@ import { customerQueries, paymentQueries } from "~/queries";
 /**
  * Short `/pay/<code>` links for texts. A payment page URL with `?ct=` is too
  * long for an SMS, and the text opens in Safari or Messages where the
- * checkout cookie from Facebook's webview is missing. Redeeming a code sets
- * the same checkout-guest session `addOrder` sets, scoped to one payment.
- * A code lives 48 hours and stops working once the payment is no longer
- * pending or the order is cancelled.
+ * checkout cookie from Facebook's webview is missing.
+ *
+ * The code is a bearer token for one order. Redeeming it sets the same
+ * checkout-guest session `addOrder` sets, scoped to that order and its
+ * payment. For 48 hours an unpaid order opens its payment page. Otherwise,
+ * once paid, cancelled or late, the code opens that order's status page.
  */
-const PAY_LINK_TTL_SECONDS = 60 * 60 * 48;
+const PAY_LINK_TTL_SECONDS = 60 * 60 * 24 * 30;
+const PAY_LINK_PAYABLE_MS = 48 * 3_600_000;
 const CODE_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const CODE_LENGTH = 10;
 const CODE_RE = /^[0-9A-Za-z]{10}$/;
 
-const payLinkRecordSchema = v.object({ paymentNumber: v.string() });
+// Codes issued before issuedAt existed read as 0, so they open the status page.
+const payLinkRecordSchema = v.object({
+	issuedAt: v.optional(v.number(), 0),
+	paymentNumber: v.string(),
+});
 
 const payLinkKey = (code: string) => `pay_link:${code}`;
 
@@ -45,7 +52,7 @@ function randomCode() {
 
 export async function createPayLink(paymentNumber: string) {
 	const code = randomCode();
-	await kv().put(payLinkKey(code), JSON.stringify({ paymentNumber }), {
+	await kv().put(payLinkKey(code), JSON.stringify({ issuedAt: Date.now(), paymentNumber }), {
 		expirationTtl: PAY_LINK_TTL_SECONDS,
 	});
 	return code;
@@ -67,14 +74,17 @@ async function readPayLink(code: string) {
 	}
 }
 
-/** Sets a checkout-guest session for a live code and returns its payment number, or null. */
+/**
+ * Sets a checkout-guest session for the code's order and returns where to send
+ * the buyer, or null when the code or its order is unknown.
+ */
 export async function redeemPayLink(c: HonoContextType, code: string) {
 	const record = await readPayLink(code);
 	if (!record) {
 		return null;
 	}
 	const payment = await paymentQueries.store.getPaymentInfoByNumber(record.paymentNumber);
-	if (!payment || !isAwaitingPayment(payment)) {
+	if (!payment) {
 		return null;
 	}
 	const customer = await customerQueries.store.getCustomerByPhone(payment.order.customerPhone);
@@ -92,5 +102,11 @@ export async function redeemPayLink(c: HonoContextType, code: string) {
 	} satisfies CustomerSessionClaims;
 	const { session, token } = await createSession(checkoutGuestUser, kv());
 	setSessionTokenCookie(c, token, session.expiresAt);
-	return payment.paymentNumber;
+	const payable = isAwaitingPayment(payment) && Date.now() - record.issuedAt < PAY_LINK_PAYABLE_MS;
+	return {
+		path: payable
+			? `/payment/${payment.paymentNumber}`
+			: `/order-tracking?order=${encodeURIComponent(payment.order.orderNumber)}`,
+		paymentNumber: payment.paymentNumber,
+	};
 }
