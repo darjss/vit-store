@@ -102,8 +102,7 @@ export async function redeemPayLink(c: HonoContextType, code: string) {
 	} satisfies CustomerSessionClaims;
 	const { session, token } = await createSession(checkoutGuestUser, kv());
 	setSessionTokenCookie(c, token, session.expiresAt);
-	const payable =
-		isAwaitingPayment(payment) && Date.now() - record.issuedAt < PAY_LINK_PAYABLE_MS;
+	const payable = isAwaitingPayment(payment) && Date.now() - record.issuedAt < PAY_LINK_PAYABLE_MS;
 	return {
 		path: payable
 			? `/payment/${payment.paymentNumber}`
