@@ -118,6 +118,14 @@ const BankTile = (props: BankTileProps) => {
 
 const isDesktop = () => !isServer && window.matchMedia("(min-width: 640px)").matches;
 
+// QPay records a bank-app payment some time after the app shows success. In
+// prod from 11-12 to 11-19 the webhook landed 10 to 48 s after the shopper
+// came back, so a check on return alone called those payments unpaid. After a
+// return, poll faster for this long before offering other ways to pay.
+const RETURN_CHECK_MS = 60_000;
+const RETURN_POLL_MS = 2000;
+const POLL_MS = 5000;
+
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
 	let qrSection: HTMLDivElement | undefined;
@@ -134,66 +142,23 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		null,
 	);
 	const recoveryFocusRestore = createSheetFocusRestore();
+	// True from the shopper's return until QPay reports the payment or
+	// RETURN_CHECK_MS runs out.
+	const [checking, setChecking] = createSignal(false);
+	let checkTimer: number | undefined;
+	let checkPanel: HTMLDivElement | undefined;
 	// Watcher stops accumulate here because onCleanup inside event handlers
 	// never registers: click handlers run outside any Solid reactive owner.
-	const stops: Array<() => void> = [];
+	const stops: Array<() => void> = [() => window.clearTimeout(checkTimer)];
 	onCleanup(() => {
 		for (const stop of stops) {
 			stop();
 		}
 	});
 
-	const handleBankClick = (link: { description: string; link: string; name: string }) => {
-		const current = handoff();
-		if (!isHandoffState(current, "idle") && !isHandoffState(current, "failed")) {
-			return;
-		}
-		const bank = link.name || link.description || "Банк";
-		const opening = HandoffState.opening(bank, Date.now());
-		setHandoff(opening);
-		trackBankDeeplinkClicked(bank, props.paymentNumber);
-		stops.push(
-			watchHandoff(opening, {
-				onFailed: () => {
-					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
-					setHandoff(HandoffState.failed(bank));
-					setShowQr(true);
-					setRecoveryReason("no_handoff");
-				},
-				onOpened: () => {
-					trackBankDeeplinkOpened(bank, props.paymentNumber, Date.now() - opening.startedAt);
-					setHandoff(HandoffState.opened(bank));
-					stops.push(
-						watchReturnFromBankApp(() => {
-							setHandoff(HandoffState.idle());
-							void (async () => {
-								if (navigated()) {
-									return;
-								}
-								try {
-									const result = await api.payment.checkQpayPayment.mutate({
-										checkoutToken: props.checkoutToken,
-										paymentNumber: props.paymentNumber,
-									});
-									if (result.paid) {
-										setNavigated(true);
-										void safeNavigate(paymentSuccessUrl(props.paymentNumber, props.checkoutToken));
-										return;
-									}
-								} catch {
-									// Check failed or invoice is not QPay yet. Fall through
-									// to the unpaid recovery sheet.
-								}
-								if (navigated()) {
-									return;
-								}
-								setRecoveryReason("returned_unpaid");
-							})();
-						}),
-					);
-				},
-			}),
-		);
+	const stopChecking = () => {
+		window.clearTimeout(checkTimer);
+		setChecking(false);
 	};
 
 	onMount(() => {
@@ -208,12 +173,16 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		trackPaymentRecoverySheetShown(props.paymentNumber, reason);
 	});
 
-	const chooseRecovery = (choice: "qr" | "transfer" | "dismiss") => {
+	const chooseRecovery = (choice: "qr" | "transfer" | "dismiss" | "recheck") => {
 		if (!recoveryReason()) {
 			return;
 		}
 		setRecoveryReason(null);
 		trackPaymentRecoveryChosen(props.paymentNumber, choice);
+		if (choice === "recheck") {
+			startReturnCheck();
+			return;
+		}
 		if (choice === "qr") {
 			setShowQr(true);
 			queueMicrotask(() => {
@@ -264,8 +233,8 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		const bank = failedHandoffBank();
 		if (!bank) {
 			return {
-				description: "QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?",
-				title: "Апп нээгдсэнгүй",
+				description: "Банкны аппаар төлсөн бол дахин шалгана уу. Эсвэл QR код, дансаар төлж болно.",
+				title: "Төлбөр хараахан ороогүй байна",
 			};
 		}
 		if (detectInAppBrowser() === "facebook") {
@@ -306,7 +275,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					paymentNumber: props.paymentNumber,
 				}),
 			queryKey: ["qpay-payment-status", props.paymentNumber, invoiceData()?.invoice_id],
-			refetchInterval: 5000,
+			refetchInterval: checking() ? RETURN_POLL_MS : POLL_MS,
 			staleTime: 0,
 		}),
 		() => queryClient,
@@ -317,10 +286,60 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 			return;
 		}
 		if (paymentStatusQuery.data?.paid) {
+			stopChecking();
 			setNavigated(true);
 			void safeNavigate(paymentSuccessUrl(props.paymentNumber, props.checkoutToken));
 		}
 	});
+
+	const startReturnCheck = () => {
+		window.clearTimeout(checkTimer);
+		setChecking(true);
+		void paymentStatusQuery.refetch();
+		queueMicrotask(() => {
+			checkPanel?.scrollIntoView({ behavior: "smooth", block: "center" });
+		});
+		checkTimer = window.setTimeout(() => {
+			setChecking(false);
+			if (!navigated()) {
+				setRecoveryReason("returned_unpaid");
+			}
+		}, RETURN_CHECK_MS);
+	};
+
+	const handleBankClick = (link: { description: string; link: string; name: string }) => {
+		const current = handoff();
+		if (!isHandoffState(current, "idle") && !isHandoffState(current, "failed")) {
+			return;
+		}
+		stopChecking();
+		const bank = link.name || link.description || "Банк";
+		const opening = HandoffState.opening(bank, Date.now());
+		setHandoff(opening);
+		trackBankDeeplinkClicked(bank, props.paymentNumber);
+		stops.push(
+			watchHandoff(opening, {
+				onFailed: () => {
+					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
+					setHandoff(HandoffState.failed(bank));
+					setShowQr(true);
+					setRecoveryReason("no_handoff");
+				},
+				onOpened: () => {
+					trackBankDeeplinkOpened(bank, props.paymentNumber, Date.now() - opening.startedAt);
+					setHandoff(HandoffState.opened(bank));
+					stops.push(
+						watchReturnFromBankApp(() => {
+							setHandoff(HandoffState.idle());
+							if (!navigated()) {
+								startReturnCheck();
+							}
+						}),
+					);
+				},
+			}),
+		);
+	};
 
 	return (
 		<>
@@ -394,6 +413,34 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						    handler), so desktop leads with QR only. */}
 						<Show when={(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()}>
 							<div class="space-y-3">
+								<Show when={checking()}>
+									<div
+										aria-live="polite"
+										class="animate-handoff-reveal border-border bg-wash-lemon flex flex-col items-center gap-2 rounded-2xl border p-4 text-center"
+										ref={checkPanel}
+									>
+										<p class="text-foreground flex items-center gap-2 text-sm font-semibold">
+											<span
+												aria-hidden="true"
+												class="working-spinner size-4 rounded-full border-2 border-current/20 border-t-current"
+											/>
+											Төлбөр шалгаж байна…
+										</p>
+										<p class="text-muted-foreground text-xs">
+											Банкны аппаар төлсөн бол хэдхэн секундэд баталгаажна.
+										</p>
+										<button
+											class="text-foreground text-xs font-medium underline underline-offset-2"
+											onClick={() => {
+												stopChecking();
+												setRecoveryReason("returned_unpaid");
+											}}
+											type="button"
+										>
+											Өөр аргаар төлөх
+										</button>
+									</div>
+								</Show>
 								<p class="text-muted-foreground text-xs font-semibold">Банкаа сонгоно уу</p>
 								<Show when={banks().hero}>
 									{(hero) => (
@@ -525,7 +572,24 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</SheetDescription>
 					</SheetHeader>
 					<div class="space-y-2 px-5 py-5">
-						<button class={cn(buttonVariants())} onClick={() => chooseRecovery("qr")} type="button">
+						<Show when={recoveryReason() === "returned_unpaid"}>
+							<button
+								class={cn(buttonVariants())}
+								onClick={() => chooseRecovery("recheck")}
+								type="button"
+							>
+								Төлсөн, дахин шалгах
+							</button>
+						</Show>
+						<button
+							class={cn(
+								buttonVariants({
+									variant: recoveryReason() === "returned_unpaid" ? "outline" : "default",
+								}),
+							)}
+							onClick={() => chooseRecovery("qr")}
+							type="button"
+						>
 							QR код уншуулах
 						</button>
 						<Show when={BANK_TRANSFER_ENABLED && props.onChooseTransfer}>
