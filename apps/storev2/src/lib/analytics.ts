@@ -192,7 +192,7 @@ export function trackPaymentRecoverySheetShown(
 
 export function trackPaymentRecoveryChosen(
 	paymentNumber: string,
-	choice: "qr" | "transfer" | "dismiss",
+	choice: "qr" | "transfer" | "dismiss" | "recheck",
 ) {
 	capture("payment_recovery_chosen", {
 		choice,
