@@ -339,14 +339,16 @@ const adTreeSchema = v.looseObject({
 					ads: v.array(v.looseObject({ name: v.string(), platformAdId: v.string() })),
 				}),
 			),
+			campaignName: v.string(),
 		}),
 	),
 });
 
 // Ads name the products they advertise with `#p<id>` tags ("x-receipt #p6994"),
-// so a chat opened from an ad can lead with that product. The tree search
-// takes an exact platform ad id.
-export const adProductIds = async (env: Env, adId: string) => {
+// so a chat opened from an ad can lead with that product. The ad and campaign
+// names also go on the chat's order. The tree search takes an exact platform ad
+// id; an ad it doesn't list comes back with empty names and no products.
+export const lookupAd = async (env: Env, adId: string) => {
 	const response = await fetch(
 		`${zernioBaseUrl(env)}/v1/ads/tree?search=${encodeURIComponent(adId)}`,
 		{
@@ -359,10 +361,14 @@ export const adProductIds = async (env: Env, adId: string) => {
 		throw new Error(`Zernio ad lookup failed: ${response.status}`);
 	}
 	const tree = v.parse(adTreeSchema, await response.json());
+	const campaign = tree.campaigns.find((c) =>
+		c.adSets.some((s) => s.ads.some((ad) => ad.platformAdId === adId)),
+	);
 	const name =
-		tree.campaigns
-			.flatMap((c) => c.adSets)
-			.flatMap((s) => s.ads)
-			.find((ad) => ad.platformAdId === adId)?.name ?? "";
-	return [...name.matchAll(/#p(\d+)/g)].map((m) => Number(m[1]));
+		campaign?.adSets.flatMap((s) => s.ads).find((ad) => ad.platformAdId === adId)?.name ?? "";
+	return {
+		campaign: campaign?.campaignName ?? "",
+		name,
+		productIds: [...name.matchAll(/#p(\d+)/g)].map((m) => Number(m[1])),
+	};
 };
