@@ -43,6 +43,34 @@ export const renderTurn = async (opts: {
 	return hasSent(cardsKey) ? ids.slice(0, 10) : [];
 };
 
+const CARD_TITLE_MAX = 68;
+const IHERB_NOISE_RE =
+	/\b(dietary supplement|flavored with other natural flavors|natural flavors?|per serving)\b/gi;
+
+// Trims verbose iHerb product titles for Messenger's 2-line mobile card header:
+// collapses duplicated brand prefixes ("Micro Ingredients Micro Ingredients,"),
+// drops boilerplate filler, and truncates on a word boundary.
+const cardTitle = (name: string, brand: string): string => {
+	let clean = name.trim().replaceAll(/\s+/g, " ");
+	const trimmedBrand = brand.trim();
+	if (trimmedBrand.length > 0) {
+		const escaped = trimmedBrand.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+		clean = clean.replace(new RegExp(`^(${escaped})[,\\s]+\\1\\b[,\\s]*`, "i"), "$1, ");
+	}
+	clean = clean
+		.replaceAll(IHERB_NOISE_RE, "")
+		.replaceAll(/\s*,\s*,+/g, ", ")
+		.replace(/[,\s-]+$/, "")
+		.replaceAll(/\s+/g, " ")
+		.trim();
+	if (clean.length <= CARD_TITLE_MAX) {
+		return clean;
+	}
+	const cut = clean.slice(0, CARD_TITLE_MAX - 1);
+	const space = cut.lastIndexOf(" ");
+	return `${(space > 24 ? cut.slice(0, space) : cut).replace(/[,\s-]+$/, "")}…`;
+};
+
 // One product carousel, up to 10 cards. False when none of the ids exist.
 export const sendCards = async (opts: {
 	accountId: string;
@@ -79,7 +107,7 @@ export const sendCards = async (opts: {
 								],
 					imageUrl: p.image ? squareImage(p.image) : undefined,
 					subtitle: `${mnt(p.price)} · ${STOCK_LABEL[p.stockStatus]}`,
-					title: p.name.slice(0, 80),
+					title: cardTitle(p.name, p.brand),
 				})),
 				imageAspectRatio: "square",
 				type: "generic" as const,

@@ -17,6 +17,7 @@ import {
 	createCheckoutAccessToken,
 	type CustomerSessionClaims,
 } from "~/lib/session/checkout-access";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import {
 	trackOrderCreatedServerSide,
@@ -26,7 +27,7 @@ import { kv } from "~/lib/kv";
 import { enqueueUnpaidReminder } from "~/lib/payments/notification-outbox";
 import { createQpayInvoice } from "~/lib/payments/qpay";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
-import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
+import { publicProcedure, router, timingSafeEqual, verifiedCustomerProcedure } from "~/lib/trpc";
 import type { Context } from "~/lib/context";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 
@@ -104,6 +105,14 @@ type OrderSource = "messenger" | "web";
 const orderSource = (ctx: Context): OrderSource =>
 	ctx.c.req.header("x-vit-client") === "messenger" ? "messenger" : "web";
 
+// Only the authenticated Messenger worker may create pay-after-delivery or
+// pre-selected transfer orders on the public checkout endpoint.
+const isAuthenticatedBot = async (ctx: Context): Promise<boolean> => {
+	const token = ctx.c.env.ADMIN_BOT_TOKEN;
+	const provided = ctx.c.req.header("X-Admin-Bot-Token");
+	return Boolean(token && provided && (await timingSafeEqual(token, provided)));
+};
+
 async function upsertCheckoutCustomer(
 	tx: CheckoutTx,
 	input: v.InferOutput<typeof newOrderSchema>,
@@ -169,16 +178,23 @@ async function reuseMatchingCheckout(
 	customer: Awaited<ReturnType<typeof upsertCheckoutCustomer>>,
 	pendingOrder: NonNullable<Awaited<ReturnType<typeof loadPendingCheckout>>["pendingOrder"]>,
 	openPayment: NonNullable<Awaited<ReturnType<typeof loadPendingCheckout>>["openPayment"]>,
-	submittedFingerprint: string,
+	opts: { payAfterDelivery: boolean; provider: "qpay" | "transfer" },
 ) {
+	const baseUpdate = {
+		address: input.address,
+		addressZoneId: input.addressZoneId ?? pendingOrder.addressZoneId,
+		notes: input.notes ?? null,
+	};
 	await tx
 		.update(OrdersTable)
-		.set({
-			address: input.address,
-			addressZoneId: input.addressZoneId ?? pendingOrder.addressZoneId,
-			notes: input.notes ?? null,
-		})
+		.set(opts.payAfterDelivery ? { ...baseUpdate, status: "pending" as const } : baseUpdate)
 		.where(eq(OrdersTable.id, pendingOrder.id));
+	if (opts.provider === "transfer" && openPayment.paymentNumber) {
+		await tx
+			.update(PaymentsTable)
+			.set({ provider: "transfer" })
+			.where(eq(PaymentsTable.paymentNumber, openPayment.paymentNumber));
+	}
 	return {
 		customer,
 		orderId: pendingOrder.id,
@@ -236,8 +252,10 @@ async function insertFreshCheckout(
 		customerPhone: number;
 		normalizedProducts: Array<CartLine>;
 		orderNumber: string;
+		payAfterDelivery: boolean;
 		paymentNumberGenerated: string;
 		productById: Map<number, CheckoutProduct>;
+		provider: "qpay" | "transfer";
 		total: number;
 	},
 ) {
@@ -250,7 +268,7 @@ async function insertFreshCheckout(
 			deliveryProvider: "tu-delivery",
 			notes: input.notes ?? null,
 			orderNumber: params.orderNumber,
-			status: "created",
+			status: params.payAfterDelivery ? "pending" : "created",
 			total: params.total,
 		})
 		.returning({ orderId: OrdersTable.id });
@@ -271,7 +289,7 @@ async function insertFreshCheckout(
 			amount: params.total,
 			orderId: createdOrder.orderId,
 			paymentNumber: params.paymentNumberGenerated,
-			provider: "qpay",
+			provider: params.provider,
 			status: "pending",
 		})
 		.returning({ paymentNumber: PaymentsTable.paymentNumber });
@@ -292,8 +310,10 @@ async function executeCheckoutTransaction(
 		customerPhone: number;
 		normalizedProducts: Array<CartLine>;
 		orderNumber: string;
+		payAfterDelivery: boolean;
 		paymentNumberGenerated: string;
 		productById: Map<number, CheckoutProduct>;
+		provider: "qpay" | "transfer";
 		source: OrderSource;
 		submittedFingerprint: string;
 		total: number;
@@ -307,14 +327,10 @@ async function executeCheckoutTransaction(
 			openPayment &&
 			cartFingerprint(pendingOrder.orderDetails) === params.submittedFingerprint
 		) {
-			return reuseMatchingCheckout(
-				tx,
-				input,
-				customer,
-				pendingOrder,
-				openPayment,
-				params.submittedFingerprint,
-			);
+			return reuseMatchingCheckout(tx, input, customer, pendingOrder, openPayment, {
+				payAfterDelivery: params.payAfterDelivery,
+				provider: params.provider,
+			});
 		}
 		if (
 			pendingOrder &&
@@ -338,6 +354,7 @@ function logCheckoutOutcome(
 	txResult: Awaited<ReturnType<typeof executeCheckoutTransaction>>,
 	normalizedProducts: Array<CartLine>,
 	total: number,
+	opts: { payAfterDelivery: boolean; provider: "qpay" | "transfer" },
 ) {
 	const { orderId, paymentNumber, reused } = txResult;
 	if (reused) {
@@ -355,7 +372,7 @@ function logCheckoutOutcome(
 		itemCount: normalizedProducts.length,
 		orderId,
 		orderNumber: txResult.orderNumber,
-		status_text: "created",
+		status_text: opts.payAfterDelivery ? "pending" : "created",
 		total,
 	});
 	if (paymentNumber) {
@@ -363,7 +380,7 @@ function logCheckoutOutcome(
 			amount: total,
 			orderId,
 			paymentNumber,
-			provider: "qpay",
+			provider: opts.provider,
 			status_text: "pending",
 		});
 	}
@@ -395,6 +412,40 @@ async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
 	});
 }
 
+function schedulePostCheckoutPaymentWork(
+	ctx: Context,
+	paymentNumber: string | null,
+	provider: "qpay" | "transfer",
+	reused: boolean,
+) {
+	if (!paymentNumber) {
+		return;
+	}
+	if (provider === "transfer") {
+		ctx.c.executionCtx.waitUntil(
+			getTransferReconciliationStub(ctx.c.env, paymentNumber)
+				.start({ paymentNumber })
+				.catch((error) => {
+					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
+						error: error instanceof Error ? error.message : String(error),
+						paymentNumber,
+					});
+				}),
+		);
+		return;
+	}
+	if (!reused) {
+		ctx.c.executionCtx.waitUntil(
+			precreateQpayInvoice(paymentNumber).catch((error) => {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+					event: "qpay.invoice_precreate_failed",
+					paymentNumber,
+				});
+			}),
+		);
+	}
+}
+
 export const order = router({
 	addOrder: publicProcedure.input(newOrderSchema).mutation(async ({ ctx, input }) => {
 		const startTime = performance.now();
@@ -406,12 +457,18 @@ export const order = router({
 			const customerPhone = Number(input.phoneNumber);
 			const submittedFingerprint = cartFingerprint(normalizedProducts);
 			const source = orderSource(ctx);
+			const botAuthed = await isAuthenticatedBot(ctx);
+			const payAfterDelivery = botAuthed && input.payAfterDelivery === true;
+			const provider: "qpay" | "transfer" =
+				botAuthed && input.paymentProvider === "transfer" ? "transfer" : "qpay";
 			const txResult = await executeCheckoutTransaction(ctx, input, {
 				customerPhone,
 				normalizedProducts,
 				orderNumber,
+				payAfterDelivery,
 				paymentNumberGenerated,
 				productById,
+				provider,
 				source,
 				submittedFingerprint,
 				total,
@@ -420,20 +477,11 @@ export const order = router({
 			const reused = txResult.reused;
 			const resolvedOrderNumber = txResult.orderNumber;
 			const paymentNumber = txResult.paymentNumber;
-			logCheckoutOutcome(ctx, input, txResult, normalizedProducts, total);
-
-			// Keep speculative QPay invoice creation alive after the response.
-			// Failure is non-fatal — createQr is the fallback.
-			if (paymentNumber && !reused) {
-				ctx.c.executionCtx.waitUntil(
-					precreateQpayInvoice(paymentNumber).catch((error) => {
-						ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-							event: "qpay.invoice_precreate_failed",
-							paymentNumber,
-						});
-					}),
-				);
-			}
+			logCheckoutOutcome(ctx, input, txResult, normalizedProducts, total, {
+				payAfterDelivery,
+				provider,
+			});
+			schedulePostCheckoutPaymentWork(ctx, paymentNumber, provider, reused);
 
 			if (paymentNumber && !reused) {
 				trackOrderCreatedServerSide({

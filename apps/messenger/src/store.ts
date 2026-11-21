@@ -25,11 +25,16 @@ const clients = new WeakMap<Env, TRPCClient<StoreRouter>>();
 export const storeClient = (env: Env): TRPCClient<StoreRouter> => {
 	let client = clients.get(env);
 	if (client === undefined) {
+		const botToken = env.ADMIN_BOT_TOKEN?.trim();
+		const headers = botToken
+			? { "X-Admin-Bot-Token": botToken, "X-Vit-Client": "messenger" }
+			: { "X-Vit-Client": "messenger" };
 		client = createTRPCClient<StoreRouter>({
 			links: [
 				httpLink({
-					// Tags the store's `order_created` analytics event with source "messenger".
-					headers: { "X-Vit-Client": "messenger" },
+					// Tags the store's `order_created` analytics event with source "messenger"
+					// and authenticates Messenger-only checkout options (pay-after-delivery).
+					headers,
 					transformer: SuperJSON,
 					url: storeApiUrl(env),
 				}),
