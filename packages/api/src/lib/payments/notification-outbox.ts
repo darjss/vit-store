@@ -21,7 +21,7 @@ const CONFIRMED_SMS = "order_payment_confirmed_sms";
 const UNPAID_REMINDER_SMS = "order_unpaid_reminder_sms";
 const PURPOSES = [CONFIRMED_SMS, UNPAID_REMINDER_SMS];
 const BATCH = 10;
-// sendSmsAndWait makes at most 33 gateway requests of up to 10s, 30 of them 1s apart.
+// sendSmsAndWait makes at most 34 gateway requests of up to 10s, 32 of them 1s apart.
 const LEASE_MS = 420_000;
 const MAX_ATTEMPTS = 5;
 

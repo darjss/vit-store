@@ -12,6 +12,7 @@ import Client, {
 } from "android-sms-gateway";
 import ky from "ky";
 import * as v from "valibot";
+import { logger } from "~/lib/logger";
 import { alertSmsGatewayProblem } from "./alert";
 
 // Re-export types from android-sms-gateway
@@ -222,16 +223,57 @@ export class SmsNotAcceptedError extends Error {
 	}
 }
 
-/** The message's state, or null when the gateway answers 404 for that id. */
-async function findMessageState(id: string) {
-	try {
-		return await smsClient.getState(id);
-	} catch (error) {
-		if (error instanceof Error && error.message === "sms_provider_http_404") {
-			return null;
+const FIND_STATE_ATTEMPTS = 3;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * The message's state, or null when the gateway answers 404 for that id.
+ * Other errors, such as the 429s the cloud API sometimes returns, are retried a few times.
+ */
+async function findMessageState(id: string, intervalMs: number) {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await smsClient.getState(id);
+		} catch (error) {
+			if (error instanceof Error && error.message === "sms_provider_http_404") {
+				return null;
+			}
+			if (attempt >= FIND_STATE_ATTEMPTS) {
+				throw error;
+			}
+			await sleep(intervalMs);
 		}
-		throw error;
 	}
+}
+
+/**
+ * Polls while the message is Pending (the phone has not fetched it) or Processed
+ * (the phone has it but the SIM has not sent it yet). Both usually clear within ~15s.
+ */
+async function waitWhileQueued(
+	id: string,
+	initial: MessageState,
+	options: { intervalMs: number; maxAttempts: number },
+) {
+	let state = initial;
+	for (
+		let attempt = 0;
+		(state.state === "Pending" || state.state === "Processed") && attempt < options.maxAttempts;
+		attempt++
+	) {
+		await sleep(options.intervalMs);
+		try {
+			state = await smsClient.getState(id);
+		} catch (error) {
+			// The gateway has the message, so a failed poll (a 429 on 11-17) changes nothing. Poll again.
+			logger.warn("sms.poll_failed", {
+				error: error instanceof Error ? error.message : String(error),
+				smsState: state.state,
+			});
+		}
+	}
+	return state;
 }
 
 const smsGatewayAuthHeaders = () =>
@@ -303,23 +345,14 @@ export const smsGateway = {
 				{ skipPhoneValidation },
 			);
 		} catch (error) {
-			const landed = await findMessageState(id);
+			const landed = await findMessageState(id, intervalMs);
 			if (!landed) {
 				throw new SmsNotAcceptedError(error);
 			}
 			state = landed;
 		}
 
-		// Pending: the phone has not fetched it. Processed: the phone has it
-		// but the SIM has not sent it yet. Both usually clear within ~15s.
-		for (
-			let attempt = 0;
-			(state.state === "Pending" || state.state === "Processed") && attempt < maxAttempts;
-			attempt++
-		) {
-			await new Promise((resolve) => setTimeout(resolve, intervalMs));
-			state = await smsClient.getState(id);
-		}
+		state = await waitWhileQueued(id, state, { intervalMs, maxAttempts });
 
 		if (state.state === "Pending") {
 			await alertSmsGatewayProblem({ kind: "pending" });
