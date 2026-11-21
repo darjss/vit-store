@@ -239,6 +239,11 @@ export const createDelivery = async (
 		throw createError;
 	}
 
+	await db()
+		.update(DeliveryDispatchesTable)
+		.set({ tuOrderId: result.orderId })
+		.where(eq(DeliveryDispatchesTable.orderId, orderId));
+
 	logger.info("delivery created", {
 		deliveryOrderId: result.orderId,
 		documentNo: result.documentNo,
