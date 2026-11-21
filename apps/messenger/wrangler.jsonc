@@ -16,6 +16,10 @@
 	// OPENAI_API_KEY, ADMIN_TOKEN, ADMIN_BOT_TOKEN, TELEGRAM_ADMIN_BOT_TOKEN,
 	// TELEGRAM_ADMIN_CHAT_ID, TELEGRAM_WEBHOOK_SECRET.
 	"vars": {
+		"BRIDGE_ACCOUNT_ID": "6abf80aecb476a6db0a17892",
+		"BRIDGE_MODE": "shadow",
+		"BRIDGE_MODEL": "gpt-6.1-terra",
+		"BRIDGE_SHADOW_TELEGRAM": "false",
 		"MODEL": "gpt-6.1-terra",
 		// The VPC binding pins host and port; this URL's host only sets the
 		// Host header, but the /v1 path suffix must match the proxy.
@@ -24,6 +28,9 @@
 		"STORE_PUBLIC_URL": "https://amerikvitamin.mn",
 		"ZERNIO_ACCOUNT_IDS": "6abd496a8fa7e621847d9954",
 		"ZERNIO_BASE_URL": "https://zernio.com/api",
+	},
+	"triggers": {
+		"crons": ["*/5 * * * *"],
 	},
 	// Skill SKILL.md files import as text for the admin system prompt.
 	"rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
@@ -58,6 +65,7 @@
 			{ "name": "Ingress", "class_name": "Ingress" },
 			{ "name": "Conversation", "class_name": "Conversation" },
 			{ "name": "Admin", "class_name": "Admin" },
+			{ "name": "OrderBridge", "class_name": "OrderBridge" },
 		],
 	},
 	"migrations": [
@@ -68,6 +76,10 @@
 		{
 			"tag": "v2",
 			"new_sqlite_classes": ["Admin"],
+		},
+		{
+			"tag": "v3",
+			"new_sqlite_classes": ["OrderBridge"],
 		},
 	],
 }
