@@ -93,6 +93,20 @@ const adminTelegramTranscript = async (
 	return Response.json(await admin.adminTranscript());
 };
 
+const adminBridge = async (request: Request, env: Env, url: URL): Promise<Response> => {
+	if (!bearerOk(request, env)) {
+		return new Response("unauthorized", { status: 401 });
+	}
+	const bridge = await getAgentByName(env.OrderBridge, "default");
+	if (url.pathname === "/admin/bridge/status" && request.method === "GET") {
+		return Response.json(await bridge.adminStatus());
+	}
+	if (url.pathname === "/admin/bridge/run" && request.method === "POST") {
+		return Response.json(await bridge.tick());
+	}
+	return new Response("not found", { status: 404 });
+};
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
@@ -109,15 +123,23 @@ export default {
 		if (url.pathname.startsWith("/admin/conversations")) {
 			return adminRoute(request, env, url);
 		}
+		if (url.pathname.startsWith("/admin/bridge/")) {
+			return adminBridge(request, env, url);
+		}
 		const telegramTranscript = /^\/admin\/telegram\/([^/]+)\/transcript$/.exec(url.pathname);
 		if (request.method === "GET" && telegramTranscript !== null) {
 			return adminTelegramTranscript(request, env, telegramTranscript[1] ?? "");
 		}
 		return new Response("not found", { status: 404 });
 	},
+	async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
+		const bridge = await getAgentByName(env.OrderBridge, "default");
+		await bridge.tick();
+	},
 } satisfies ExportedHandler<Env>;
 
 export { Admin } from "./admin/admin";
+export { OrderBridge } from "./bridge/shadow";
 export { Conversation } from "./conversation";
 export { Ingress } from "./ingress";
 export { PaymentWatch } from "./payment-watch";

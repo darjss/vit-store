@@ -121,6 +121,39 @@ export type LogEvent =
 			thread: string;
 	  }
 	| {
+			conversation: string;
+			event: "bridge_shadow";
+			messages: number;
+			model: string;
+			ms: number;
+			order_summaries: Array<{
+				cancelled: boolean;
+				confirmedAtMsg: number;
+				deliveryFee: number | null;
+				itemCount: number;
+				itemIds: Array<number | null>;
+				paymentSent: boolean;
+				phoneLast4: string | null;
+				pickup: boolean;
+				quotedTotal: number | null;
+			}>;
+			orders: number;
+			photos: number;
+			tokens_cached: number;
+			tokens_in: number;
+			tokens_out: number;
+	  }
+	| {
+			changed?: number;
+			checked?: number;
+			errors?: number;
+			event: "bridge_tick";
+			extracted?: number;
+			ms: number;
+			skipped?: string;
+			watermark?: string;
+	  }
+	| {
 			event: "tap";
 			kind: string;
 			outcome: string;

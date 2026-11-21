@@ -1,4 +1,5 @@
 import type { Admin } from "./admin/admin";
+import type { OrderBridge } from "./bridge/shadow";
 import type { Conversation } from "./conversation";
 import type { Ingress } from "./ingress";
 
@@ -7,6 +8,10 @@ export interface Env extends Cloudflare.Env {
 	ADMIN_BOT_TOKEN?: string;
 	ADMIN_TOKEN?: string;
 	AI?: Ai;
+	BRIDGE_ACCOUNT_ID?: string;
+	BRIDGE_MODE?: string;
+	BRIDGE_MODEL?: string;
+	BRIDGE_SHADOW_TELEGRAM?: string;
 	Conversation: DurableObjectNamespace<Conversation>;
 	INBOX_RECOVER_SECONDS?: string;
 	Ingress: DurableObjectNamespace<Ingress>;
@@ -16,6 +21,7 @@ export interface Env extends Cloudflare.Env {
 	MODEL?: string;
 	OPENAI_API_KEY: string;
 	OPENAI_BASE_URL?: string;
+	OrderBridge: DurableObjectNamespace<OrderBridge>;
 	PAYMENT_WATCH: Workflow;
 	PAYMENT_WATCH_SECONDS?: string;
 	PAYMENT_WATCH_SLOW_SECONDS?: string;
