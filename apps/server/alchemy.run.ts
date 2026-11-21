@@ -170,6 +170,8 @@ export const server = await Worker("api", {
 					TELEGRAM_ADMIN_CHAT_ID: env.TELEGRAM_ADMIN_CHAT_ID,
 				}
 			: {}),
+		...(env.TU_WEBHOOK_TOKEN ? { TU_WEBHOOK_TOKEN: alchemy.secret(env.TU_WEBHOOK_TOKEN) } : {}),
+		...(env.TU_WEBHOOK_SECRET ? { TU_WEBHOOK_SECRET: alchemy.secret(env.TU_WEBHOOK_SECRET) } : {}),
 		IMAGE_UPLOAD_TOKEN: alchemy.secret(env.IMAGE_UPLOAD_TOKEN),
 	},
 

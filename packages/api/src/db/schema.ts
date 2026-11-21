@@ -270,10 +270,18 @@ export const OrdersTable = createTable(
 export const DeliveryDispatchesTable = createTable("delivery_dispatch", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	deliveryDate: varchar("delivery_date", { length: 10 }).notNull(),
+	driverComment: text("driver_comment"),
+	driverName: varchar("driver_name", { length: 128 }),
 	fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+	lastEventKey: varchar("last_event_key", { length: 128 }),
 	orderId: integer("order_id")
 		.primaryKey()
 		.references(() => OrdersTable.id, { onDelete: "cascade" }),
+	tuOrderId: integer("tu_order_id"),
+	tuStatus: varchar("tu_status", { length: 32 }),
+	tuStatusName: varchar("tu_status_name", { length: 128 }),
+	tuUpdatedAt: varchar("tu_updated_at", { length: 32 }),
+	updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 });
 
 export const OrderDetailsTable = createTable(
