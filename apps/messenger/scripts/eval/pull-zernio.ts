@@ -4,7 +4,7 @@
 // Usage: bun --env-file=../../.env.prod scripts/eval/pull-zernio.ts \
 //   [--account <zernioAccountId>] [--since 2026-10-01T00:00:00+08:00]
 // Default --since is yesterday 00:00 Ulaanbaatar time.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as v from "valibot";
 import { EVAL_DIR } from "./paths";
@@ -97,7 +97,21 @@ for (let cursor: string | null = null, done = false; !done;) {
 	console.error(`listed ${conversations.length} (last ${page.data.at(-1)?.updatedTime ?? "-"})`);
 }
 
+// Same CDN namespace filter as apps/messenger/src/conversation.ts: Messenger
+// stickers (including the thumbs-up "like") live under /t39.1997-6/, while
+// real customer photos live under /t1.15752-9/.
+const isStickerUrl = (url: string): boolean => {
+	try {
+		return new URL(url).pathname.includes("/t39.1997-6/");
+	} catch {
+		return url.includes("/t39.1997-6/");
+	}
+};
+
 const download = async (url: string, file: string): Promise<boolean> => {
+	if (existsSync(file)) {
+		return true;
+	}
 	const res = await fetch(url);
 	if (!res.ok) {
 		return false;
@@ -108,6 +122,7 @@ const download = async (url: string, file: string): Promise<boolean> => {
 
 let messageCount = 0;
 let photoCount = 0;
+let stickerCount = 0;
 for (const c of conversations) {
 	const raw: v.InferOutput<typeof messageListSchema>["messages"] = [];
 	for (let cursor: string | null = null, more = true; more;) {
@@ -122,25 +137,40 @@ for (const c of conversations) {
 	const messages: Array<DumpedMessage> = [];
 	for (const m of raw.toSorted((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))) {
 		const photos: Array<string> = [];
+		let stickers = 0;
 		if (m.direction === "incoming") {
 			for (const [i, a] of (m.attachments ?? []).entries()) {
+				if (a.type !== "image" || !a.url) {
+					continue;
+				}
+				if (isStickerUrl(a.url)) {
+					stickers += 1;
+					continue;
+				}
 				const file = join(photoDir, `${m.id.slice(-24)}_${i}.jpg`);
-				if (a.type === "image" && a.url && (await download(a.url, file))) {
+				if (await download(a.url, file)) {
 					photos.push(file);
 				}
 			}
 		}
 		photoCount += photos.length;
+		stickerCount += stickers;
+		const baseText = (m.message ?? "").trim();
+		const textParts = [baseText, ...Array.from({ length: stickers }, () => "[стикер]")].filter(
+			(t) => t.length > 0,
+		);
 		messages.push({
 			at: m.createdAt,
 			direction: m.direction,
 			id: m.id,
 			photos,
-			text: (m.message ?? "").trim(),
+			text: textParts.join("\n"),
 		});
 	}
 	messageCount += messages.length;
-	console.error(`${c.id}: ${messages.length} messages, ${photoCount} photos so far`);
+	console.error(
+		`${c.id}: ${messages.length} messages, ${photoCount} photos, ${stickerCount} stickers so far`,
+	);
 	writeFileSync(
 		join(outDir, `${c.id}.json`),
 		JSON.stringify({ id: c.id, messages, updatedTime: c.updatedTime }, null, 1),
@@ -155,5 +185,6 @@ console.log(
 		out: outDir,
 		photos: photoCount,
 		since: since.toISOString(),
+		stickers: stickerCount,
 	}),
 );
