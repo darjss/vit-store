@@ -14,10 +14,10 @@ export const createModel = (env: Env) => {
 		apiKey: env.OPENAI_API_KEY,
 		baseURL: env.OPENAI_BASE_URL,
 		fetch: fetcher,
-	}).chat(env.MODEL ?? "gpt-6-luna");
+	}).chat(env.MODEL ?? "gpt-6.1-terra");
 };
 
-export const modelName = (env: Env): string => env.MODEL ?? "gpt-6-luna";
+export const modelName = (env: Env): string => env.MODEL ?? "gpt-6.1-terra";
 
 export const providerOptions = {
 	openai: { reasoningEffort: "none" },

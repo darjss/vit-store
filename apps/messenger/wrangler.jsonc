@@ -16,7 +16,7 @@
 	// OPENAI_API_KEY, ADMIN_TOKEN, ADMIN_BOT_TOKEN, TELEGRAM_ADMIN_BOT_TOKEN,
 	// TELEGRAM_ADMIN_CHAT_ID, TELEGRAM_WEBHOOK_SECRET.
 	"vars": {
-		"MODEL": "gpt-6-luna",
+		"MODEL": "gpt-6.1-terra",
 		// The VPC binding pins host and port; this URL's host only sets the
 		// Host header, but the /v1 path suffix must match the proxy.
 		"OPENAI_BASE_URL": "http://127.0.0.1:8317/v1",

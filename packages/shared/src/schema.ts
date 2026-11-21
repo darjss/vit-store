@@ -297,6 +297,8 @@ export const newOrderSchema = v.object({
 	address: v.string(),
 	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	notes: v.optional(v.string()),
+	payAfterDelivery: v.optional(v.boolean()),
+	paymentProvider: v.optional(v.picklist(["qpay", "transfer"])),
 	phoneNumber: v.pipe(
 		v.string(),
 		v.minLength(8, "Утасны дугаар 8 оронтой байх ёстой"),

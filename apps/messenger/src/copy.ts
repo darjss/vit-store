@@ -1,8 +1,7 @@
 // Owner-approved customer-facing text (~/dev/scratchpad/vit-store/briefs/pr4-copy.md).
 // Verbatim: do not rewrite or translate. The model never produces these.
 
-export const DELIVERY_UB =
-	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
+export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
 export const DISPATCH_COUNTRYSIDE =
 	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна.";
 
@@ -13,7 +12,7 @@ export const NEEDS_DELIVERY = "Утас, хаягаа бичээрэй.";
 // Welcome-screen buttons (owner-approved 2026-11-03).
 export const ASK_PRODUCT = "Ямар бараа сонирхож байна вэ? Нэрийг нь бичээрэй.";
 export const DELIVERY_INFO =
-	"Улаанбаатарт хүргэлт 6,000₮. Төлбөр орсны дараа өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ. Орон нутаг руу автобус, таксинд тавьж явуулна.";
+	"Улаанбаатарт хүргэлт 6,000₮, өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ (бараагаа хүлээж аваад шилжүүлж болно). Орон нутаг руу төлбөр орсны дараа автобус, таксинд тавьж явуулна.";
 
 export const CLAIM_ACK = "Баярлалаа 🙏 Шилжүүлгийг шалгаад баталгаажуулна.";
 export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
@@ -23,7 +22,6 @@ export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, �
 export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин оролдоно уу.";
 
 export const CONFIRM_PROMPT = "Зөв бол захиалгаа баталгаажуулна уу 👇";
-export const PAY_PROMPT = "Төлбөрөө сонгоно уу 👇";
 export const TRANSFER_PROMPT = "Шилжүүлсний дараа дарна уу 👇";
 
 export const DELIVERY_FEE = 6000;
@@ -58,14 +56,27 @@ export const formatConfirmSummary = (input: {
 };
 
 export const formatOrderCreated = (input: {
+	accountName: string;
+	accountNumber: string;
 	countryside: boolean;
 	orderNumber: string;
+	phone: string;
 	total: number;
 }): string =>
 	[
 		`Захиалга авлаа 🙏 №${input.orderNumber}`,
-		`Нийт: ${mnt(input.total)}`,
 		input.countryside ? DISPATCH_COUNTRYSIDE : DELIVERY_UB,
+		"",
+		input.countryside
+			? "Дансаар шилжүүлэх мэдээлэл:"
+			: "Бараагаа хүлээж аваад шилжүүлнэ үү (урьдчилан шилжүүлж болно):",
+		"Банк: Хаан банк",
+		`Данс: ${input.accountNumber}`,
+		`Нэр: ${input.accountName}`,
+		`Дүн: ${mnt(input.total)}`,
+		`Гүйлгээний утга: ${input.phone}`,
+		"",
+		`Гүйлгээний утга хэсэгт заавал ${input.phone} гэж бичнэ үү.`,
 	].join("\n");
 
 export const formatBankDetails = (input: {
@@ -88,4 +99,4 @@ export const formatBankDetails = (input: {
 export const formatPaid = (countryside: boolean): string =>
 	countryside
 		? "Төлбөр баталгаажлаа 🙏 Өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна."
-		: "Төлбөр баталгаажлаа 🙏 Өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
+		: "Төлбөр баталгаажлаа 🙏 Баярлалаа!";

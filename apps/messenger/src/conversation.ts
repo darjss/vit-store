@@ -22,7 +22,6 @@ import {
 	parsePayTransferPayload,
 	parseTransferDonePayload,
 	phonesInText,
-	buildQpayPageUrl,
 	type CartLine,
 	type IcePayload,
 } from "./cart";
@@ -42,7 +41,6 @@ import {
 	HANDOFF,
 	IMAGE_UNREADABLE,
 	NEEDS_DELIVERY,
-	PAY_PROMPT,
 	TRANSFER_PROMPT,
 } from "./copy";
 import type { Env } from "./env";
@@ -136,9 +134,9 @@ const prefillLog = (outcome: string, thread: string): void =>
 const PAUSE_MS = 12 * 60 * 60_000;
 const HUMAN_SETTLE_MS = 15_000;
 const PAYMENT_DEADLINE_MS = 2 * 60 * 60_000;
-// After the payment deadline the watcher keeps polling: a late QPay or
-// reconciled transfer still gets announced, just less often.
-const PAYMENT_WATCH_END_MS = 24 * 60 * 60_000;
+// After the payment deadline the watcher keeps polling: UB buyers transfer
+// after delivery (often the next afternoon), so watch for 48 hours.
+const PAYMENT_WATCH_END_MS = 48 * 60 * 60_000;
 const RECON_FAIL_STATES = new Set(["timeout", "ambiguous", "failed", "auth_required"]);
 // Terminal payment statuses from the store (packages/shared paymentStatus):
 // "failed" is the only terminal non-success one.
@@ -1422,27 +1420,25 @@ export class Conversation extends Agent<Env> {
 	}
 
 	private async sendOrderCreated(row: PaymentDbRow, key: string): Promise<void> {
-		const qpay = buildQpayPageUrl(this.env.STORE_PUBLIC_URL ?? "https://amerikvitamin.mn", {
-			checkoutToken: row.checkout_token,
-			paymentNumber: row.payment_number,
-		});
 		await this.sendPart(key, {
 			message: formatOrderCreated({
+				accountName: row.account_name ?? "",
+				accountNumber: row.account_number ?? "",
 				countryside: row.countryside === 1,
 				orderNumber: row.order_number,
+				phone: row.phone,
 				total: row.total,
 			}),
 		});
 		await this.sendPart(`${key}:btn`, {
 			buttons: [
-				{ title: "QPay-р төлөх", type: "url", url: qpay },
 				{
-					payload: `pay_transfer:${row.payment_number}`,
-					title: "Дансаар шилжүүлэх",
+					payload: `transfer_done:${row.payment_number}`,
+					title: "Шилжүүлсэн",
 					type: "postback",
 				},
 			],
-			message: PAY_PROMPT,
+			message: TRANSFER_PROMPT,
 		});
 	}
 
@@ -1608,6 +1604,8 @@ export class Conversation extends Agent<Env> {
 				{
 					address: checkout.address,
 					notes: checkout.note ?? undefined,
+					payAfterDelivery: checkout.countryside === 0,
+					paymentProvider: "transfer",
 					phoneNumber: checkout.phone,
 					products: lines.map((l) => ({ productId: l.productId, quantity: l.qty })),
 				},
@@ -1619,14 +1617,15 @@ export class Conversation extends Agent<Env> {
 			const now = Date.now();
 			// addOrder can return an existing payment number (the store reuses a
 			// matching pending checkout), so upsert instead of failing the whole
-			// order on the payments PK.
+			// order on the payments PK. Bank details go out immediately in
+			// sendOrderCreated, so transfer_shown starts at 1.
 			void this.sql`
 				INSERT INTO payments
 					(payment_number, order_number, revision, checkout_token, account_name, account_number,
-					 total, phone, created_at, status, claimed, deadline, notified, handed_off, countryside)
+					 total, phone, created_at, status, claimed, deadline, notified, handed_off, transfer_shown, countryside)
 				VALUES (${res.paymentNumber}, ${res.orderNumber}, ${checkout.revision}, ${res.checkoutToken},
 					${res.accountName}, ${res.accountNumber}, ${res.total}, ${checkout.phone}, ${now},
-					'pending', 0, ${now + PAYMENT_DEADLINE_MS}, 0, 0, ${checkout.countryside})
+					'pending', 0, ${now + PAYMENT_DEADLINE_MS}, 0, 0, 1, ${checkout.countryside})
 				ON CONFLICT(payment_number) DO UPDATE SET
 					order_number = excluded.order_number,
 					revision = excluded.revision,
@@ -1635,6 +1634,7 @@ export class Conversation extends Agent<Env> {
 					account_number = excluded.account_number,
 					total = excluded.total,
 					phone = excluded.phone,
+					transfer_shown = 1,
 					countryside = excluded.countryside`;
 			void this.sql`DELETE FROM cart`;
 			this.bumpRevision();
