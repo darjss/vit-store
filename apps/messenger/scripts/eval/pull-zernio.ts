@@ -108,16 +108,36 @@ const isStickerUrl = (url: string): boolean => {
 	}
 };
 
-const download = async (url: string, file: string): Promise<boolean> => {
-	if (existsSync(file)) {
-		return true;
+const extForContentType = (header: string | null): string => {
+	const mime = header?.split(";")[0]?.trim().toLowerCase();
+	if (mime === "image/png") {
+		return "png";
+	}
+	if (mime === "image/webp") {
+		return "webp";
+	}
+	if (mime === "image/gif") {
+		return "gif";
+	}
+	return "jpg";
+};
+
+const IMAGE_EXTS = ["jpg", "png", "webp", "gif"] as const;
+
+const download = async (url: string, basePath: string): Promise<string | null> => {
+	for (const ext of IMAGE_EXTS) {
+		const existing = `${basePath}.${ext}`;
+		if (existsSync(existing)) {
+			return existing;
+		}
 	}
 	const res = await fetch(url);
 	if (!res.ok) {
-		return false;
+		return null;
 	}
+	const file = `${basePath}.${extForContentType(res.headers.get("content-type"))}`;
 	await Bun.write(file, res);
-	return true;
+	return file;
 };
 
 let messageCount = 0;
@@ -146,8 +166,8 @@ for (const c of conversations) {
 				stickers += 1;
 				continue;
 			}
-			const file = join(photoDir, `${m.id.slice(-24)}_${i}.jpg`);
-			if (await download(a.url, file)) {
+			const file = await download(a.url, join(photoDir, `${m.id.slice(-24)}_${i}`));
+			if (file) {
 				photos.push(file);
 			}
 		}
