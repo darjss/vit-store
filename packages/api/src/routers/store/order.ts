@@ -485,6 +485,7 @@ export const order = router({
 
 			if (paymentNumber && !reused) {
 				trackOrderCreatedServerSide({
+					ad: input.ad,
 					lines: normalizedProducts.map((line) => ({
 						price: productById.get(line.productId)?.price ?? 0,
 						productId: line.productId,

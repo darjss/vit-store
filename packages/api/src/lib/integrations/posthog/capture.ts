@@ -59,6 +59,7 @@ function lineProperties(lines: Array<OrderLine>) {
 }
 
 type TrackOrderCreatedProps = {
+	ad?: { campaign: string; id: string; name: string };
 	lines: Array<OrderLine>;
 	orderNumber: string;
 	paymentNumber: string;
@@ -67,10 +68,18 @@ type TrackOrderCreatedProps = {
 	total: number;
 };
 
-/** Order intent. Carries `order_value`, never `$revenue`: only a confirmed payment is revenue. */
+/**
+ * Order intent. Carries `order_value`, never `$revenue`: only a confirmed payment is revenue.
+ * Messenger orders from a chat an ad opened carry `ad_id`, `ad_name` and `ad_campaign`.
+ */
 export function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
 	capture(props.phone, "order_created", {
 		...lineProperties(props.lines),
+		...(props.ad && {
+			ad_campaign: props.ad.campaign,
+			ad_id: props.ad.id,
+			ad_name: props.ad.name,
+		}),
 		order_number: props.orderNumber,
 		order_value: props.total,
 		payment_number: props.paymentNumber,
