@@ -6,7 +6,7 @@ import {
 	type SmsCarrier,
 	type SmsSendParams,
 } from "@wesend/node";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { logger } from "~/lib/logger";
 import { alertSmsProblem } from "./alert";
 
@@ -105,19 +105,21 @@ export async function sendSms(input: SendSmsInput): Promise<SentSms> {
 			});
 		}
 		if (!result.sandbox && result.balance <= LOW_BALANCE_ALERT_CREDITS) {
-			await alertSmsProblem({ balance: result.balance, kind: "low_balance" });
+			waitUntil(alertSmsProblem({ balance: result.balance, kind: "low_balance" }));
 		}
 		return result;
 	} catch (error) {
 		if (error instanceof WeSendError) {
 			if (error.code === "insufficient_credits") {
-				await alertSmsProblem({
-					balance: error.balance,
-					kind: "insufficient_credits",
-					required: error.required,
-				});
+				waitUntil(
+					alertSmsProblem({
+						balance: error.balance,
+						kind: "insufficient_credits",
+						required: error.required,
+					}),
+				);
 			} else if (ACCOUNT_BLOCKER_CODES.has(error.code)) {
-				await alertSmsProblem({ code: error.code, kind: "account_blocked" });
+				waitUntil(alertSmsProblem({ code: error.code, kind: "account_blocked" }));
 			}
 		}
 		throw error;
