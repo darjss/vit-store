@@ -1,20 +1,10 @@
-export type {
-	Device,
-	DeviceSettings,
-	HealthResponse,
-	LogEntry,
-	Message,
-	MessageState,
-	MessagesExportRequest,
-	RegisterWebHookRequest,
-	SmsGatewayConfig,
-	TokenRequest,
-	TokenResponse,
-	WebHook,
-} from "~/lib/integrations/sms/client";
+export type { SendSmsInput, SentSms, SmsCarrier } from "~/lib/integrations/sms/client";
 export {
-	createSmsClient,
-	smsClient,
-	smsGateway,
-	WebHookEventType,
+	isAmbiguousWeSendError,
+	isRetryableWeSendError,
+	sanitizeSmsLatin,
+	sendSms,
+	WESEND_LATIN_PART_SIZE,
+	WESEND_MAX_PARTS,
+	WeSendError,
 } from "~/lib/integrations/sms/client";

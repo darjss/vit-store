@@ -1,456 +1,127 @@
-import Client, {
-	type Device,
-	type DeviceSettings,
-	type HealthResponse,
-	type LogEntry,
-	type Message,
-	type MessageState,
-	type MessagesExportRequest,
-	type RegisterWebHookRequest,
-	type WebHook,
-	WebHookEventType,
-} from "android-sms-gateway";
-import ky from "ky";
-import * as v from "valibot";
-import { alertSmsGatewayProblem } from "./alert";
+import {
+	WeSend,
+	WeSendError,
+	type SendOptions,
+	type SentSms,
+	type SmsCarrier,
+	type SmsSendParams,
+} from "@wesend/node";
+import { env, waitUntil } from "cloudflare:workers";
+import { logger } from "~/lib/logger";
+import { alertSmsProblem } from "./alert";
 
-// Re-export types from android-sms-gateway
-export type {
-	Device,
-	DeviceSettings,
-	HealthResponse,
-	LogEntry,
-	Message,
-	MessageState,
-	MessagesExportRequest,
-	RegisterWebHookRequest,
-	WebHook,
-};
+export type { SentSms, SmsCarrier };
+export { WeSendError };
 
-export { WebHookEventType };
+// WeSend bills 80 MNT per part: 155 chars in Latin ASCII, 65 chars in Unicode, max 4 parts.
+export const WESEND_LATIN_PART_SIZE = 155;
+export const WESEND_MAX_PARTS = 4;
 
-const SMS_GATEWAY_BASE_URL = "https://api.sms-gate.app/3rdparty/v1";
-const DEFAULT_SMS_TTL_SECONDS = 15 * 60;
+const SMS_REQUEST_TIMEOUT_MS = 10_000;
+const LOW_BALANCE_ALERT_CREDITS = 2000;
 
-type SmsGatewayJson =
-	| null
-	| boolean
-	| number
-	| string
-	| Array<SmsGatewayJson>
-	| { [key: string]: SmsGatewayJson };
+// Allowed by WeSend's Latin SMS charset; brackets, braces, pipes, tildes, backticks and
+// non-ASCII characters (including ₮ and Cyrillic) switch the whole message to 65-char Unicode.
+const NON_WESEND_LATIN_RE = /[^A-Za-z0-9 \n!"#$%&'()*+,\-./:;<=>?@_]/g;
 
-type SmsGatewayRequestBody = SmsGatewayJson;
+const RETRYABLE_ERROR_CODES = new Set([
+	"insufficient_credits",
+	"provider_failed",
+	"rate_limited",
+	"recipient_rate_limited",
+	"sending_paused",
+	"subscription_required",
+]);
 
-const smsGatewayJsonSchema: v.GenericSchema<SmsGatewayJson> = v.lazy(() =>
-	v.union([
-		v.null_(),
-		v.boolean(),
-		v.number(),
-		v.string(),
-		v.array(smsGatewayJsonSchema),
-		v.record(v.string(), smsGatewayJsonSchema),
-	]),
-);
+const AMBIGUOUS_ERROR_CODES = new Set([
+	"connection_error",
+	"server_error",
+	"timeout",
+	"unexpected_response",
+]);
 
-// Define JWT types locally (matching android-sms-gateway v3.0 API)
-export type TokenRequest = {
-	/** The scopes to include in the token */
-	scopes: Array<string>;
-	/** The time-to-live (TTL) of the token in seconds */
-	ttl?: number;
-};
+const ACCOUNT_BLOCKER_CODES = new Set([
+	"invalid_api_key",
+	"sending_paused",
+	"subscription_required",
+]);
 
-export const tokenResponseSchema = v.object({
-	access_token: v.string(),
-	expires_at: v.string(),
-	id: v.string(),
-	token_type: v.string(),
-});
-
-export type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;
-
-/**
- * HTTP client interface for making requests
- */
-interface HttpClient {
-	delete<T>(url: string, headers?: Record<string, string>): Promise<T>;
-	get<T>(url: string, headers?: Record<string, string>): Promise<T>;
-	patch<T>(url: string, body: SmsGatewayRequestBody, headers?: Record<string, string>): Promise<T>;
-	post<T>(url: string, body: SmsGatewayRequestBody, headers?: Record<string, string>): Promise<T>;
-	put<T>(url: string, body: SmsGatewayRequestBody, headers?: Record<string, string>): Promise<T>;
+export interface SendSmsInput {
+	idempotencyKey?: string;
+	text: string;
+	textByCarrier?: Partial<Record<SmsCarrier, string>>;
+	to: string;
 }
 
-const readSmsGatewayResponseBody = async (response: Response): Promise<SmsGatewayJson> => {
-	if (response.status === 204) {
-		return null;
-	}
+export function isRetryableWeSendError(error: WeSendError): boolean {
+	return RETRYABLE_ERROR_CODES.has(error.code);
+}
 
-	const contentType = response.headers.get("Content-Type");
-	if (contentType?.includes("application/json")) {
-		return v.parse(smsGatewayJsonSchema, await response.json());
-	}
-	return v.parse(v.string(), await response.text());
-};
+export function isAmbiguousWeSendError(error: WeSendError): boolean {
+	return AMBIGUOUS_ERROR_CODES.has(error.code);
+}
 
 /**
- * Create a ky-based HTTP client
+ * Normalizes text into WeSend's pure Latin SMS alphabet so a stray symbol
+ * (like `®`, `–`, curly quotes, or `₮`) never silently doubles/triples SMS cost.
  */
-function createHttpClient(): HttpClient {
-	const client = ky.create({ throwHttpErrors: false, timeout: 10_000 });
+export function sanitizeSmsLatin(text: string): string {
+	return text
+		.replaceAll(/[‘’]/g, "'")
+		.replaceAll(/[“”«»]/g, '"')
+		.replaceAll(/[–—]/g, "-")
+		.replaceAll("…", "...")
+		.replaceAll("₮", "T")
+		.replaceAll(NON_WESEND_LATIN_RE, " ")
+		.replaceAll(/[ \t]+/g, " ")
+		.trim();
+}
 
-	const handleResponse = async <T>(response: Response): Promise<T> => {
-		if (!response.ok) {
-			throw new Error(`sms_provider_http_${response.status}`);
-		}
+function getWeSendClient(): WeSend {
+	return new WeSend(env.WESEND_API_KEY, {
+		timeout: SMS_REQUEST_TIMEOUT_MS,
+	});
+}
 
-		const body = await readSmsGatewayResponseBody(response);
-		// SAFETY: body parsed by smsGatewayJsonSchema or v.string() in readSmsGatewayResponseBody; android-sms-gateway binds T to this endpoint's response contract.
-		return body as T;
+export async function sendSms(input: SendSmsInput): Promise<SentSms> {
+	const params: SmsSendParams = {
+		text: input.text,
+		to: input.to,
 	};
-
-	return {
-		async delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
-			const response = await client.delete(url, { headers });
-			return handleResponse<T>(response);
-		},
-		async get<T>(url: string, headers?: Record<string, string>): Promise<T> {
-			const response = await client.get(url, { headers });
-			return handleResponse<T>(response);
-		},
-		async patch<T>(
-			url: string,
-			body: SmsGatewayRequestBody,
-			headers?: Record<string, string>,
-		): Promise<T> {
-			const response = await client.patch(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-		async post<T>(
-			url: string,
-			body: SmsGatewayRequestBody,
-			headers?: Record<string, string>,
-		): Promise<T> {
-			const response = await client.post(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-		async put<T>(
-			url: string,
-			body: SmsGatewayRequestBody,
-			headers?: Record<string, string>,
-		): Promise<T> {
-			const response = await client.put(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-	};
-}
-
-/**
- * SMS Gateway client configuration options
- */
-export interface SmsGatewayConfig {
-	/** Optional custom base URL */
-	baseUrl?: string;
-	/** Username for Basic Auth (empty string for JWT auth) */
-	login: string;
-	/** Password for Basic Auth or JWT token */
-	password: string;
-}
-
-/**
- * Create an SMS Gateway client instance
- *
- * @example Basic Auth
- * ```ts
- * const client = createSmsClient({
- *   login: process.env.SMS_GATEWAY_LOGIN!,
- *   password: process.env.SMS_GATEWAY_PASSWORD!,
- * });
- * ```
- *
- * @example JWT Auth
- * ```ts
- * const client = createSmsClient({
- *   login: "", // Empty string for JWT
- *   password: jwtToken,
- * });
- * ```
- */
-export function createSmsClient(config: SmsGatewayConfig): Client {
-	const { baseUrl, login, password } = config;
-	const httpClient = createHttpClient();
-	return new Client(login, password, httpClient, baseUrl);
-}
-
-const smsGatewayConfig: SmsGatewayConfig = {
-	baseUrl: process.env.SMS_GATEWAY_BASE_URL,
-	login: process.env.SMS_GATEWAY_LOGIN ?? "",
-	password: process.env.SMS_GATEWAY_PASSWORD ?? "",
-};
-
-const smsGatewayBaseUrl = smsGatewayConfig.baseUrl ?? SMS_GATEWAY_BASE_URL;
-const smsGatewayHttpClient = createHttpClient();
-
-/**
- * Default SMS Gateway client using environment variables
- *
- * Requires the following environment variables:
- * - SMS_GATEWAY_LOGIN: Username for Basic Auth
- * - SMS_GATEWAY_PASSWORD: Password for Basic Auth
- *
- * Optional:
- * - SMS_GATEWAY_BASE_URL: Custom API base URL
- */
-export const smsClient = new Client(
-	smsGatewayConfig.login,
-	smsGatewayConfig.password,
-	smsGatewayHttpClient,
-	smsGatewayBaseUrl,
-);
-
-/** The gateway has no record of the message, so it was never queued and is safe to send again. */
-export class SmsNotAcceptedError extends Error {
-	readonly code: string;
-	constructor(cause: unknown) {
-		const message = cause instanceof Error ? cause.message : String(cause);
-		super(message, { cause });
-		this.code = /^sms_provider_http_\d+$/.test(message)
-			? message.replace("sms_provider_", "provider_")
-			: cause instanceof Error && cause.name === "TimeoutError"
-				? "provider_timeout"
-				: "provider_unreachable";
+	if (input.textByCarrier) {
+		params.text_by_carrier = input.textByCarrier;
 	}
-}
+	const options: SendOptions | undefined = input.idempotencyKey
+		? { idempotencyKey: input.idempotencyKey }
+		: undefined;
 
-/** The message's state, or null when the gateway answers 404 for that id. */
-async function findMessageState(id: string) {
 	try {
-		return await smsClient.getState(id);
+		const result = await getWeSendClient().sms.send(params, options);
+		if (result.encoding === "unicode") {
+			logger.warn("sms.unicode_encoding", {
+				nonLatinCharacters: result.non_latin_characters,
+				parts: result.parts,
+				smsId: result.id,
+			});
+		}
+		if (!result.sandbox && result.balance <= LOW_BALANCE_ALERT_CREDITS) {
+			waitUntil(alertSmsProblem({ balance: result.balance, kind: "low_balance" }));
+		}
+		return result;
 	} catch (error) {
-		if (error instanceof Error && error.message === "sms_provider_http_404") {
-			return null;
+		if (error instanceof WeSendError) {
+			if (error.code === "insufficient_credits") {
+				waitUntil(
+					alertSmsProblem({
+						balance: error.balance,
+						kind: "insufficient_credits",
+						required: error.required,
+					}),
+				);
+			} else if (ACCOUNT_BLOCKER_CODES.has(error.code)) {
+				waitUntil(alertSmsProblem({ code: error.code, kind: "account_blocked" }));
+			}
 		}
 		throw error;
 	}
 }
-
-const smsGatewayAuthHeaders = () =>
-	({
-		Authorization: `Basic ${btoa(`${smsGatewayConfig.login}:${smsGatewayConfig.password}`)}`,
-		"Content-Type": "application/json",
-		"User-Agent": "android-sms-gateway/3.0 (client; js)",
-	}) satisfies Record<string, string>;
-
-/**
- * Helper functions for common SMS operations
- */
-export const smsGateway = {
-	/**
-	 * Send an SMS message
-	 *
-	 * @example
-	 * ```ts
-	 * const result = await smsGateway.sendSms({
-	 *   phoneNumbers: ["+1234567890"],
-	 *   message: "Hello from Vit Store!",
-	 * });
-	 * ```
-	 */
-	async sendSms(
-		message: Message,
-		options?: { skipPhoneValidation?: boolean },
-	): Promise<MessageState> {
-		return smsClient.send({ ...message, ttl: message.ttl ?? DEFAULT_SMS_TTL_SECONDS }, options);
-	},
-
-	/**
-	 * Send an SMS and wait until it's actually sent (not just queued)
-	 * Polls the message state while it is "Pending" or "Processed"
-	 *
-	 * @param message - The SMS message to send
-	 * @param options - Send options
-	 * @param options.skipPhoneValidation - Skip phone number validation
-	 * @param options.maxAttempts - Maximum polling attempts (default 10)
-	 * @param options.intervalMs - Polling interval in ms (default 1000)
-	 * @returns The final message state after sending
-	 * @throws Error if message fails to send
-	 *
-	 * @example
-	 * ```ts
-	 * const result = await smsGateway.sendSmsAndWait({
-	 *   phoneNumbers: ["+1234567890"],
-	 *   message: "Your OTP is 1234",
-	 * });
-	 * console.log(result.state); // "Sent" or "Delivered"
-	 * ```
-	 */
-	async sendSmsAndWait(
-		message: Message,
-		options?: {
-			intervalMs?: number;
-			maxAttempts?: number;
-			skipPhoneValidation?: boolean;
-		},
-	): Promise<MessageState> {
-		const { intervalMs = 1000, maxAttempts = 10, skipPhoneValidation } = options ?? {};
-		// Our own id lets us ask the gateway whether a failed POST landed anyway.
-		const id = message.id ?? crypto.randomUUID();
-
-		let state: MessageState;
-		try {
-			state = await smsClient.send(
-				{ ...message, id, ttl: message.ttl ?? DEFAULT_SMS_TTL_SECONDS },
-				{ skipPhoneValidation },
-			);
-		} catch (error) {
-			const landed = await findMessageState(id);
-			if (!landed) {
-				throw new SmsNotAcceptedError(error);
-			}
-			state = landed;
-		}
-
-		// Pending: the phone has not fetched it. Processed: the phone has it
-		// but the SIM has not sent it yet. Both usually clear within ~15s.
-		for (
-			let attempt = 0;
-			(state.state === "Pending" || state.state === "Processed") && attempt < maxAttempts;
-			attempt++
-		) {
-			await new Promise((resolve) => setTimeout(resolve, intervalMs));
-			state = await smsClient.getState(id);
-		}
-
-		if (state.state === "Pending") {
-			await alertSmsGatewayProblem({ kind: "pending" });
-		} else if (state.state === "Failed") {
-			await alertSmsGatewayProblem({
-				error: state.recipients[0]?.error ?? "Unknown SMS error",
-				kind: "failed",
-			});
-		}
-		return state;
-	},
-
-	/**
-	 * Get the state of a sent message
-	 */
-	async getMessageState(messageId: string): Promise<MessageState> {
-		return smsClient.getState(messageId);
-	},
-
-	/**
-	 * List all registered devices
-	 */
-	async getDevices(): Promise<Array<Device>> {
-		return smsClient.getDevices();
-	},
-
-	/**
-	 * Remove a device
-	 */
-	async deleteDevice(deviceId: string): Promise<void> {
-		return smsClient.deleteDevice(deviceId);
-	},
-
-	/**
-	 * List all registered webhooks
-	 */
-	async getWebhooks(): Promise<Array<WebHook>> {
-		return smsClient.getWebhooks();
-	},
-
-	/**
-	 * Register a new webhook
-	 *
-	 * @example
-	 * ```ts
-	 * await smsGateway.registerWebhook({
-	 *   url: "https://your-api.com/sms-callback",
-	 *   event: WebHookEventType.SmsReceived,
-	 * });
-	 * ```
-	 */
-	async registerWebhook(request: RegisterWebHookRequest): Promise<WebHook> {
-		return smsClient.registerWebhook(request);
-	},
-
-	/**
-	 * Delete a webhook
-	 */
-	async deleteWebhook(webhookId: string): Promise<void> {
-		return smsClient.deleteWebhook(webhookId);
-	},
-
-	/**
-	 * Check system health
-	 */
-	async getHealth(): Promise<HealthResponse> {
-		return smsClient.getHealth();
-	},
-
-	/**
-	 * Export inbox messages
-	 */
-	async exportInbox(request: MessagesExportRequest): Promise<void> {
-		return smsClient.exportInbox(request);
-	},
-
-	/**
-	 * Get logs within a time range
-	 */
-	async getLogs(from?: Date, to?: Date): Promise<Array<LogEntry>> {
-		return smsClient.getLogs(from, to);
-	},
-
-	/**
-	 * Get current settings
-	 */
-	async getSettings(): Promise<DeviceSettings> {
-		return smsClient.getSettings();
-	},
-
-	/**
-	 * Update settings (full replacement)
-	 */
-	async updateSettings(settings: DeviceSettings): Promise<void> {
-		return smsClient.updateSettings(settings);
-	},
-
-	/**
-	 * Partially update settings
-	 */
-	async patchSettings(settings: Partial<DeviceSettings>): Promise<void> {
-		return smsClient.patchSettings(settings);
-	},
-
-	/**
-	 * Generate a JWT token (requires Basic Auth client)
-	 *
-	 * @example
-	 * ```ts
-	 * const token = await smsGateway.generateToken({
-	 *   scopes: ["messages:send", "messages:read"],
-	 *   ttl: 3600, // 1 hour
-	 * });
-	 * ```
-	 */
-	async generateToken(request: TokenRequest): Promise<TokenResponse> {
-		const raw = await smsGatewayHttpClient.post<SmsGatewayJson>(
-			`${smsGatewayBaseUrl}/auth/token`,
-			request,
-			smsGatewayAuthHeaders(),
-		);
-		return v.parse(tokenResponseSchema, raw);
-	},
-
-	/**
-	 * Revoke a JWT token by its ID (jti)
-	 */
-	async revokeToken(jti: string): Promise<void> {
-		await smsGatewayHttpClient.delete(`${smsGatewayBaseUrl}/auth/token/${jti}`, {
-			Authorization: `Basic ${btoa(`${smsGatewayConfig.login}:${smsGatewayConfig.password}`)}`,
-			"User-Agent": "android-sms-gateway/3.0 (client; js)",
-		});
-	},
-};
