@@ -132,6 +132,7 @@ export type LogEvent =
 				deliveryFee: number | null;
 				itemCount: number;
 				itemIds: Array<number | null>;
+				paidAmount: number | null;
 				paymentSent: boolean;
 				phoneLast4: string | null;
 				pickup: boolean;
