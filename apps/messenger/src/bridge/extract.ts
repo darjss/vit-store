@@ -40,6 +40,7 @@ const extractedOrderSchema = v.strictObject({
 			unitPrice: v.nullable(v.number()),
 		}),
 	),
+	paidAmount: v.nullable(v.number()),
 	paymentSent: v.boolean(),
 	paymentSentMsg: v.nullable(v.number()),
 	phone: v.nullable(v.string()),
@@ -80,12 +81,13 @@ Fields:
   - Even when photos are missing, match the product if the mentioned brand/type/potency plus the admin's unit price uniquely identifies one catalog product. Prices in chat can differ from catalog prices by a few thousand; prices listed as "X (reg Y)" show a sale price and regular price — match against either.
   - Duplicate catalog listings: when two rows represent the exact same product at the same price (matching either the listed price or the "reg" price), prefer status "active" over "out_of_stock", and "out_of_stock" over "draft". When prices differ, prefer the row whose price (or "reg" price) matches the chat/photo price.
   - label: the product as written or shown. qty: count. unitPrice: the admin's price for one unit in ₮, or null.
-- quotedTotal: the admin's final total in ₮. Admins write thousands, so "120+5=125" is 125000 and deliveryFee is 5000. Other forms: "13*70=910+5", StorePay "+11%=111", a bare "240k", or the customer's own sum the admin confirms. null if no total was ever stated.
+- quotedTotal: the admin's final full order total in ₮ (never replace it with a partial payment, deposit, or remaining-balance amount). Admins write thousands, so "120+5=125" is 125000 and deliveryFee is 5000. Other forms: "13*70=910+5", StorePay "+11%=111", a bare "240k", or the customer's own sum the admin confirms. null if no total was ever stated.
 - deliveryFee: the delivery fee in the quote in ₮, or null.
 - phone: the delivery phone, digits only (first phone if the customer gave two).
 - address: the delivery address, shortened to one line, as written.
 - pickup: true if the customer picks it up.
-- paymentSent: true if after the order the customer says they paid, sends a bank transfer screenshot, sends a StorePay / zary.mn confirmation or delivery code ("Baraa huleeltseh kod"), OR sends an "[empty]" message right after bank details that is clearly a payment receipt (followed by customer thanks and admin "Za bayarlalaa", with no later payment reminder). paymentSentMsg is that message's number.
+- paymentSent: true ONLY when the full order is paid — after the order the customer says they paid the full amount, sends a bank transfer screenshot for the full total, sends a StorePay / zary.mn confirmation or delivery code ("Baraa huleeltseh kod"), OR sends an "[empty]" message right after bank details that is clearly a payment receipt (followed by customer thanks and admin "Za bayarlalaa", with no later payment reminder). If the customer only paid a partial amount / deposit (e.g. "250k hiichihlee", "daraa ni 135", or admin still chasing an unpaid remainder), set paymentSent to false and put the paid portion in paidAmount. paymentSentMsg is the message number of the full-payment proof/statement (null if only partially paid or unpaid).
+- paidAmount: amount in ₮ the customer actually paid when explicitly stated (especially on a partial payment like 250000 out of a 385000 order, or from a receipt/transfer message), or null if unpaid or no amount was stated.
 - cancelled: true only if the customer or admin explicitly cancels the order (e.g. "болилоо", "цуцаллаа", bought elsewhere) after confirmation and before delivery. A stock-delay notice ("irsengui ee" / hasn't arrived yet) without explicit cancellation is not cancelled. cancelledAtMsg is that message's number.
 
 When the chat truly can't settle a field, use null. Don't invent values.

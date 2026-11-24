@@ -60,6 +60,7 @@ const hashOrders = async (orders: Array<ExtractedOrder>): Promise<string> => {
 		confirmedAtMsg: o.confirmedAtMsg,
 		deliveryFee: o.deliveryFee,
 		items: o.items.map((i) => ({ productId: i.productId, qty: i.qty })),
+		paidAmount: o.paidAmount,
 		paymentSent: o.paymentSent,
 		phone: o.phone,
 		pickup: o.pickup,
@@ -76,6 +77,7 @@ const summarizeOrder = (o: ExtractedOrder) => ({
 	deliveryFee: o.deliveryFee,
 	itemCount: o.items.length,
 	itemIds: o.items.map((i) => i.productId),
+	paidAmount: o.paidAmount,
 	paymentSent: o.paymentSent,
 	phoneLast4: o.phone ? o.phone.slice(-4) : null,
 	pickup: o.pickup,
@@ -136,9 +138,14 @@ const sendShadowTelegram = async (
 		`[bridge shadow] ${conversationId} · ${orders.length} order(s)`,
 		...orders.map((o, idx) => {
 			const items = o.items.map((i) => `${i.productId ?? "?"}×${i.qty} ${i.label}`).join(", ");
+			const paymentFlag = o.paymentSent
+				? "paid"
+				: o.paidAmount !== null
+					? `partial ${o.paidAmount.toLocaleString()}₮`
+					: "unpaid";
 			const flags = [
 				o.quotedTotal !== null ? `${o.quotedTotal.toLocaleString()}₮` : "no quote",
-				o.paymentSent ? "paid" : "unpaid",
+				paymentFlag,
 				...(o.pickup ? ["pickup"] : []),
 				...(o.cancelled ? ["cancelled"] : []),
 			].join(" · ");
@@ -341,7 +348,7 @@ export class OrderBridge extends Agent<Env> {
 	): Promise<{ latestMsgId: string | null; messages: Array<ChatMessage> }> {
 		const url =
 			`${zernioBaseUrl(this.env)}/v1/inbox/conversations/${encodeURIComponent(conversationId)}/messages` +
-			`?accountId=${encodeURIComponent(accountId)}&sortOrder=asc&limit=100`;
+			`?accountId=${encodeURIComponent(accountId)}&sortOrder=desc&limit=100`;
 		const res = await fetch(url, {
 			headers: { authorization: `Bearer ${this.env.ZERNIO_API_KEY}` },
 			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -353,26 +360,35 @@ export class OrderBridge extends Agent<Env> {
 		const sorted = parsed.messages.toSorted(
 			(a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
 		);
-		let photoBudget = MAX_PHOTOS_PER_CHAT;
-		const messages: Array<ChatMessage> = [];
-		for (const m of sorted) {
-			const photos: ChatMessage["photos"] = [];
+		// Keep the newest MAX_PHOTOS_PER_CHAT non-sticker images so long repeat-buyer
+		// threads never spend their photo budget on old months and miss today's receipt.
+		const photoCandidates: Array<{ msgIndex: number; url: string }> = [];
+		for (const [msgIndex, m] of sorted.entries()) {
 			for (const a of m.attachments ?? []) {
-				if (a.type === "image" && a.url && photoBudget > 0) {
-					photoBudget--;
-					const photo = await downloadPhoto(a.url);
-					if (photo) {
-						photos.push(photo);
-					}
+				if (a.type === "image" && a.url && !a.url.includes("/t39.1997-6/")) {
+					photoCandidates.push({ msgIndex, url: a.url });
 				}
 			}
-			messages.push({
-				at: m.createdAt,
-				direction: m.direction,
-				photos,
-				text: (m.message ?? "").trim(),
-			});
 		}
+		const selectedPhotos = photoCandidates.slice(-MAX_PHOTOS_PER_CHAT);
+		const photosByMsg = new Map<number, ChatMessage["photos"]>();
+		for (const candidate of selectedPhotos) {
+			const photo = await downloadPhoto(candidate.url);
+			if (photo) {
+				const list = photosByMsg.get(candidate.msgIndex);
+				if (list) {
+					list.push(photo);
+				} else {
+					photosByMsg.set(candidate.msgIndex, [photo]);
+				}
+			}
+		}
+		const messages: Array<ChatMessage> = sorted.map((m, msgIndex) => ({
+			at: m.createdAt,
+			direction: m.direction,
+			photos: photosByMsg.get(msgIndex) ?? [],
+			text: (m.message ?? "").trim(),
+		}));
 		return { latestMsgId: sorted.at(-1)?.id ?? null, messages };
 	}
 
