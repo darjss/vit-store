@@ -18,7 +18,8 @@ const AppSidebar = () => {
 	const counts = useNavCounts();
 	return (
 		<Sidebar className="border-r bg-white" collapsible="offcanvas">
-			<SidebarHeader className="px-4 pt-4 pb-2">
+			<SidebarHeader className="flex-row items-center gap-2 px-4 pt-4 pb-2">
+				<img alt="" aria-hidden="true" className="size-6 shrink-0" src="/favicon.svg" />
 				<span className="text-sm font-bold tracking-tight">Amerik Vitamin</span>
 			</SidebarHeader>
 			<SidebarContent className="gap-0">

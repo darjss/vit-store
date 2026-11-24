@@ -1,5 +1,6 @@
 ---
 import UserProfile from "@/components/auth/UserProfile.astro";
+import BrandMark from "@/components/BrandMark.astro";
 import CartButton from "@/components/cart/cart-button";
 import SidebarContent from "@/components/SidebarContent.astro";
 import SearchOverlay from "@/components/search/search-overlay";
@@ -24,9 +25,7 @@ import { HamburgerMenuIcon as IconMenu, UserIcon as IconUser } from "@solar-icon
                 </SheetContent>
             </Sheet>
             <a href="/" class="flex min-w-0 shrink-0 items-center gap-2.5 rounded-full py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <div class="h-10 w-10 shrink-0 rounded-xl bg-primary flex items-center justify-center font-display font-bold text-xs shadow-soft-sm">
-                    AV
-                </div>
+                <BrandMark class="h-10 w-10 shrink-0" />
                 <div class="min-w-0">
                     <span class="block truncate font-display font-semibold text-[13px] sm:text-[15px] leading-tight">Amerik Vitamin</span>
                     <span class="hidden lg:block text-[11px] font-medium text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
