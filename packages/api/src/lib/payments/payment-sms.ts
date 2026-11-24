@@ -1,13 +1,20 @@
-import { smsGateway } from "~/lib/integrations";
-import { SmsNotAcceptedError } from "~/lib/integrations/sms/client";
+import {
+	isAmbiguousWeSendError,
+	isRetryableWeSendError,
+	sendSms,
+	WeSendError,
+} from "~/lib/integrations";
 import { logger } from "~/lib/logger";
 
 const MN_PHONE_RE = /^[6-9]\d{7}$/;
-const SMS_SUCCESS_STATES = new Set(["Sent", "Delivered"]);
-// The cron has time to wait for the phone: about 30s, against ~15s seen on 11-17.
-const SMS_WAIT_POLLS = 30;
 
 export class SmsRetryableError extends Error {
+	constructor(readonly code: string) {
+		super(code);
+	}
+}
+
+export class SmsPermanentError extends Error {
 	constructor(readonly code: string) {
 		super(code);
 	}
@@ -33,18 +40,19 @@ export function getStorefrontBaseUrl(): string {
 	return url.origin;
 }
 
+// Pure Latin ASCII (~95 chars) — 1 WeSend SMS part (80 MNT) instead of 2 Cyrillic parts (160 MNT).
 export function buildOrderConfirmationSmsMessage(input: {
 	orderNumber: string;
 	total: number;
 }): string {
-	const amount = `${input.total.toLocaleString("en-US")}₮`;
+	const amount = `${input.total.toLocaleString("en-US")}T`;
 	const trackUrl = `${getStorefrontBaseUrl()}/order-tracking`;
-	return `Захиалга #${input.orderNumber} баталгаажлаа. Нийт: ${amount}. Хянах: ${trackUrl}`;
+	return `Zahialga #${input.orderNumber} batalgaajlaa. Niit: ${amount}. Hyanah: ${trackUrl}`;
 }
 
-// Owner-approved wording, 175 UCS-2 characters, 3 SMS parts. Do not reword.
+// Pure Latin ASCII (146 chars prod, 154 staging) — 1 WeSend SMS part (80 MNT) instead of 3 Cyrillic parts (240 MNT).
 export function buildUnpaidReminderSmsMessage(payLinkCode: string): string {
-	return `Сайн уу, Америк хүнс бараагаас холбогдож байна. Таны захиалгад зөвхөн төлбөр л үлдлээ. Апп нээгдээгүй бол энэ линкээр дахин оролдоорой: ${getStorefrontBaseUrl()}/pay/${payLinkCode}`;
+	return `Sain uu, Amerik vitamin. Tanii zahialgad zovhon tolbor uldlee. App neegdeegui bol endees dahin oroldooroi: ${getStorefrontBaseUrl()}/pay/${payLinkCode}`;
 }
 
 export async function sendPaymentSms(input: {
@@ -55,45 +63,44 @@ export async function sendPaymentSms(input: {
 	paymentNumber: string;
 }): Promise<void> {
 	if (!isMongolianMobile(input.customerPhone)) {
-		throw new SmsRetryableError("invalid_phone");
+		throw new SmsPermanentError("invalid_phone");
 	}
 
-	let finalState: { recipients: Array<{ error?: string | null }>; state: string };
 	try {
-		finalState = await smsGateway.sendSmsAndWait(
-			{ message: input.message, phoneNumbers: [`+976${input.customerPhone}`] },
-			{ maxAttempts: SMS_WAIT_POLLS },
-		);
+		const sent = await sendSms({
+			text: input.message,
+			to: String(input.customerPhone),
+		});
+		logger.info(input.event, {
+			balance: sent.balance,
+			credits: sent.credits,
+			encoding: sent.encoding,
+			orderNumber: input.orderNumber,
+			parts: sent.parts,
+			paymentNumber: input.paymentNumber,
+			smsId: sent.id,
+		});
 	} catch (error) {
+		if (error instanceof WeSendError) {
+			logger.error("sms.send_failed", error.message, {
+				code: error.code,
+				event: input.event,
+				paymentNumber: input.paymentNumber,
+				requestId: error.requestId,
+				status: error.status,
+			});
+			if (isRetryableWeSendError(error)) {
+				throw new SmsRetryableError(error.code);
+			}
+			if (isAmbiguousWeSendError(error)) {
+				throw new SmsAmbiguousError();
+			}
+			throw new SmsPermanentError(error.code);
+		}
 		logger.error("sms.send_failed", error instanceof Error ? error.message : String(error), {
 			event: input.event,
 			paymentNumber: input.paymentNumber,
 		});
-		if (error instanceof SmsNotAcceptedError) {
-			throw new SmsRetryableError(error.code);
-		}
-		// The gateway may hold the message, but we could not confirm it either way.
 		throw new SmsAmbiguousError();
 	}
-
-	if (finalState.state === "Failed") {
-		logger.warn("sms.provider_failed", {
-			error: finalState.recipients[0]?.error ?? "unknown",
-			paymentNumber: input.paymentNumber,
-		});
-		throw new SmsRetryableError("provider_failed");
-	}
-	if (!SMS_SUCCESS_STATES.has(finalState.state)) {
-		logger.warn("sms.not_sent_yet", {
-			paymentNumber: input.paymentNumber,
-			smsState: finalState.state,
-		});
-		throw new SmsAmbiguousError();
-	}
-
-	logger.info(input.event, {
-		orderNumber: input.orderNumber,
-		paymentNumber: input.paymentNumber,
-		smsState: finalState.state,
-	});
 }

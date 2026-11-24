@@ -45,8 +45,6 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			QPAY_URL: runtimeEnv.QPAY_URL,
 			QPAY_USERNAME: runtimeEnv.QPAY_USERNAME,
 			RESTOCK_FROM_EMAIL: runtimeEnv.RESTOCK_FROM_EMAIL,
-			SMS_GATEWAY_LOGIN: runtimeEnv.SMS_GATEWAY_LOGIN,
-			SMS_GATEWAY_PASSWORD: runtimeEnv.SMS_GATEWAY_PASSWORD,
 			TELEGRAM_ADMIN_BOT_TOKEN: runtimeEnv.TELEGRAM_ADMIN_BOT_TOKEN,
 			TELEGRAM_ADMIN_CHAT_ID: runtimeEnv.TELEGRAM_ADMIN_CHAT_ID,
 			TU_WEBHOOK_SECRET: runtimeEnv.TU_WEBHOOK_SECRET,
@@ -55,6 +53,7 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			UPSTASH_REDIS_REST_URL: runtimeEnv.UPSTASH_REDIS_REST_URL,
 			UPSTASH_SEARCH_TOKEN: runtimeEnv.UPSTASH_SEARCH_TOKEN,
 			UPSTASH_SEARCH_URL: runtimeEnv.UPSTASH_SEARCH_URL,
+			WESEND_API_KEY: runtimeEnv.WESEND_API_KEY,
 		},
 		server: {
 			ADMIN_BOT_TOKEN: optional(string()),
@@ -93,8 +92,6 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			QPAY_URL: requiredUrl(),
 			QPAY_USERNAME: requiredString(),
 			RESTOCK_FROM_EMAIL: requiredString(),
-			SMS_GATEWAY_LOGIN: requiredString(),
-			SMS_GATEWAY_PASSWORD: requiredString(),
 			TELEGRAM_ADMIN_BOT_TOKEN: optional(requiredString()),
 			TELEGRAM_ADMIN_CHAT_ID: optional(requiredString()),
 			TU_WEBHOOK_SECRET: optional(requiredString()),
@@ -103,6 +100,7 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			UPSTASH_REDIS_REST_URL: requiredUrl(),
 			UPSTASH_SEARCH_TOKEN: requiredString(),
 			UPSTASH_SEARCH_URL: requiredUrl(),
+			WESEND_API_KEY: requiredString(),
 		},
 	});
 };

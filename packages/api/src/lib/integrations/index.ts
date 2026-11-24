@@ -21,23 +21,13 @@ export {
 } from "~/lib/integrations/messenger";
 export type { PostHogConfig } from "~/lib/integrations/posthog";
 export { createPostHogClient, PostHogClient } from "~/lib/integrations/posthog";
-export type {
-	Device as SmsDevice,
-	DeviceSettings as SmsDeviceSettings,
-	HealthResponse as SmsHealthResponse,
-	LogEntry as SmsLogEntry,
-	Message as SmsMessage,
-	MessageState as SmsMessageState,
-	MessagesExportRequest as SmsMessagesExportRequest,
-	RegisterWebHookRequest as SmsRegisterWebHookRequest,
-	SmsGatewayConfig,
-	TokenRequest as SmsTokenRequest,
-	TokenResponse as SmsTokenResponse,
-	WebHook as SmsWebHook,
-} from "~/lib/integrations/sms";
+export type { SendSmsInput, SentSms, SmsCarrier } from "~/lib/integrations/sms";
 export {
-	createSmsClient,
-	smsClient,
-	smsGateway,
-	WebHookEventType as SmsWebHookEventType,
+	isAmbiguousWeSendError,
+	isRetryableWeSendError,
+	sanitizeSmsLatin,
+	sendSms,
+	WESEND_LATIN_PART_SIZE,
+	WESEND_MAX_PARTS,
+	WeSendError,
 } from "~/lib/integrations/sms";

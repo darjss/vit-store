@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { customAlphabet } from "nanoid";
-import { sendEmail, smsGateway } from "~/lib/integrations";
+import { sendEmail, sendSms } from "~/lib/integrations";
 import { redis } from "~/lib/redis";
 import {
 	consumeRestockChallenge,
@@ -43,14 +43,10 @@ async function sendConfirmation(input: {
 	contact: string;
 }) {
 	if (input.channel === "sms") {
-		const finalState = await smsGateway.sendSmsAndWait({
-			message: `amerikvitamin.mn baraa oroh medegdel batalgaajuulah kod: ${input.code}\n\n@amerikvitamin.mn #${input.code}`,
-			phoneNumbers: [`+976${input.contact}`],
-			ttl: CHALLENGE_TTL_SECONDS,
+		await sendSms({
+			text: `amerikvitamin.mn baraa oroh medegdel batalgaajuulah kod: ${input.code}\n\n@amerikvitamin.mn #${input.code}`,
+			to: input.contact,
 		});
-		if (finalState.state === "Failed") {
-			throw new Error("Restock confirmation SMS failed");
-		}
 		return;
 	}
 

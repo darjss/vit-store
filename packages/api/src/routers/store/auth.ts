@@ -4,7 +4,7 @@ import { logger } from "~/lib/logger";
 import { parseCaught } from "~/lib/logging";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
-import { smsGateway } from "~/lib/integrations";
+import { sendSms, WeSendError } from "~/lib/integrations";
 import { kv } from "~/lib/kv";
 import { redis } from "~/lib/redis";
 import type { CustomerSessionClaims } from "~/lib/session/checkout-access";
@@ -172,28 +172,30 @@ export const storeAuthRouter = router({
 					expirationTtl: OTP_TTL_SECONDS,
 				});
 				ctx.log.info("auth.otp_sent", { phone: Number(input.phone) });
-				const finalState = await smsGateway.sendSmsAndWait({
-					message: `amerikvitamin.mn nevtreh kod: ${otp}\n\n@amerikvitamin.mn #${otp}`,
-					phoneNumbers: [`+976${input.phone}`],
-					ttl: OTP_TTL_SECONDS,
-				});
-				if (finalState.state === "Failed") {
-					const errorMsg = finalState.recipients[0]?.error ?? "Unknown SMS error";
-					ctx.log.error(
-						new Error(errorMsg) instanceof Error
-							? new Error(errorMsg)
-							: new Error(String(new Error(errorMsg))),
-						{
-							event: "auth.sms_failed",
-							phone: Number(input.phone),
-						},
-					);
+				try {
+					const sent = await sendSms({
+						text: `amerikvitamin.mn nevtreh kod: ${otp}\n\n@amerikvitamin.mn #${otp}`,
+						to: input.phone,
+					});
+					ctx.log.info("auth.sms_sent", {
+						balance: sent.balance,
+						parts: sent.parts,
+						phone: Number(input.phone),
+						smsId: sent.id,
+					});
+				} catch (error) {
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+						code: error instanceof WeSendError ? error.code : undefined,
+						event: "auth.sms_failed",
+						phone: Number(input.phone),
+						requestId: error instanceof WeSendError ? error.requestId : undefined,
+					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
-						message: `Failed to send OTP: ${errorMsg}`,
+						message: "Failed to send OTP",
 					});
 				}
-				ctx.log.info("auth.sms_sent", { phone: Number(input.phone) });
 				return {
 					message: "OTP sent successfully",
 					success: true,

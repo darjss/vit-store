@@ -11,6 +11,7 @@ import {
 	buildUnpaidReminderSmsMessage,
 	isMongolianMobile,
 	SmsAmbiguousError,
+	SmsPermanentError,
 	SmsRetryableError,
 	sendPaymentSms,
 } from "~/lib/payments/payment-sms";
@@ -21,8 +22,8 @@ const CONFIRMED_SMS = "order_payment_confirmed_sms";
 const UNPAID_REMINDER_SMS = "order_unpaid_reminder_sms";
 const PURPOSES = [CONFIRMED_SMS, UNPAID_REMINDER_SMS];
 const BATCH = 10;
-// sendSmsAndWait makes at most 33 gateway requests of up to 10s, 30 of them 1s apart.
-const LEASE_MS = 420_000;
+// WeSend SDK runs up to 3 attempts with a 10s timeout and short backoff (~35s worst case).
+const LEASE_MS = 90_000;
 const MAX_ATTEMPTS = 5;
 
 const UNPAID_REMINDER_DELAY_MS = 20 * 60_000;
@@ -179,6 +180,9 @@ async function deliver(job: ClaimedJob, payment: PaymentInfo) {
 	} catch (error) {
 		if (error instanceof SmsAmbiguousError) {
 			return finish(job, "unknown", "provider_ambiguous");
+		}
+		if (error instanceof SmsPermanentError) {
+			return finish(job, "unknown", error.code);
 		}
 		return retry(job, error instanceof SmsRetryableError ? error.code : "unexpected_error");
 	}
