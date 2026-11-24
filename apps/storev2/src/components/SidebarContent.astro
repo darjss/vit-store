@@ -3,6 +3,7 @@
 import { AltArrowDownIcon as IconArrowDown, WidgetIcon as IconGrid, HomeAngleIcon as IconHome, UserIcon as IconUser } from "@solar-icons/solid/linear";
 import { CartLarge2Icon as IconCart } from "@solar-icons/solid/linear/cart-large-2";
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
+import BrandMark from "@/components/BrandMark.astro";
 import { getBrandLogoUrl } from "@/lib/image";
 import { getStaticNavigationData } from "@/lib/static-navigation";
 
@@ -209,9 +210,7 @@ const brandLogoOnError =
     <!-- Bottom Branding -->
     <div class="border-border border-t bg-muted/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary font-display text-primary-foreground text-xs">
-                AV
-            </div>
+            <BrandMark class="h-10 w-10 shrink-0" />
             <div>
                 <span class="block font-display text-foreground text-sm">Amerik Vitamin</span>
                 <span class="text-[10px] text-muted-foreground">Баталгаатай импорт</span>

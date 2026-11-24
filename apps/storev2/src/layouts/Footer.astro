@@ -1,5 +1,6 @@
 ---
 import { PhoneIcon as IconPhone, LetterIcon as IconMail, ClockCircleIcon as IconClock, MapPointIcon as IconMapPin, DeliveryIcon as IconTruck, QuestionCircleIcon as IconQuestion, ShieldCheckIcon as IconShield, BillListIcon as IconFile, MinimalisticMagnifierIcon as IconSearch, CloseCircleIcon as IconClose, AltArrowDownIcon as IconChevronDown } from "@solar-icons/solid/linear";
+import BrandMark from "@/components/BrandMark.astro";
 import { FacebookIcon as IconFacebook, InstagramIcon as IconInstagram } from "@/components/brand-icons";
 
 const currentYear = new Date().getFullYear();
@@ -74,7 +75,7 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
       <!-- Brand column -->
       <div class="lg:col-span-4 pb-4 md:pb-0">
         <div class="mb-3.5 flex items-center gap-2.5">
-          <div class="h-10 w-10 rounded-xl bg-primary flex items-center justify-center font-display font-bold text-xs text-primary-foreground shadow-soft-sm">AV</div>
+          <BrandMark variant="dark" class="h-10 w-10 shrink-0" />
           <span class="font-display font-semibold text-base">Amerik Vitamin</span>
         </div>
         <p class="max-w-xs text-sm font-medium leading-relaxed text-secondary-foreground/70 mb-4">

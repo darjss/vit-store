@@ -182,7 +182,7 @@ A warm cream stage lit by a single butter spotlight, with eight sorbet washes st
 
 ### Primary
 
-- **Butter** (`oklch(0.9 0.14 95)`): The one CTA voice. Primary buttons, the hero add-to-products button, the round product-card "+", active navigation, and the logo tile. This is the only saturated warm accent that says "act."
+- **Butter** (`oklch(0.9 0.14 95)`): The one CTA voice. Primary buttons, the hero add-to-products button, the round product-card "+", active navigation, and the Vito brand mark. This is the only saturated warm accent that says "act."
 - **Butter Deep** (`oklch(0.8 0.13 92)`): Never a fill. It is the solid 2px underline color beneath every butter CTA (`shadow-lift`) and the loading-bar progress color. It is the shadow butter casts.
 
 ### Secondary
@@ -307,7 +307,7 @@ For each component: a character line, then shape, color, states, and distinctive
 
 ### Navigation (Header)
 
-- **Style:** Sticky top bar, `bg-background` with `backdrop-blur-md` where supported, divided by a hairline `border-b border-border`. The logo is a butter `rounded-xl` tile with `shadow-soft-sm`.
+- **Style:** Sticky top bar, `bg-background` with `backdrop-blur-md` where supported, divided by a hairline `border-b border-border`. The logo is the tilted butter Vito Shades mark (`BrandMark.astro`) with a cocoa stamp shadow.
 - **Controls:** 44px circular icon buttons (`rounded-full`), hover `bg-muted`, `active:scale-[0.94]` on an `--ease-out-quart` curve. Mobile menu and cart open as sheets.
 
 ### Product Card (Signature)
