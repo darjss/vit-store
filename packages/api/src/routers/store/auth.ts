@@ -174,7 +174,7 @@ export const storeAuthRouter = router({
 				ctx.log.info("auth.otp_sent", { phone: Number(input.phone) });
 				try {
 					const sent = await sendSms({
-						text: `amerikvitamin.mn nevtreh kod: ${otp}\n\n@amerikvitamin.mn #${otp}`,
+						text: `Amerik Vitamin nevtreh kod: ${otp}\n\n@amerikvitamin.mn #${otp}`,
 						to: input.phone,
 					});
 					ctx.log.info("auth.sms_sent", {

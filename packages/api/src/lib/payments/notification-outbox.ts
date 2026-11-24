@@ -164,7 +164,11 @@ async function deliver(job: ClaimedJob, payment: PaymentInfo) {
 	try {
 		const message =
 			job.purpose === UNPAID_REMINDER_SMS
-				? buildUnpaidReminderSmsMessage(await createPayLink(job.paymentNumber))
+				? buildUnpaidReminderSmsMessage({
+						orderNumber: payment.order.orderNumber,
+						payLinkCode: await createPayLink(job.paymentNumber),
+						total: payment.order.total,
+					})
 				: buildOrderConfirmationSmsMessage(payment.order);
 		await sendPaymentSms({
 			customerPhone: payment.order.customerPhone,

@@ -44,7 +44,7 @@ async function sendConfirmation(input: {
 }) {
 	if (input.channel === "sms") {
 		await sendSms({
-			text: `amerikvitamin.mn baraa oroh medegdel batalgaajuulah kod: ${input.code}\n\n@amerikvitamin.mn #${input.code}`,
+			text: `Amerik Vitamin baraa medegdel batalgaajuulah kod: ${input.code}\n\n@amerikvitamin.mn #${input.code}`,
 			to: input.contact,
 		});
 		return;

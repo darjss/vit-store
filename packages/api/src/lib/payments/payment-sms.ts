@@ -40,19 +40,24 @@ export function getStorefrontBaseUrl(): string {
 	return url.origin;
 }
 
-// Pure Latin ASCII (~95 chars) — 1 WeSend SMS part (80 MNT) instead of 2 Cyrillic parts (160 MNT).
+// Pure Latin ASCII (~134 chars prod, 142 staging) — 1 WeSend SMS part (80 MNT).
 export function buildOrderConfirmationSmsMessage(input: {
 	orderNumber: string;
 	total: number;
 }): string {
 	const amount = `${input.total.toLocaleString("en-US")}T`;
 	const trackUrl = `${getStorefrontBaseUrl()}/order-tracking`;
-	return `Zahialga #${input.orderNumber} batalgaajlaa. Niit: ${amount}. Hyanah: ${trackUrl}`;
+	return `Amerik Vitamin: #${input.orderNumber} (${amount}) tolbor batalgaajlaa, bayarlalaa! Hurgeltiin yavts hyanah: ${trackUrl}`;
 }
 
-// Pure Latin ASCII (146 chars prod, 154 staging) — 1 WeSend SMS part (80 MNT) instead of 3 Cyrillic parts (240 MNT).
-export function buildUnpaidReminderSmsMessage(payLinkCode: string): string {
-	return `Sain uu, Amerik vitamin. Tanii zahialgad zovhon tolbor uldlee. App neegdeegui bol endees dahin oroldooroi: ${getStorefrontBaseUrl()}/pay/${payLinkCode}`;
+// Pure Latin ASCII (~139 chars prod, 147 staging) — 1 WeSend SMS part (80 MNT).
+export function buildUnpaidReminderSmsMessage(input: {
+	orderNumber: string;
+	payLinkCode: string;
+	total: number;
+}): string {
+	const amount = `${input.total.toLocaleString("en-US")}T`;
+	return `Amerik Vitamin: #${input.orderNumber} (${amount}) zahialgiig tanii ner deer hadgalsan baina. QPay/dansaar toloh: ${getStorefrontBaseUrl()}/pay/${input.payLinkCode}`;
 }
 
 export async function sendPaymentSms(input: {

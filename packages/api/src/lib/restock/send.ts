@@ -22,14 +22,16 @@ function truncateLabel(text: string, maxChars: number) {
 // Pure Latin ASCII: fits in 1 WeSend part (155 chars = 80 MNT) whenever the PDP URL allows,
 // and never exceeds WeSend's 4-part cap (620 chars).
 function buildRestockSmsMessage(productName: string, pdpUrl: string) {
-	const suffix = ` dahin orloo. Zahialah: ${pdpUrl}`;
+	const prefix = "Amerik Vitamin: ";
+	const suffix = ` dahin orloo! Zahialah: ${pdpUrl}`;
 	const cleanName = sanitizeSmsLatin(productName) || "Baraa";
-	const singlePartBudget = WESEND_LATIN_PART_SIZE - suffix.length;
+	const overhead = prefix.length + suffix.length;
+	const singlePartBudget = WESEND_LATIN_PART_SIZE - overhead;
 	const nameBudget =
 		singlePartBudget >= MIN_PRODUCT_NAME_CHARS
 			? singlePartBudget
-			: WESEND_LATIN_PART_SIZE * WESEND_MAX_PARTS - suffix.length;
-	return `${truncateLabel(cleanName, nameBudget)}${suffix}`;
+			: WESEND_LATIN_PART_SIZE * WESEND_MAX_PARTS - overhead;
+	return `${prefix}${truncateLabel(cleanName, nameBudget)}${suffix}`;
 }
 
 export async function sendRestockNotification(input: {
