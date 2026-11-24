@@ -40,13 +40,16 @@ export function getStorefrontBaseUrl(): string {
 	return url.origin;
 }
 
-// Pure Latin ASCII (~134 chars prod, 142 staging) — 1 WeSend SMS part (80 MNT).
+// Pure Latin ASCII (~132 chars prod, 140 staging) — 1 WeSend SMS part (80 MNT).
+// /pay/<code> sets a 30-day scoped checkout_guest session and redirects paid orders
+// straight to /order-tracking?order=<n> with no OTP needed.
 export function buildOrderConfirmationSmsMessage(input: {
 	orderNumber: string;
+	payLinkCode: string;
 	total: number;
 }): string {
 	const amount = `${input.total.toLocaleString("en-US")}T`;
-	const trackUrl = `${getStorefrontBaseUrl()}/order-tracking`;
+	const trackUrl = `${getStorefrontBaseUrl()}/pay/${input.payLinkCode}`;
 	return `Amerik Vitamin: #${input.orderNumber} (${amount}) tolbor batalgaajlaa, bayarlalaa! Hurgeltiin yavts hyanah: ${trackUrl}`;
 }
 
