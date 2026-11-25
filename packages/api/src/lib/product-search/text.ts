@@ -95,23 +95,37 @@ const LATIN_SEARCH_ALIASES = {
 
 // Whole-word query phrases rewritten to the term the catalog uses.
 const QUERY_PHRASE_ALIASES = {
+	bcomplex: "b complex",
 	"black more": "blackmores",
 	blackmore: "blackmores",
 	"black mores": "blackmores",
+	blackseed: "black seed",
+	codliver: "cod liver",
+	eveningprimrose: "evening primrose",
+	fishoil: "fish oil",
+	folicacid: "folate",
 	"jarrow formula": "jarrow formulas",
+	ltheanine: "l theanine",
+	methylb12: "methyl b12",
+	methylfolate: "methyl folate",
+	milkthistle: "milk thistle",
 	naturbell: "naturebell",
 	"nature bell": "naturebell",
 	"natures bell": "naturebell",
+	seamoss: "sea moss",
+	метилфолат: "methyl folate",
 	фолийн: "folate",
 	"фолийн хүчил": "folate",
 };
 
 const VITAMIN_LETTER_ALIASES = {
+	a: "vitamin a",
 	b: "vitamin b",
 	c: "vitamin c",
 	d: "d3",
 	e: "vitamin e",
 	k: "k2",
+	а: "vitamin a",
 	б: "vitamin b",
 	д: "d3",
 	е: "vitamin e",
@@ -127,6 +141,7 @@ const CODE_LETTERS = { б: "b", д: "d", к: "k", с: "c", ц: "c" };
 
 const SYMPTOM_INGREDIENT_ALIASES = {
 	anxiety: ["ashwagandha", "l theanine", "magnesium"],
+	constipation: ["psyllium", "fiber", "magnesium citrate"],
 	fatigue: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
 	hair: ["biotin", "collagen", "zinc"],
 	immune: ["zinc", "vitamin c", "probiotic"],
@@ -134,6 +149,7 @@ const SYMPTOM_INGREDIENT_ALIASES = {
 	insomnia: ["melatonin", "5 htp"],
 	joint: ["glucosamine", "collagen", "omega 3"],
 	joints: ["glucosamine", "collagen", "omega 3"],
+	liver: ["milk thistle", "tudca", "nac", "artichoke"],
 	menstrual: ["magnesium", "b6", "iron", "evening primrose"],
 	period: ["magnesium", "b6", "iron", "evening primrose"],
 	skin: ["collagen", "hyaluronic", "vitamin c"],
@@ -146,9 +162,12 @@ const SYMPTOM_INGREDIENT_ALIASES = {
 	менструац: ["magnesium", "b6", "iron", "evening primrose"],
 	нойр: ["melatonin", "5 htp", "magnesium"],
 	нойргүйдэл: ["melatonin", "5 htp", "magnesium"],
+	"өтгөн хаталт": ["psyllium", "fiber", "magnesium citrate"],
 	стресс: ["ashwagandha", "magnesium", "l theanine"],
 	"үе мөч": ["glucosamine", "collagen", "omega 3"],
 	үс: ["biotin", "collagen", "zinc"],
+	цөс: ["milk thistle", "tudca", "artichoke"],
+	элэг: ["milk thistle", "tudca", "nac", "artichoke"],
 	ядаргаа: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
 };
 

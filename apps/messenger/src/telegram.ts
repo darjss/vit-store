@@ -24,25 +24,29 @@ const sendToAdmins = async (env: Env, text: string): Promise<{ ok: boolean; stat
 	return { ok: failed === undefined, status: failed ?? statuses[0] };
 };
 
-// One-shot admin handoff alert to every chat in TELEGRAM_ADMIN_CHAT_ID.
+// One-shot admin alert to every chat in TELEGRAM_ADMIN_CHAT_ID.
 export const sendTelegramAlert = async (
 	env: Env,
 	input: {
 		extraLines?: Array<string>;
 		reason: string;
 		recentTexts: Array<string>;
+		tag?: "handoff" | "payment";
 		threadId: string;
 	},
 ): Promise<{ ok: boolean; status?: number }> => {
+	const tag = input.tag ?? "handoff";
 	const lines = [
-		`[handoff] ${input.reason}`,
+		`[${tag}] ${input.reason}`,
 		`Thread: ${input.threadId}`,
 		...(input.extraLines ?? []),
 		...input.recentTexts
 			.slice(0, 5)
 			.reverse()
 			.map((t) => `> ${t}`),
-		`Resume: POST /admin/conversations/${encodeURIComponent(input.threadId)}/resume`,
+		...(tag === "handoff"
+			? [`Resume: POST /admin/conversations/${encodeURIComponent(input.threadId)}/resume`]
+			: []),
 	];
 	return sendToAdmins(env, lines.join("\n"));
 };

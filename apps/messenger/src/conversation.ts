@@ -14,9 +14,11 @@ import {
 	lastToolCallInput,
 	messageText,
 	normalizeInboundItem,
+	pendingAttachmentsSchema,
 	segmentClaimed,
 	toSeedModelMessages,
 	turnIdFor,
+	type AttachmentItem,
 	type InboundItem,
 } from "./conversation-helpers";
 import { createConversationIO, type ConversationIO } from "./conversation-io";
@@ -383,10 +385,21 @@ export class Conversation extends Agent<Env> {
 		}
 
 		await this.prefillFromHistory();
+		const carriedAttachments = this.readPendingAttachments();
+		const effectiveItems: Array<InboundItem> =
+			carriedAttachments.length > 0
+				? [{ attachments: carriedAttachments, id: "carried", text: "" }, ...items]
+				: items;
+		const turnAttachments = effectiveItems
+			.flatMap((i) => i.attachments ?? [])
+			.filter(
+				(a) => a.type === "image" && a.url !== undefined && a.url !== null && a.url.length > 0,
+			);
 		const { firstPhotoUrl, hadPhotos, persistedUserMessage, photoCount, text, userMessage } =
-			await buildUserMessages(this.env, items);
+			await buildUserMessages(this.env, effectiveItems);
 
 		if (text.length === 0 && hadPhotos && photoCount === 0) {
+			this.store.deleteMeta("pending_attachments");
 			this.store.persistTurn(turnId, persistedUserMessage, [], false);
 			await this.io().sendPart(`${turnId}:text`, { message: IMAGE_UNREADABLE });
 			this.finishTurn(rows);
@@ -417,8 +430,32 @@ export class Conversation extends Agent<Env> {
 			seqAtStart,
 			started,
 			stepMs,
+			turnAttachments,
 			turnId,
 		});
+	}
+
+	private readPendingAttachments(): Array<AttachmentItem> {
+		const raw = this.store.getMeta("pending_attachments");
+		if (raw === undefined) {
+			return [];
+		}
+		try {
+			const parsed = v.safeParse(pendingAttachmentsSchema, JSON.parse(raw));
+			return parsed.success ? parsed.output : [];
+		} catch {
+			return [];
+		}
+	}
+
+	// Preserve photo attachments across superseded turns so the follow-up turn
+	// still sees the actual image instead of only "[зураг]".
+	private syncPendingAttachments(superseded: boolean, attachments: Array<AttachmentItem>): void {
+		if (superseded && attachments.length > 0) {
+			this.store.setMeta("pending_attachments", JSON.stringify(attachments.slice(0, 6)));
+		} else if (!superseded) {
+			this.store.deleteMeta("pending_attachments");
+		}
 	}
 
 	private async replaySavedTurn(opts: {
@@ -465,6 +502,7 @@ export class Conversation extends Agent<Env> {
 		seqAtStart: number;
 		started: number;
 		stepMs: Array<number>;
+		turnAttachments: Array<AttachmentItem>;
 		turnId: string;
 	}): Promise<void> {
 		const {
@@ -478,12 +516,14 @@ export class Conversation extends Agent<Env> {
 			seqAtStart,
 			started,
 			stepMs,
+			turnAttachments,
 			turnId,
 		} = opts;
 		const reply = lastToolCallInput(result.steps, "reply", replyInputSchema);
 		const handoff = lastToolCallInput(result.steps, "handoff", handoffInputSchema);
 		const paymentAction = extractPaymentAction(result.steps);
 		const superseded = this.store.latestSeq() > seqAtStart;
+		this.syncPendingAttachments(superseded, turnAttachments);
 
 		this.store.saveTurnOutcome(turnId, {
 			handoff: handoff?.reason,
