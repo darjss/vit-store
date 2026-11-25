@@ -20,13 +20,14 @@
 		"BRIDGE_MODE": "shadow",
 		"BRIDGE_MODEL": "gpt-6.1-terra",
 		"BRIDGE_SHADOW_TELEGRAM": "false",
+		"CUTOVER_AT": "2026-11-25T10:00:00Z",
 		"MODEL": "gpt-6.1-terra",
 		// The VPC binding pins host and port; this URL's host only sets the
 		// Host header, but the /v1 path suffix must match the proxy.
 		"OPENAI_BASE_URL": "http://127.0.0.1:8317/v1",
 		"STORE_API_URL": "https://api.amerikvitamin.mn",
 		"STORE_PUBLIC_URL": "https://amerikvitamin.mn",
-		"ZERNIO_ACCOUNT_IDS": "6abd496a8fa7e621847d9954",
+		"ZERNIO_ACCOUNT_IDS": "6abd496a8fa7e621847d9954,6abf80aecb476a6db0a17892",
 		"ZERNIO_BASE_URL": "https://zernio.com/api",
 	},
 	"triggers": {

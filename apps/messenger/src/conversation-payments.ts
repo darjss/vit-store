@@ -20,7 +20,7 @@ const checkPaymentSchema = v.object({ paymentNumber: v.pipe(v.string(), v.minLen
 export const PAYMENT_DEADLINE_MS = 2 * 60 * 60_000;
 const LONG_WATCH_CUTOFF_MS = 48 * 60 * 60_000;
 const UB_REMINDER_DELAY_MS = 6 * 60 * 60_000;
-const UB_SHIPPED_FALLBACK_MS = 20 * 60 * 60_000;
+const UB_SHIPPED_FALLBACK_MS = 8 * 60 * 60_000;
 const COUNTRYSIDE_REMINDER_DELAY_MS = 4 * 60 * 60_000;
 const RECON_FAIL_STATES = new Set(["timeout", "ambiguous", "failed", "auth_required"]);
 const PAYMENT_TERMINAL_FAIL = "failed";
@@ -191,6 +191,16 @@ const handleDelivered = async (
 	return undefined;
 };
 
+const shippedAtFor = (io: ConversationIO, paymentNumber: string, now: number): number => {
+	const key = `pay_${paymentNumber}:shipped_at`;
+	const existing = Number(io.store.getMeta(key) ?? "0");
+	if (Number.isFinite(existing) && existing > 0) {
+		return existing;
+	}
+	io.store.setMeta(key, String(now));
+	return now;
+};
+
 const maybeSendReminder = async (
 	io: ConversationIO,
 	row: Payment,
@@ -198,9 +208,10 @@ const maybeSendReminder = async (
 	now: number,
 ): Promise<"ops_nudged" | "reminder_sent" | undefined> => {
 	const reminderKey = `pay_${row.paymentNumber}:reminder`;
+	const reminderDoneKey = `${reminderKey}:done`;
 	if (
 		row.claimed ||
-		io.store.outboxHas(reminderKey) ||
+		io.store.outboxHas(reminderDoneKey) ||
 		io.store.isPaused() ||
 		isQuietHoursUB(now)
 	) {
@@ -209,7 +220,9 @@ const maybeSendReminder = async (
 	const ubDeliveredDue =
 		row.deliveredAt !== undefined && now >= row.deliveredAt + UB_REMINDER_DELAY_MS;
 	const ubShippedFallbackDue =
-		orderStatus === "shipped" && now >= row.createdAt + UB_SHIPPED_FALLBACK_MS;
+		!row.countryside &&
+		orderStatus === "shipped" &&
+		now >= shippedAtFor(io, row.paymentNumber, now) + UB_SHIPPED_FALLBACK_MS;
 	const due = row.countryside
 		? now >= row.createdAt + COUNTRYSIDE_REMINDER_DELAY_MS
 		: ubDeliveredDue || ubShippedFallbackDue;
@@ -219,7 +232,7 @@ const maybeSendReminder = async (
 
 	if (io.store.within23h(now)) {
 		try {
-			await io.sendPart(reminderKey, {
+			await io.sendPart(`${reminderKey}:text`, {
 				message: formatReminder({
 					accountNumber: row.accountNumber,
 					orderNumber: row.orderNumber,
@@ -237,6 +250,7 @@ const maybeSendReminder = async (
 				],
 				message: TRANSFER_PROMPT,
 			});
+			io.store.markOutbox(reminderDoneKey);
 			log({
 				action: "reminder_sent",
 				claimed: 0,
@@ -252,7 +266,7 @@ const maybeSendReminder = async (
 	}
 
 	if (await nudgeOps(io, row, "Төлбөр ороогүй (23ц хэтэрсэн)")) {
-		io.store.markOutbox(reminderKey);
+		io.store.markOutbox(reminderDoneKey);
 		log({
 			action: "ops_nudged",
 			claimed: 0,
