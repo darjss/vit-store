@@ -24,6 +24,8 @@ export const zernioMessageEventSchema = v.looseObject({
 	}),
 	conversation: v.looseObject({
 		id: v.pipe(v.string(), v.minLength(1)),
+		participantId: v.optional(v.string()),
+		participantName: v.optional(v.nullable(v.string())),
 		platformConversationId: v.optional(v.string()),
 	}),
 	event: v.literal("message.received"),
@@ -42,7 +44,7 @@ export const zernioMessageEventSchema = v.looseObject({
 		id: v.optional(v.string()),
 		platform: v.string(),
 		platformMessageId: v.optional(v.string()),
-		sender: v.optional(v.looseObject({ id: v.string() })),
+		sender: v.optional(v.looseObject({ id: v.string(), name: v.optional(v.nullable(v.string())) })),
 		sentAt: v.optional(v.string()),
 		text: v.nullable(v.string()),
 	}),
@@ -61,6 +63,28 @@ export const zernioMessageEventSchema = v.looseObject({
 export type ZernioMessageEvent = v.InferOutput<typeof zernioMessageEventSchema>;
 
 const envelopeSchema = v.looseObject({ event: v.optional(v.string()) });
+
+// Internal / non-customer accounts the bot must never answer.
+const IGNORED_PARTICIPANT_IDS = new Set([
+	"8150131448402413", // Tsogzolmaa Jigjidsuren
+]);
+const IGNORED_PARTICIPANT_NAMES = new Set(["tsogzolmaa jigjidsuren", "aviddaram bazarragchaa"]);
+
+const normalizeName = (name: string | null | undefined): string =>
+	(name ?? "").trim().toLowerCase().replaceAll(/\s+/g, " ");
+
+const isIgnoredParticipant = (event: ZernioMessageEvent): boolean => {
+	const ids = [
+		event.message.sender?.id,
+		event.conversation.participantId,
+		event.conversation.platformConversationId,
+	];
+	if (ids.some((id) => id !== undefined && IGNORED_PARTICIPANT_IDS.has(id))) {
+		return true;
+	}
+	const names = [event.message.sender?.name, event.conversation.participantName];
+	return names.some((name) => IGNORED_PARTICIPANT_NAMES.has(normalizeName(name)));
+};
 
 // ─── Signature verification ─────────────────────────────────────────────────
 
@@ -167,7 +191,8 @@ export const admit = async (request: Request, env: Env, rawBody: string): Promis
 	if (
 		event.message.direction !== "incoming" ||
 		event.message.platform !== "facebook" ||
-		!allowed.includes(event.account.id)
+		!allowed.includes(event.account.id) ||
+		isIgnoredParticipant(event)
 	) {
 		return { ok: false, response: new Response("ok", { status: 200 }) };
 	}

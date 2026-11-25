@@ -8,10 +8,15 @@ import { fetchImageParts } from "./photos";
 import { paymentToolOutputSchema, type PaymentAction } from "./tools";
 import type { ListedMessage } from "./zernio";
 
+export const attachmentSchema = v.looseObject({
+	type: v.string(),
+	url: v.optional(v.nullable(v.string())),
+});
+export const pendingAttachmentsSchema = v.array(attachmentSchema);
+export type AttachmentItem = v.InferOutput<typeof attachmentSchema>;
+
 export const inboundItemSchema = v.looseObject({
-	attachments: v.optional(
-		v.array(v.looseObject({ type: v.string(), url: v.optional(v.nullable(v.string())) })),
-	),
+	attachments: v.optional(v.array(attachmentSchema)),
 	id: v.string(),
 	raw: v.optional(v.unknown()),
 	text: v.string(),

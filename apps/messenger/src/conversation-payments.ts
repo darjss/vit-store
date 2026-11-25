@@ -491,6 +491,7 @@ const handleExternalClaim = async (
 			extraLines,
 			reason: "external_transfer_claim",
 			recentTexts: io.store.recentCustomerTexts(6),
+			tag: "payment",
 			threadId: io.thread,
 		}).catch(() => undefined);
 		if (res?.ok) {
