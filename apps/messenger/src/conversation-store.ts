@@ -5,13 +5,7 @@ import * as v from "valibot";
 import { zernioMessageEventSchema } from "./admit";
 import type { CartLine } from "./cart";
 import type { Env } from "./env";
-import type {
-	CheckoutState,
-	DeliveryPatch,
-	PaymentAction,
-	PaymentSummary,
-	ReplyResult,
-} from "./tools";
+import type { DeliveryPatch, PaymentAction, ReplyResult } from "./tools";
 
 export const CLAIM_STALE_MS = 90_000;
 export const CART_TTL_MS = 24 * 60 * 60_000;
@@ -38,15 +32,36 @@ export type InboxRow = {
 	turn_id: string | null;
 };
 
-export type CartRow = {
-	added_at: number;
-	name: string;
-	price: number;
-	product_id: number;
-	qty: number;
+// Unified domain shapes mapped once at the SQLite boundary.
+export type Checkout = {
+	address?: string;
+	countryside: boolean;
+	note?: string;
+	phone?: string;
+	revision: number;
 };
 
-export type CheckoutRow = {
+export type Payment = {
+	accountName: string;
+	accountNumber: string;
+	checkoutToken?: string;
+	claimed: boolean;
+	countryside: boolean;
+	createdAt: number;
+	deadline: number;
+	deliveredAt?: number;
+	orderNumber: string;
+	paymentNumber: string;
+	phone: string;
+	receiptAmount?: number;
+	receiptUrl?: string;
+	revision: number;
+	status: string;
+	total: number;
+};
+
+type CartDbRow = { added_at: number; name: string; price: number; product_id: number; qty: number };
+type CheckoutDbRow = {
 	address: string | null;
 	countryside: number;
 	id: number;
@@ -54,8 +69,7 @@ export type CheckoutRow = {
 	phone: string | null;
 	revision: number;
 };
-
-export type PaymentDbRow = {
+type PaymentDbRow = {
 	account_name: string | null;
 	account_number: string | null;
 	checkout_token: string | null;
@@ -64,43 +78,52 @@ export type PaymentDbRow = {
 	created_at: number;
 	deadline: number;
 	delivered_at: number | null;
-	delivered_notified: number;
-	handed_off: number;
-	notified: number;
-	ops_nudged: number;
 	order_number: string;
 	payment_number: string;
 	phone: string;
 	receipt_amount: number | null;
 	receipt_url: string | null;
-	reminder_sent: number;
 	revision: number;
 	status: string;
 	total: number;
-	transfer_shown: number;
 };
 
-const rowToCartLine = (r: CartRow): CartLine => ({
+const toCartLine = (r: CartDbRow): CartLine => ({
 	name: r.name,
 	price: r.price,
 	productId: r.product_id,
 	qty: r.qty,
 });
 
-const rowToPaymentSummary = (row: PaymentDbRow): PaymentSummary => ({
-	checkoutToken: row.checkout_token ?? undefined,
-	claimed: row.claimed,
-	countryside: row.countryside === 1,
-	createdAt: row.created_at,
-	orderNumber: row.order_number,
-	paymentNumber: row.payment_number,
-	status: row.status,
-	total: row.total,
+const toCheckout = (r: CheckoutDbRow): Checkout => ({
+	address: r.address ?? undefined,
+	countryside: r.countryside === 1,
+	note: r.note ?? undefined,
+	phone: r.phone ?? undefined,
+	revision: r.revision,
 });
 
-// Durable Object SQLite repository for one Messenger conversation. Keeps all
-// schema migrations, inbox claims, seen/cart/checkout/payments state, and
-// history persistence out of the orchestration layer.
+const toPayment = (r: PaymentDbRow): Payment => ({
+	accountName: r.account_name ?? "",
+	accountNumber: r.account_number ?? "",
+	checkoutToken: r.checkout_token ?? undefined,
+	claimed: r.claimed === 1,
+	countryside: r.countryside === 1,
+	createdAt: r.created_at,
+	deadline: r.deadline,
+	deliveredAt: r.delivered_at ?? undefined,
+	orderNumber: r.order_number,
+	paymentNumber: r.payment_number,
+	phone: r.phone,
+	receiptAmount: r.receipt_amount ?? undefined,
+	receiptUrl: r.receipt_url ?? undefined,
+	revision: r.revision,
+	status: r.status,
+	total: r.total,
+});
+
+// Durable Object SQLite repository for one Messenger conversation.
+// Keeps only domain facts on rows; outbound send/skip dedupe lives in `outbox`.
 export class ConversationStore {
 	private readonly agent: Agent<Env>;
 
@@ -169,14 +192,8 @@ export class ConversationStore {
 				status TEXT NOT NULL DEFAULT 'pending',
 				claimed INTEGER NOT NULL DEFAULT 0,
 				deadline INTEGER NOT NULL,
-				notified INTEGER NOT NULL DEFAULT 0,
-				handed_off INTEGER NOT NULL DEFAULT 0,
-				transfer_shown INTEGER NOT NULL DEFAULT 0,
 				countryside INTEGER NOT NULL DEFAULT 0,
 				delivered_at INTEGER,
-				delivered_notified INTEGER NOT NULL DEFAULT 0,
-				reminder_sent INTEGER NOT NULL DEFAULT 0,
-				ops_nudged INTEGER NOT NULL DEFAULT 0,
 				receipt_url TEXT,
 				receipt_amount INTEGER
 			)`;
@@ -185,19 +202,16 @@ export class ConversationStore {
 	}
 
 	private migrateExistingTables(): void {
-		// Copy legacy `shown` ids into `seen` on deployed DOs.
 		const hasShown =
 			this.agent.sql<{ name: string }>`
 				SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'shown'`.length > 0;
 		if (hasShown) {
 			void this.agent.sql`INSERT OR IGNORE INTO seen (product_id) SELECT product_id FROM shown`;
 		}
-
 		const hasCol = (table: string, col: string) =>
 			this.agent.sql<{ name: string }>`SELECT name FROM pragma_table_info(${table})`.some(
 				(c) => c.name === col,
 			);
-
 		if (!hasCol("checkout", "countryside")) {
 			void this.agent.sql`ALTER TABLE checkout ADD COLUMN countryside INTEGER NOT NULL DEFAULT 0`;
 		}
@@ -209,16 +223,6 @@ export class ConversationStore {
 		}
 		if (!hasCol("payments", "delivered_at")) {
 			void this.agent.sql`ALTER TABLE payments ADD COLUMN delivered_at INTEGER`;
-		}
-		if (!hasCol("payments", "delivered_notified")) {
-			void this.agent
-				.sql`ALTER TABLE payments ADD COLUMN delivered_notified INTEGER NOT NULL DEFAULT 0`;
-		}
-		if (!hasCol("payments", "reminder_sent")) {
-			void this.agent.sql`ALTER TABLE payments ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0`;
-		}
-		if (!hasCol("payments", "ops_nudged")) {
-			void this.agent.sql`ALTER TABLE payments ADD COLUMN ops_nudged INTEGER NOT NULL DEFAULT 0`;
 		}
 		if (!hasCol("payments", "receipt_url")) {
 			void this.agent.sql`ALTER TABLE payments ADD COLUMN receipt_url TEXT`;
@@ -265,14 +269,9 @@ export class ConversationStore {
 		return Number.isFinite(pausedUntil) && pausedUntil > Date.now();
 	}
 
-	lastInboundAt(): number {
-		const raw = Number(this.getMeta("last_inbound_at") ?? "0");
-		return Number.isFinite(raw) ? raw : 0;
-	}
-
 	within23h(now = Date.now()): boolean {
-		const last = this.lastInboundAt();
-		return last > 0 && now - last < WINDOW_23H_MS;
+		const last = Number(this.getMeta("last_inbound_at") ?? "0");
+		return Number.isFinite(last) && last > 0 && now - last < WINDOW_23H_MS;
 	}
 
 	recordConfirmSent(revision: number, now = Date.now()): void {
@@ -291,7 +290,7 @@ export class ConversationStore {
 		}
 		const rev = Number(this.getMeta("confirm_rev") ?? "-1");
 		const at = Number(this.getMeta("confirm_at") ?? "0");
-		return rev === this.checkoutRow().revision && now - at < CONFIRM_TEXT_TTL_MS;
+		return rev === this.checkout().revision && now - at < CONFIRM_TEXT_TTL_MS;
 	}
 
 	latestSeq(): number {
@@ -354,7 +353,7 @@ export class ConversationStore {
 						OR status = 'applied'
 						OR (status = 'processing' AND claimed_at < ${staleClaim}))
 				RETURNING event_id, attempts`;
-			if (won.length > 0 && won[0] !== undefined) {
+			if (won[0] !== undefined) {
 				claimed.push({ ...row, attempts: won[0].attempts });
 			}
 		}
@@ -429,17 +428,11 @@ export class ConversationStore {
 		);
 	}
 
-	pruneStaleCart(now = Date.now()): void {
-		const cutoff = now - CART_TTL_MS;
-		void this.agent.sql`DELETE FROM cart WHERE added_at > 0 AND added_at < ${cutoff}`;
-	}
-
 	cartLines(): Array<CartLine> {
-		this.pruneStaleCart();
-		return this.agent.sql<CartRow>`
-			SELECT product_id, qty, name, price, added_at FROM cart ORDER BY product_id`.map(
-			rowToCartLine,
-		);
+		const cutoff = Date.now() - CART_TTL_MS;
+		void this.agent.sql`DELETE FROM cart WHERE added_at > 0 AND added_at < ${cutoff}`;
+		return this.agent.sql<CartDbRow>`
+			SELECT product_id, qty, name, price, added_at FROM cart ORDER BY product_id`.map(toCartLine);
 	}
 
 	replaceCart(lines: Array<CartLine>, now = Date.now()): void {
@@ -453,7 +446,8 @@ export class ConversationStore {
 	}
 
 	upsertCartItem(line: CartLine, replaceProductIds: Array<number>, now = Date.now()): void {
-		this.pruneStaleCart(now);
+		const cutoff = now - CART_TTL_MS;
+		void this.agent.sql`DELETE FROM cart WHERE added_at > 0 AND added_at < ${cutoff}`;
 		for (const id of replaceProductIds) {
 			void this.agent.sql`DELETE FROM cart WHERE product_id = ${id}`;
 		}
@@ -472,39 +466,24 @@ export class ConversationStore {
 		this.bumpRevision();
 	}
 
-	ensureCheckout(): void {
-		void this.agent.sql`INSERT OR IGNORE INTO checkout (id, revision) VALUES (1, 0)`;
-	}
-
-	checkoutRow(): CheckoutRow {
+	checkout(): Checkout {
 		this.ensureCheckout();
-		const row = this.agent.sql<CheckoutRow>`SELECT * FROM checkout WHERE id = 1`[0];
+		const row = this.agent.sql<CheckoutDbRow>`SELECT * FROM checkout WHERE id = 1`[0];
 		if (row === undefined) {
 			throw new Error("checkout row missing");
 		}
-		return row;
-	}
-
-	checkout(): CheckoutState {
-		const row = this.checkoutRow();
-		return {
-			address: row.address ?? undefined,
-			countryside: row.countryside === 1,
-			note: row.note ?? undefined,
-			phone: row.phone ?? undefined,
-			revision: row.revision,
-		};
+		return toCheckout(row);
 	}
 
 	saveDelivery(input: DeliveryPatch): void {
-		this.ensureCheckout();
-		const current = this.checkoutRow();
+		const current = this.checkout();
+		const countryside = input.countryside === undefined ? current.countryside : input.countryside;
 		void this.agent.sql`
 			UPDATE checkout SET
-				phone = ${input.phone ?? current.phone},
-				address = ${input.address ?? current.address},
-				note = ${input.note ?? current.note},
-				countryside = ${input.countryside === undefined ? current.countryside : input.countryside ? 1 : 0}
+				phone = ${input.phone ?? current.phone ?? null},
+				address = ${input.address ?? current.address ?? null},
+				note = ${input.note ?? current.note ?? null},
+				countryside = ${countryside ? 1 : 0}
 			WHERE id = 1`;
 		this.bumpRevision();
 	}
@@ -517,7 +496,11 @@ export class ConversationStore {
 		this.bumpRevision();
 	}
 
-	bumpRevision(): void {
+	private ensureCheckout(): void {
+		void this.agent.sql`INSERT OR IGNORE INTO checkout (id, revision) VALUES (1, 0)`;
+	}
+
+	private bumpRevision(): void {
 		this.ensureCheckout();
 		void this.agent.sql`UPDATE checkout SET revision = revision + 1 WHERE id = 1`;
 	}
@@ -528,7 +511,7 @@ export class ConversationStore {
 		accountName: string;
 		accountNumber: string;
 		checkoutToken: string | null;
-		countryside: number;
+		countryside: boolean;
 		createdAt: number;
 		deadline: number;
 		orderNumber: string;
@@ -536,14 +519,14 @@ export class ConversationStore {
 		phone: string;
 		revision: number;
 		total: number;
-	}): PaymentDbRow {
+	}): Payment {
 		void this.agent.sql`
 			INSERT INTO payments
 				(payment_number, order_number, revision, checkout_token, account_name, account_number,
-				 total, phone, created_at, status, claimed, deadline, notified, handed_off, transfer_shown, countryside)
+				 total, phone, created_at, status, claimed, deadline, countryside)
 			VALUES (${input.paymentNumber}, ${input.orderNumber}, ${input.revision}, ${input.checkoutToken},
 				${input.accountName}, ${input.accountNumber}, ${input.total}, ${input.phone}, ${input.createdAt},
-				'pending', 0, ${input.deadline}, 0, 0, 1, ${input.countryside})
+				'pending', 0, ${input.deadline}, ${input.countryside ? 1 : 0})
 			ON CONFLICT(payment_number) DO UPDATE SET
 				order_number = excluded.order_number,
 				revision = excluded.revision,
@@ -552,7 +535,6 @@ export class ConversationStore {
 				account_number = excluded.account_number,
 				total = excluded.total,
 				phone = excluded.phone,
-				transfer_shown = 1,
 				countryside = excluded.countryside`;
 		const row = this.paymentByNumber(input.paymentNumber);
 		if (row === undefined) {
@@ -561,45 +543,40 @@ export class ConversationStore {
 		return row;
 	}
 
-	paymentByNumber(paymentNumber: string): PaymentDbRow | undefined {
-		return this.agent.sql<PaymentDbRow>`
+	paymentByNumber(paymentNumber: string): Payment | undefined {
+		const row = this.agent.sql<PaymentDbRow>`
 			SELECT * FROM payments WHERE payment_number = ${paymentNumber}`[0];
+		return row === undefined ? undefined : toPayment(row);
 	}
 
-	paymentByRevision(revision: number): PaymentDbRow | undefined {
-		return this.agent.sql<PaymentDbRow>`
+	paymentByRevision(revision: number): Payment | undefined {
+		const row = this.agent.sql<PaymentDbRow>`
 			SELECT * FROM payments WHERE revision = ${revision}`[0];
+		return row === undefined ? undefined : toPayment(row);
 	}
 
-	pendingPaymentRows(now = Date.now()): Array<PaymentDbRow> {
+	pendingPayments(now = Date.now()): Array<Payment> {
 		const cutoff = now - PAYMENT_WATCH_END_MS;
 		return this.agent.sql<PaymentDbRow>`
 			SELECT * FROM payments
 			WHERE status = 'pending' AND created_at > ${cutoff}
-			ORDER BY created_at DESC`;
+			ORDER BY created_at DESC`.map(toPayment);
 	}
 
-	pendingPayments(now = Date.now()): Array<PaymentSummary> {
-		return this.pendingPaymentRows(now).map(rowToPaymentSummary);
-	}
-
-	latestPayment(): PaymentSummary | undefined {
+	latestPayment(): Payment | undefined {
 		const row = this.agent.sql<PaymentDbRow>`
 			SELECT * FROM payments ORDER BY created_at DESC LIMIT 1`[0];
-		return row === undefined ? undefined : rowToPaymentSummary(row);
+		return row === undefined ? undefined : toPayment(row);
 	}
 
-	allPayments(): Array<PaymentDbRow> {
-		return this.agent.sql<PaymentDbRow>`SELECT * FROM payments ORDER BY created_at ASC`;
+	allPayments(): Array<Payment> {
+		return this.agent.sql<PaymentDbRow>`
+			SELECT * FROM payments ORDER BY created_at ASC`.map(toPayment);
 	}
 
 	markPaymentStatus(paymentNumber: string, status: string): void {
 		void this.agent
 			.sql`UPDATE payments SET status = ${status} WHERE payment_number = ${paymentNumber}`;
-	}
-
-	markPaymentNotified(paymentNumber: string): void {
-		void this.agent.sql`UPDATE payments SET notified = 1 WHERE payment_number = ${paymentNumber}`;
 	}
 
 	markPaymentClaimed(paymentNumber: string, receipt?: { amount?: number; url?: string }): void {
@@ -611,31 +588,29 @@ export class ConversationStore {
 			WHERE payment_number = ${paymentNumber}`;
 	}
 
-	markPaymentHandedOff(paymentNumber: string): void {
-		void this.agent.sql`UPDATE payments SET handed_off = 1 WHERE payment_number = ${paymentNumber}`;
-	}
-
-	markPaymentDelivered(paymentNumber: string, deliveredAt: number, notified: boolean): void {
+	markPaymentDeliveredAt(paymentNumber: string, deliveredAt: number): void {
 		void this.agent.sql`
-			UPDATE payments SET
-				delivered_at = COALESCE(delivered_at, ${deliveredAt}),
-				delivered_notified = CASE WHEN ${notified ? 1 : 0} = 1 THEN 1 ELSE delivered_notified END
+			UPDATE payments SET delivered_at = COALESCE(delivered_at, ${deliveredAt})
 			WHERE payment_number = ${paymentNumber}`;
-	}
-
-	markPaymentReminderSent(paymentNumber: string, opsNudged = false): void {
-		void this.agent.sql`
-			UPDATE payments SET
-				reminder_sent = 1,
-				ops_nudged = CASE WHEN ${opsNudged ? 1 : 0} = 1 THEN 1 ELSE ops_nudged END
-			WHERE payment_number = ${paymentNumber}`;
-	}
-
-	markPaymentOpsNudged(paymentNumber: string): void {
-		void this.agent.sql`UPDATE payments SET ops_nudged = 1 WHERE payment_number = ${paymentNumber}`;
 	}
 
 	// ─── Messages & turns ────────────────────────────────────────────────────
+
+	hasMessages(): boolean {
+		return this.agent.sql`SELECT id FROM messages LIMIT 1`.length > 0;
+	}
+
+	// Seeds pre-cutover Zernio chat history once when a DO wakes up empty on an
+	// existing customer thread, so the bot sees recent context on turn 1.
+	seedZernioHistory(messages: Array<ModelMessage>): void {
+		if (messages.length === 0 || this.hasMessages()) {
+			return;
+		}
+		const baseAt = Date.now() - messages.length - 10;
+		for (const [i, message] of messages.entries()) {
+			this.saveMessage("t_zernio_seed", i, message, baseAt + i);
+		}
+	}
 
 	turnOutcome(turnId: string): TurnOutcome | undefined {
 		const row = this.agent.sql<{ reply: string }>`

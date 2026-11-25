@@ -1,4 +1,4 @@
-import { generateText, stepCountIs, type ModelMessage, type ToolSet } from "ai";
+import { generateText, isStepCount, type ModelMessage, type ToolSet } from "ai";
 import { Agent } from "agents";
 import * as v from "valibot";
 import type { Env } from "../env";
@@ -358,17 +358,17 @@ export class Admin extends Agent<Env> {
 
 		const posted = { did: false };
 		const result = await generateText({
+			instructions: `${adminAssistantInstructions}\n\n## Available skills\n${skillsIndex()}`,
 			messages: [...this.historyByTurns(HISTORY_TURNS), userMessage],
 			model: createModel(this.env),
 			providerOptions: { openai: { reasoningEffort: "medium" } },
-			stopWhen: stepCountIs(20),
-			system: `${adminAssistantInstructions}\n\n## Available skills\n${skillsIndex()}`,
+			stopWhen: isStepCount(20),
 			tools: this.buildTools(posted, chatId),
 		});
 
 		const created = Date.now();
 		this.saveMessages(turnId, [userMessage], created, 0);
-		this.saveMessages(turnId, result.response.messages, created + 1, 1);
+		this.saveMessages(turnId, result.responseMessages, created + 1, 1);
 
 		// Parity guard: a turn that ended in assistant text but never called
 		// post_telegram_message would otherwise be silently dropped.

@@ -1,9 +1,10 @@
 import { valibotSchema } from "@ai-sdk/valibot";
+import { deliveryFee } from "@vit/shared/constants";
 import { tool } from "ai";
 import * as v from "valibot";
 
 import { isCountrysideAddress, listingKey, normalizePhone, PHONE_RE, type CartLine } from "./cart";
-import { DELIVERY_FEE } from "./copy";
+import type { Checkout, Payment } from "./conversation-store";
 import type { Env } from "./env";
 import { storeClient, withTimeout } from "./store";
 
@@ -30,35 +31,34 @@ export type DeliveryPatch = {
 
 export type DeliveryErrors = { address?: string; phone?: string };
 
-export type CheckoutState = DeliveryPatch & { revision: number };
+export const paymentActionSchema = v.variant("kind", [
+	v.object({ kind: v.literal("already_paid") }),
+	v.object({ kind: v.literal("ambiguous") }),
+	v.object({
+		kind: v.literal("claim"),
+		paymentNumber: v.string(),
+		receiptAmount: v.optional(v.number()),
+	}),
+	v.object({ kind: v.literal("details"), paymentNumber: v.string() }),
+]);
 
-export type PaymentSummary = {
-	checkoutToken?: string;
-	claimed: number;
-	countryside: boolean;
-	createdAt: number;
-	orderNumber: string;
-	paymentNumber: string;
-	status: string;
-	total: number;
-};
+export type PaymentAction = v.InferOutput<typeof paymentActionSchema>;
 
-export type PaymentAction =
-	| { kind: "already_paid" }
-	| { kind: "ambiguous" }
-	| { kind: "claim"; paymentNumber: string; receiptAmount?: number }
-	| { kind: "details"; paymentNumber: string };
+export const paymentToolOutputSchema = v.object({
+	action: v.optional(paymentActionSchema),
+	handled: v.boolean(),
+});
 
 export type CartItemInput = { productId: number; quantity: number };
 
 export type ToolDeps = {
 	cartLines(): Array<CartLine>;
 	cartReplace(items: Array<CartItemInput>): Promise<void>;
-	checkout(): CheckoutState;
-	latestPayment(): PaymentSummary | undefined;
+	checkout(): Checkout;
+	latestPayment(): Payment | undefined;
 	markSeen(ids: Array<number>): void;
 	onSearch(hits: Array<SearchHit>): void;
-	pendingPayments(): Array<PaymentSummary>;
+	pendingPayments(): Array<Payment>;
 	recentCustomerTexts(): Array<string>;
 	saveDelivery(input: DeliveryPatch): void;
 };
@@ -71,21 +71,14 @@ export const replyInputSchema = v.object({
 	text: v.optional(v.pipe(v.string(), v.maxLength(200))),
 });
 
-export type ReplyResult = {
-	action?: "confirm";
-	productIds?: Array<number>;
-	text?: string;
-};
+export type ReplyResult = v.InferOutput<typeof replyInputSchema>;
 
 export const handoffInputSchema = v.object({
 	message: v.optional(v.pipe(v.string(), v.maxLength(200))),
 	reason: v.pipe(v.string(), v.minLength(1), v.maxLength(300)),
 });
 
-export type HandoffResult = {
-	message?: string;
-	reason: string;
-};
+export type HandoffResult = v.InferOutput<typeof handoffInputSchema>;
 
 export const paymentInputSchema = v.object({
 	kind: v.picklist(["claim", "details"]),
@@ -127,7 +120,7 @@ const toHit = (p: {
 
 const digitGroups = (text: string): Array<string> => text.match(/\d+/g) ?? [];
 
-// Normalize hyphens/punctuation so "42-р байр" matches "42р байр" and "3-р хороо" matches "3р хороо".
+// Normalize hyphens/punctuation so "42-р байр" matches "42р байр".
 const normalizeAddressText = (text: string): string =>
 	text
 		.toLowerCase()
@@ -141,14 +134,12 @@ const addressTokens = (text: string): Array<string> =>
 		.split(" ")
 		.filter((w) => w.length >= 3 && !/^\d+$/.test(w));
 
-const corroboratePhone = (phone: string, texts: Array<string>): boolean => {
-	const haystack = texts.map((t) => t.replaceAll(/\D/g, "")).join("|");
-	return haystack.includes(phone);
-};
+const corroboratePhone = (phone: string, texts: Array<string>): boolean =>
+	texts
+		.map((t) => t.replaceAll(/\D/g, ""))
+		.join("|")
+		.includes(phone);
 
-// Every digit group must appear verbatim in customer text, and at least 60% of
-// normalized significant words must match (tolerates minor Latin/Cyrillic or
-// punctuation normalization without allowing hallucinated addresses).
 const corroborateAddress = (address: string, texts: Array<string>): boolean => {
 	const haystack = normalizeAddressText(texts.join(" "));
 	const haystackDigits = new Set(digitGroups(haystack));
@@ -164,8 +155,6 @@ const corroborateAddress = (address: string, texts: Array<string>): boolean => {
 	return matched.length / tokens.length >= 0.6;
 };
 
-// In an ad chat the ad product leads any search it matches, and its lookalike
-// listings drop out.
 const leadWithAdProducts = (hits: Array<SearchHit>, adProducts: Array<AdProduct>) => {
 	const matched = adProducts.filter((ad) =>
 		hits.some((h) => listingKey(h.name) === listingKey(ad.name)),
@@ -195,7 +184,7 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 			const lines = deps.cartLines();
 			const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
 			return {
-				deliveryFee: DELIVERY_FEE,
+				deliveryFee,
 				items: lines.map((l) => ({
 					name: l.name,
 					price: l.price,
@@ -203,7 +192,7 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 					qty: l.qty,
 				})),
 				subtotal,
-				total: lines.length > 0 ? subtotal + DELIVERY_FEE : 0,
+				total: lines.length > 0 ? subtotal + deliveryFee : 0,
 			};
 		},
 		inputSchema: valibotSchema(
@@ -237,26 +226,23 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 			}
 			let paymentStatus = payment.status;
 			let orderStatus: string | undefined;
-			let deliveryStatus: string | null = null;
 			try {
 				const res = await storeClient(env).payment.getPaymentStatus.query(
 					{
-						checkoutToken: payment.checkoutToken ?? undefined,
+						checkoutToken: payment.checkoutToken,
 						paymentNumber: payment.paymentNumber,
 					},
 					{ signal: withTimeout() },
 				);
 				paymentStatus = res.status;
 				orderStatus = res.orderStatus;
-				deliveryStatus = res.deliveryStatus;
 			} catch {
 				// Keep stored status if store query fails.
 			}
 			return {
-				claimed: payment.claimed === 1,
+				claimed: payment.claimed,
 				countryside: payment.countryside,
 				createdAt: new Date(payment.createdAt).toISOString(),
-				deliveryStatus,
 				orderNumber: payment.orderNumber,
 				orderStatus,
 				paymentStatus,

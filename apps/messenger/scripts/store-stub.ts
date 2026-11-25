@@ -136,8 +136,6 @@ const storeRoute = async (request: Request, url: URL, procedure: string): Promis
 		const { paymentNumber } = queryParamInput(url);
 		const isDelivered = paymentNumber !== undefined && delivered.has(paymentNumber);
 		return ok({
-			deliveryStatus: isDelivered ? "delivered" : null,
-			deliveryUpdatedAt: isDelivered ? new Date().toISOString() : null,
 			orderStatus: isDelivered ? "delivered" : "pending",
 			provider: "transfer",
 			status: paymentNumber !== undefined && paid.has(paymentNumber) ? "success" : "pending",
