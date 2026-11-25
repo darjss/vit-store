@@ -2,7 +2,8 @@ import { valibotSchema } from "@ai-sdk/valibot";
 import { tool } from "ai";
 import * as v from "valibot";
 
-import { normalizePhone, PHONE_RE, type CartLine } from "./cart";
+import { isCountrysideAddress, listingKey, normalizePhone, PHONE_RE, type CartLine } from "./cart";
+import { DELIVERY_FEE } from "./copy";
 import type { Env } from "./env";
 import { storeClient, withTimeout } from "./store";
 
@@ -20,8 +21,6 @@ export type SearchHit = {
 	summary?: string;
 };
 
-// The conversation side supplies cart/checkout persistence and the recent
-// customer texts set_delivery validates against. tools.ts stays free of SQL.
 export type DeliveryPatch = {
 	address?: string;
 	countryside?: boolean;
@@ -33,43 +32,70 @@ export type DeliveryErrors = { address?: string; phone?: string };
 
 export type CheckoutState = DeliveryPatch & { revision: number };
 
-export type PaymentRow = {
+export type PaymentSummary = {
 	checkoutToken?: string;
 	claimed: number;
+	countryside: boolean;
 	createdAt: number;
 	orderNumber: string;
 	paymentNumber: string;
 	status: string;
+	total: number;
 };
+
+export type PaymentAction =
+	| { kind: "already_paid" }
+	| { kind: "ambiguous" }
+	| { kind: "claim"; paymentNumber: string; receiptAmount?: number }
+	| { kind: "details"; paymentNumber: string };
+
+export type CartItemInput = { productId: number; quantity: number };
 
 export type ToolDeps = {
 	cartLines(): Array<CartLine>;
-	cartSet(productId: number, quantity: number): Promise<void>;
+	cartReplace(items: Array<CartItemInput>): Promise<void>;
 	checkout(): CheckoutState;
-	latestPayment(): PaymentRow | undefined;
+	latestPayment(): PaymentSummary | undefined;
+	markSeen(ids: Array<number>): void;
+	onSearch(hits: Array<SearchHit>): void;
+	pendingPayments(): Array<PaymentSummary>;
 	recentCustomerTexts(): Array<string>;
 	saveDelivery(input: DeliveryPatch): void;
 };
 
 export const replyInputSchema = v.object({
-	action: v.optional(v.picklist(["confirm_order", "show_cart"])),
+	action: v.optional(v.literal("confirm")),
 	productIds: v.optional(
-		v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(10)),
+		v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(6)),
 	),
-	text: v.pipe(v.string(), v.minLength(1), v.maxLength(300)),
+	text: v.optional(v.pipe(v.string(), v.maxLength(200))),
 });
 
 export type ReplyResult = {
-	action?: "confirm_order" | "show_cart";
+	action?: "confirm";
 	productIds?: Array<number>;
-	text: string;
+	text?: string;
 };
 
-const ustr = (v: string | null | undefined): string | undefined => v || undefined;
+export const handoffInputSchema = v.object({
+	message: v.optional(v.pipe(v.string(), v.maxLength(200))),
+	reason: v.pipe(v.string(), v.minLength(1), v.maxLength(300)),
+});
 
-// getProductsByIdsForAdvice rows: amount/brand/category/description are "",
-// dailyIntake a number, expirationDate "" or an ISO string; search hits carry
-// stockStatus ("in_stock" | "low_stock" | "out_of_stock") instead of stock.
+export type HandoffResult = {
+	message?: string;
+	reason: string;
+};
+
+export const paymentInputSchema = v.object({
+	kind: v.picklist(["claim", "details"]),
+	receiptAmount: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+});
+
+export type AdProduct = { id: number; name: string; price: number; stockStatus: string };
+
+const ustr = (value: string | null | undefined): string | undefined => value || undefined;
+
 const toHit = (p: {
 	amount?: string | null;
 	brand?: string | null;
@@ -91,7 +117,6 @@ const toHit = (p: {
 			: String(p.dailyIntake),
 	expiry: ustr(p.expirationDate)?.slice(0, 10),
 	id: p.id,
-	// Short label lists; "which oil" and "what's in it" answers live here.
 	ingredients: p.ingredients?.length ? p.ingredients : undefined,
 	name: p.name,
 	potency: ustr(p.potency),
@@ -102,38 +127,45 @@ const toHit = (p: {
 
 const digitGroups = (text: string): Array<string> => text.match(/\d+/g) ?? [];
 
-const significantWords = (text: string): Array<string> =>
+// Normalize hyphens/punctuation so "42-р байр" matches "42р байр" and "3-р хороо" matches "3р хороо".
+const normalizeAddressText = (text: string): string =>
 	text
 		.toLowerCase()
-		.split(/[\s,.;:]+/)
-		.filter((w) => w.length >= 3);
+		.replaceAll(/[-–—/.,;:()№#]+/g, " ")
+		.replaceAll(/(\d)\s+([рp]\b)/giu, "$1$2")
+		.replaceAll(/\s+/g, " ")
+		.trim();
 
-// set_delivery only accepts a phone/address the customer actually typed in
-// this conversation: every digit group and every longer word of the address
-// must appear in recent texts verbatim. Blocks hallucinated details.
+const addressTokens = (text: string): Array<string> =>
+	normalizeAddressText(text)
+		.split(" ")
+		.filter((w) => w.length >= 3 && !/^\d+$/.test(w));
+
 const corroboratePhone = (phone: string, texts: Array<string>): boolean => {
 	const haystack = texts.map((t) => t.replaceAll(/\D/g, "")).join("|");
 	return haystack.includes(phone);
 };
 
+// Every digit group must appear verbatim in customer text, and at least 60% of
+// normalized significant words must match (tolerates minor Latin/Cyrillic or
+// punctuation normalization without allowing hallucinated addresses).
 const corroborateAddress = (address: string, texts: Array<string>): boolean => {
-	const haystack = texts.join(" ").toLowerCase();
-	const digitHaystack = digitGroups(haystack);
-	if (!digitGroups(address).every((g) => digitHaystack.includes(g))) {
+	const haystack = normalizeAddressText(texts.join(" "));
+	const haystackDigits = new Set(digitGroups(haystack));
+	const addrDigits = digitGroups(address);
+	if (!addrDigits.every((g) => haystackDigits.has(g))) {
 		return false;
 	}
-	return significantWords(address).every((w) => haystack.includes(w));
+	const tokens = addressTokens(address);
+	if (tokens.length === 0) {
+		return addrDigits.length > 0;
+	}
+	const matched = tokens.filter((w) => haystack.includes(w) || haystack.includes(w.slice(0, -1)));
+	return matched.length / tokens.length >= 0.6;
 };
 
-// Products of the ad that opened this chat, in stock.
-export type AdProduct = { id: number; name: string; price: number; stockStatus: string };
-
-// The catalogue lists some products twice under different ids and prices
-// ("D3 + K2" 110k and "D3 & K2" 135k): the names differ only in punctuation.
-const listingKey = (name: string) => name.toLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
-
-// In an ad chat the ad product leads any search it matches, and its
-// lookalike listings drop out (pilot: the 135k twin got tapped instead).
+// In an ad chat the ad product leads any search it matches, and its lookalike
+// listings drop out.
 const leadWithAdProducts = (hits: Array<SearchHit>, adProducts: Array<AdProduct>) => {
 	const matched = adProducts.filter((ad) =>
 		hits.some((h) => listingKey(h.name) === listingKey(ad.name)),
@@ -148,69 +180,64 @@ const leadWithAdProducts = (hits: Array<SearchHit>, adProducts: Array<AdProduct>
 	];
 };
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60_000;
+
 export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduct>) => ({
 	cart_set: tool({
 		description:
-			"Сагсанд бараа нэмэх эсвэл тоо хэмжээг өөрчлөх. quantity=0 бол устгана. Snapshot-г өөрөө авна.",
-		execute: async ({ productId, quantity }) => {
+			"Сагсны бараануудыг нэг дор тохируулах (бүрэн шинэчилнэ). items=[] бол сагсыг хоосолно.",
+		execute: async ({ items }) => {
 			try {
-				await deps.cartSet(productId, quantity);
+				await deps.cartReplace(items);
 			} catch (error) {
 				return { error: error instanceof Error ? error.message : String(error) };
 			}
 			const lines = deps.cartLines();
+			const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
 			return {
+				deliveryFee: DELIVERY_FEE,
 				items: lines.map((l) => ({
 					name: l.name,
 					price: l.price,
 					productId: l.productId,
 					qty: l.qty,
 				})),
-				subtotal: lines.reduce((s, l) => s + l.price * l.qty, 0),
+				subtotal,
+				total: lines.length > 0 ? subtotal + DELIVERY_FEE : 0,
 			};
 		},
 		inputSchema: valibotSchema(
 			v.object({
-				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				quantity: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(99)),
+				items: v.pipe(
+					v.array(
+						v.object({
+							productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+							quantity: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(20)),
+						}),
+					),
+					v.maxLength(10),
+				),
 			}),
 		),
 	}),
 
-	cart_view: tool({
-		description: "Сагсны мөрүүд ба дэд нийтийг харах.",
-		execute: async () => {
-			const lines = deps.cartLines();
-			return {
-				items: lines.map((l) => ({
-					name: l.name,
-					price: l.price,
-					productId: l.productId,
-					qty: l.qty,
-				})),
-				subtotal: lines.reduce((s, l) => s + l.price * l.qty, 0),
-			};
-		},
-		inputSchema: valibotSchema(v.object({})),
-	}),
-
 	handoff: tool({
 		description:
-			"Админ руу шилжүүлэх. Барааны гомдол, захиалга засах/цуцлах, эсвэл харилцагч хүнтэй ярихыг хүсвэл. Дуудсаны дараа reply хэрэггүй.",
-		execute: async ({ reason }) => ({ handedOff: true, reason }),
-		inputSchema: valibotSchema(
-			v.object({ reason: v.pipe(v.string(), v.minLength(1), v.maxLength(300)) }),
-		),
+			"Админ руу шилжүүлэх. Бараа ирээгүй, гэмтэлтэй/буруу ирсэн, захиалга засах/цуцлах, гомдол, гааль/хууль эсвэл хүнтэй ярих хүсэлт. Нэмэлт мэдээлэл (ж: StorePay линк) өгөх бол message-д бич. Дуудсаны дараа reply хэрэггүй.",
+		execute: async ({ message, reason }) => ({ handedOff: true, message, reason }),
+		inputSchema: valibotSchema(handoffInputSchema),
 	}),
 
 	order_status: tool({
-		description: "Сүүлийн захиалгын явц, төлбөрийн төлөв.",
+		description: "Сүүлийн захиалгын явц, хүргэлт ба төлбөрийн төлөв шалгах.",
 		execute: async () => {
 			const payment = deps.latestPayment();
 			if (!payment) {
 				return { none: true as const };
 			}
-			let liveStatus = payment.status;
+			let paymentStatus = payment.status;
+			let orderStatus: string | undefined;
+			let deliveryStatus: string | null = null;
 			try {
 				const res = await storeClient(env).payment.getPaymentStatus.query(
 					{
@@ -219,30 +246,64 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 					},
 					{ signal: withTimeout() },
 				);
-				liveStatus = res.status;
+				paymentStatus = res.status;
+				orderStatus = res.orderStatus;
+				deliveryStatus = res.deliveryStatus;
 			} catch {
-				// keep the last stored status
+				// Keep stored status if store query fails.
 			}
 			return {
 				claimed: payment.claimed === 1,
+				countryside: payment.countryside,
 				createdAt: new Date(payment.createdAt).toISOString(),
+				deliveryStatus,
 				orderNumber: payment.orderNumber,
-				status: liveStatus,
+				orderStatus,
+				paymentStatus,
+				total: payment.total,
 			};
 		},
 		inputSchema: valibotSchema(v.object({})),
 	}),
 
+	payment: tool({
+		description:
+			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Амжилттай бол код мессеж илгээнэ.',
+		execute: async ({ kind, receiptAmount }) => {
+			const pendings = deps.pendingPayments();
+			if (pendings.length === 0) {
+				const latest = deps.latestPayment();
+				if (
+					latest !== undefined &&
+					latest.status === "success" &&
+					Date.now() - latest.createdAt < SEVEN_DAYS_MS
+				) {
+					return { action: { kind: "already_paid" } satisfies PaymentAction, handled: true };
+				}
+				return { handled: false, none: true as const };
+			}
+			const pending = pendings[0];
+			if (pendings.length > 1 || pending === undefined) {
+				return { action: { kind: "ambiguous" } satisfies PaymentAction, handled: true };
+			}
+			const action: PaymentAction =
+				kind === "claim"
+					? { kind: "claim", paymentNumber: pending.paymentNumber, receiptAmount }
+					: { kind: "details", paymentNumber: pending.paymentNumber };
+			return { action, handled: true };
+		},
+		inputSchema: valibotSchema(paymentInputSchema),
+	}),
+
 	product_details: tool({
 		description:
-			"Барааны бүрэн мэдээлэл: бүтэн тайлбар, найрлага, тун, ангилал (id-аар, хамгийн ихдээ 5).",
+			"Барааны бүрэн мэдээлэл: өдөрт уух тун, хэдэн хоног хүрэх, бүтэн тайлбар, найрлага, ангилал (id-аар, хамгийн ихдээ 5).",
 		execute: async ({ ids }) => {
 			const products = await storeClient(env).product.getProductsByIdsForAdvice.query(
 				{ ids },
 				{ signal: withTimeout() },
 			);
-			// Full record, unlike search hits: the answer to "which oil" or
-			// "what's in it" often sits past the search summary's cut.
+			deps.markSeen(products.map((p) => p.id));
 			return products.map((p) => ({
 				...toHit(p),
 				category: ustr(p.category),
@@ -252,24 +313,29 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 		},
 		inputSchema: valibotSchema(
 			v.object({
-				ids: v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(5)),
+				ids: v.pipe(
+					v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
+					v.minLength(1),
+					v.maxLength(5),
+				),
 			}),
 		),
 	}),
 
 	reply: tool({
 		description:
-			"Харилцагч руу бичих цорын ганц арга. Байнга дуудна. action: 'show_cart' = сагсны самбар илгээх, 'confirm_order' = захиалгын баталгаажуулалт илгээх.",
+			"Харилцагч руу бичих цорын ганц арга. action: 'confirm' үед хураангуй болон товчийг код илгээнэ (нэмэлт асуултгүй бол text хоосон орхи).",
 		execute: async (params) => params,
 		inputSchema: valibotSchema(replyInputSchema),
 	}),
 
 	search_products: tool({
-		description: "Дэлгүүрийн каталогиос бараа хайх. Хайлтын үгийг англиар бич.",
+		description:
+			"Дэлгүүрийн каталогиос бараа хайх (1-3 англи үг, олон бараанд 4 хүртэл зэрэг дуудаж болно).",
 		execute: async ({ query }) => {
 			const store = storeClient(env);
 			const hits = await store.product.searchProductsForAssistant.query(
-				{ limit: 6, query },
+				{ limit: 8, query },
 				{ signal: withTimeout() },
 			);
 			if (hits.length === 0) {
@@ -296,7 +362,10 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 					stockStatus: h.stockStatus,
 				});
 			});
-			return leadWithAdProducts(found, adProducts);
+			const ordered = leadWithAdProducts(found, adProducts);
+			deps.markSeen(ordered.map((h) => h.id));
+			deps.onSearch(ordered);
+			return ordered;
 		},
 		inputSchema: valibotSchema(
 			v.object({ query: v.pipe(v.string(), v.minLength(1), v.maxLength(200)) }),
@@ -305,7 +374,7 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 
 	set_delivery: tool({
 		description:
-			"Харилцагчийн бичсэн утас/хаяг/тэмдэглэлийг хадгалах. Харилцагчийн өгүүлбэрээс салгаж авна; missing-д дутуу талбарууд буцна. Хаяг Улаанбаатараас гадна бол (аймаг, сум, Дархан, Эрдэнэт г.м.) countryside: true; харилцагч УБ хаяг руугаа засвал countryside: false.",
+			"Харилцагчийн бичсэн утас/хаяг/тэмдэглэлийг хадгалах. Улаанбаатараас гадна бол countryside: true; УБ хаяг руу засвал countryside: false.",
 		execute: async (input) => {
 			const texts = deps.recentCustomerTexts();
 			const saved: Array<string> = [];
@@ -324,7 +393,7 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 			}
 			if (input.address) {
 				if (!corroborateAddress(input.address, texts)) {
-					errors.address = "copy the address words exactly as the customer wrote them";
+					errors.address = "copy the address words as the customer wrote them";
 				} else {
 					out.address = input.address;
 					saved.push("address");
@@ -336,6 +405,9 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 			}
 			if (input.countryside !== undefined) {
 				out.countryside = input.countryside;
+				saved.push("countryside");
+			} else if (out.address !== undefined && isCountrysideAddress(out.address)) {
+				out.countryside = true;
 				saved.push("countryside");
 			}
 			if (saved.length > 0) {
@@ -362,4 +434,4 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 	}),
 });
 
-export type ToolSet = ReturnType<typeof createTools>;
+export type MessengerToolSet = ReturnType<typeof createTools>;

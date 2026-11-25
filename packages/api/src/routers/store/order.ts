@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { orderQueries, paymentQueries } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
-import { bankTransfer, deliveryFee } from "@vit/shared/constants";
+import { bankTransfer, deliveryFee, formatTransferAccountNumber } from "@vit/shared/constants";
 import * as v from "valibot";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
@@ -532,7 +532,7 @@ export const order = router({
 			// need a second getPaymentByNumber round-trip after addOrder.
 			return {
 				accountName: ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
-				accountNumber: ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+				accountNumber: formatTransferAccountNumber(ctx.c.env.KHAAN_ACCOUNT_NUMBER),
 				checkoutToken,
 				customerPhone: input.phoneNumber,
 				orderNumber: resolvedOrderNumber,

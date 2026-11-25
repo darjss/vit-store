@@ -9,15 +9,15 @@
 		"deploy": "wrangler deploy"
 	},
 	"dependencies": {
-		"@ai-sdk/openai": "3.0.117",
-		"@ai-sdk/valibot": "2.0.55",
-		"@cloudflare/codemode": "^0.5.2",
+		"@ai-sdk/openai": "^4.0.123",
+		"@ai-sdk/valibot": "^3.0.83",
+		"@cloudflare/codemode": "^0.5.6",
 		"@trpc/client": "catalog:",
 		"@vit/shared": "workspace:*",
 		"@zernio/chat-sdk-adapter": "0.5.1",
-		"agents": "0.24.0",
-		"ai": "6.0.290",
-		"chat": "4.41.0",
+		"agents": "^0.34.0",
+		"ai": "^7.0.181",
+		"chat": "^4.45.0",
 		"grammy": "^1.46.0",
 		"superjson": "^2.2.6",
 		"valibot": "catalog:"

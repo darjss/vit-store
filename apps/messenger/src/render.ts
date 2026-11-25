@@ -1,8 +1,8 @@
-import { mnt, STOCK_LABEL } from "./copy";
-import { send } from "./zernio";
-import { storeClient, withTimeout } from "./store";
+import { cardTitle, mnt, STOCK_LABEL } from "./copy";
 import type { Env } from "./env";
+import { storeClient, withTimeout } from "./store";
 import type { ReplyResult } from "./tools";
+import { send } from "./zernio";
 
 // Most product photos are tall bottles and Messenger crops card images to
 // fill, so Cloudflare pads them onto a white square first.
@@ -21,54 +21,25 @@ export const renderTurn = async (opts: {
 	markSent: (key: string) => void;
 	reply: ReplyResult;
 	turnId: string;
-}) => {
+}): Promise<Array<number>> => {
 	const { accountId, conversationId, env, hasSent, markSent, reply, turnId } = opts;
+	const text = reply.text?.trim() ?? "";
 
 	const textKey = `${turnId}:text`;
-	if (!hasSent(textKey)) {
-		await send(env, conversationId, { accountId, message: reply.text }, textKey);
+	if (text.length > 0 && !hasSent(textKey)) {
+		await send(env, conversationId, { accountId, message: text }, textKey);
 		markSent(textKey);
 	}
 
-	// show_cart and confirm_order send the cart view right after, so cards
-	// there would show a second, possibly different, product list.
-	const ids = reply.action === undefined ? (reply.productIds ?? []) : [];
+	// Confirmation sends the summary right after, so cards there would duplicate.
+	const ids = reply.action === undefined ? (reply.productIds ?? []).slice(0, 6) : [];
 	const cardsKey = `${turnId}:cards`;
 	if (ids.length > 0 && !hasSent(cardsKey)) {
 		if (await sendCards({ accountId, conversationId, env, ids, key: cardsKey })) {
 			markSent(cardsKey);
 		}
 	}
-	// Ids whose cards are on screen, for the caller's cart_set gate.
-	return hasSent(cardsKey) ? ids.slice(0, 10) : [];
-};
-
-const CARD_TITLE_MAX = 68;
-const IHERB_NOISE_RE =
-	/\b(dietary supplement|flavored with other natural flavors|natural flavors?|per serving)\b/gi;
-
-// Trims verbose iHerb product titles for Messenger's 2-line mobile card header:
-// collapses duplicated brand prefixes ("Micro Ingredients Micro Ingredients,"),
-// drops boilerplate filler, and truncates on a word boundary.
-const cardTitle = (name: string, brand: string): string => {
-	let clean = name.trim().replaceAll(/\s+/g, " ");
-	const trimmedBrand = brand.trim();
-	if (trimmedBrand.length > 0) {
-		const escaped = trimmedBrand.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-		clean = clean.replace(new RegExp(`^(${escaped})[,\\s]+\\1\\b[,\\s]*`, "i"), "$1, ");
-	}
-	clean = clean
-		.replaceAll(IHERB_NOISE_RE, "")
-		.replaceAll(/\s*,\s*,+/g, ", ")
-		.replace(/[,\s-]+$/, "")
-		.replaceAll(/\s+/g, " ")
-		.trim();
-	if (clean.length <= CARD_TITLE_MAX) {
-		return clean;
-	}
-	const cut = clean.slice(0, CARD_TITLE_MAX - 1);
-	const space = cut.lastIndexOf(" ");
-	return `${(space > 24 ? cut.slice(0, space) : cut).replace(/[,\s-]+$/, "")}…`;
+	return hasSent(cardsKey) ? ids : [];
 };
 
 // One product carousel, up to 10 cards. False when none of the ids exist.
@@ -78,7 +49,7 @@ export const sendCards = async (opts: {
 	env: Env;
 	ids: Array<number>;
 	key: string;
-}) => {
+}): Promise<boolean> => {
 	const { accountId, conversationId, env, ids, key } = opts;
 	const products = await storeClient(env).product.getProductsByIdsForAssistant.query(
 		{ ids: ids.slice(0, 10) },
@@ -101,7 +72,7 @@ export const sendCards = async (opts: {
 							: [
 									{
 										payload: `order_product:${p.id}`,
-										title: "Захиалах",
+										title: "Сонгох",
 										type: "postback" as const,
 									},
 								],
