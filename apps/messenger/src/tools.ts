@@ -40,6 +40,11 @@ export const paymentActionSchema = v.variant("kind", [
 		receiptAmount: v.optional(v.number()),
 	}),
 	v.object({ kind: v.literal("details"), paymentNumber: v.string() }),
+	v.object({
+		kind: v.literal("external_claim"),
+		receiptAmount: v.optional(v.number()),
+	}),
+	v.object({ kind: v.literal("external_details") }),
 ]);
 
 export type PaymentAction = v.InferOutput<typeof paymentActionSchema>;
@@ -266,7 +271,11 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 				) {
 					return { action: { kind: "already_paid" } satisfies PaymentAction, handled: true };
 				}
-				return { handled: false, none: true as const };
+				const fallback: PaymentAction =
+					kind === "claim"
+						? { kind: "external_claim", receiptAmount }
+						: { kind: "external_details" };
+				return { action: fallback, handled: true };
 			}
 			const pending = pendings[0];
 			if (pendings.length > 1 || pending === undefined) {

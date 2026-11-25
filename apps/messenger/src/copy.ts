@@ -1,5 +1,5 @@
 // Owner-approved customer-facing text. The model never produces these.
-import { deliveryFee } from "@vit/shared/constants";
+import { bankTransfer, deliveryFee } from "@vit/shared/constants";
 
 export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
 export const DISPATCH_COUNTRYSIDE =
@@ -127,6 +127,14 @@ export const formatReminder = (input: {
 	total: number;
 }): string =>
 	`Сайн байна уу 🙏 №${input.orderNumber}-ийн ${mnt(input.total)}-өө шилжүүлээд өгөөрэй. Хаан банк ${input.accountNumber}, утга ${input.phone}`;
+
+export const formatExternalBankDetails = (phone?: string): string =>
+	[
+		`Хаан банк ${bankTransfer.accountNumber}`,
+		bankTransfer.accountName,
+		phone ? `Гүйлгээний утга: ${phone}` : "Гүйлгээний утга дээр утасны дугаараа бичээрэй.",
+		"Шилжүүлээд баримтаа энд илгээгээрэй 🙏",
+	].join("\n");
 
 export const formatPaid = (countryside: boolean): string =>
 	countryside
