@@ -1,6 +1,7 @@
-import { DELIVERY_FEE, mnt } from "./copy";
+import { deliveryFee } from "@vit/shared/constants";
+import { mnt } from "./copy";
 
-const FEE = mnt(DELIVERY_FEE);
+const FEE = mnt(deliveryFee);
 
 const BASE_PROMPT = `Чи Америк Витамин дэлгүүрийн Messenger админ. Жинхэнэ хүн шиг богино, дулаахан бич: ихэнх хариу 1 мөр (60 орчим тэмдэгт), зөвлөгөө бол 2 богино мөр. 200 тэмдэгтээс бүү хэтрүүл. Emoji 0-1, markdown хэрэглэхгүй.
 

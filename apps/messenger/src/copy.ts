@@ -1,8 +1,6 @@
 // Owner-approved customer-facing text. The model never produces these.
 import { deliveryFee } from "@vit/shared/constants";
 
-export const DELIVERY_FEE = deliveryFee;
-
 export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
 export const DISPATCH_COUNTRYSIDE =
 	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна.";
@@ -14,7 +12,7 @@ export const EDIT_PROMPT = "Юу өөрчлөх вэ? Бичээд эсвэл д
 
 // Welcome-screen buttons.
 export const ASK_PRODUCT = "Ямар бараа сонирхож байна вэ? Нэрийг нь бичээрэй.";
-export const DELIVERY_INFO = `Улаанбаатарт хүргэлт ${Math.round(DELIVERY_FEE).toLocaleString("en-US")}₮, өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ (бараагаа хүлээж аваад шилжүүлж болно). Орон нутаг руу төлбөр орсны дараа автобус, таксинд тавьж явуулна.`;
+export const DELIVERY_INFO = `Улаанбаатарт хүргэлт ${Math.round(deliveryFee).toLocaleString("en-US")}₮, өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ (бараагаа хүлээж аваад шилжүүлж болно). Орон нутаг руу төлбөр орсны дараа автобус, таксинд тавьж явуулна.`;
 
 export const CLAIM_ACK = "Баярлалаа 🙏 Шилжүүлгийг шалгаад баталгаажуулна.";
 export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
@@ -77,8 +75,8 @@ export const formatConfirmSummary = (input: {
 	return [
 		"Захиалгаа шалгаарай:",
 		...lines,
-		`Хүргэлт: ${mnt(DELIVERY_FEE)}`,
-		`Нийт: ${mnt(subtotal + DELIVERY_FEE)}`,
+		`Хүргэлт: ${mnt(deliveryFee)}`,
+		`Нийт: ${mnt(subtotal + deliveryFee)}`,
 		`Утас: ${input.phone}`,
 		`Хаяг: ${input.address}`,
 		...(input.note ? [`Тэмдэглэл: ${input.note}`] : []),

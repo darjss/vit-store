@@ -2,9 +2,6 @@
 
 export type CartLine = { name: string; price: number; productId: number; qty: number };
 
-export const cartSubtotal = (lines: Array<CartLine>): number =>
-	lines.reduce((s, l) => s + l.price * l.qty, 0);
-
 // The catalogue lists some products twice under different ids and prices
 // ("D3 + K2" 110k and "D3 & K2" 135k): the names differ only in punctuation.
 export const listingKey = (name: string): string =>

@@ -1,25 +1,37 @@
-import {
-	generateText,
-	hasToolCall,
-	stepCountIs,
-	type ImagePart,
-	type ModelMessage,
-	type TextPart,
-	type ToolSet,
-} from "ai";
+import { generateText, hasToolCall, isStepCount, type ModelMessage, type ToolSet } from "ai";
 import { Agent } from "agents";
 import * as v from "valibot";
 
 import { zernioMessageEventSchema } from "./admit";
-import { isAffirmativeConfirm, listingKey, parseTransferDonePayload, phonesInText } from "./cart";
-import { CheckoutCoordinator } from "./conversation-checkout";
-import { PaymentCoordinator, type PaymentTickResult } from "./conversation-payments";
+import { isAffirmativeConfirm, listingKey, parseTransferDonePayload } from "./cart";
+import { cartReplace, confirmOrder, handleTap, sendConfirmOrNeed } from "./conversation-checkout";
+import {
+	buildUserMessages,
+	extractPaymentAction,
+	inboundItemsSchema,
+	inboundRawSchema,
+	incomingPhones,
+	lastToolCallInput,
+	messageText,
+	normalizeInboundItem,
+	segmentClaimed,
+	toSeedModelMessages,
+	turnIdFor,
+	type InboundItem,
+} from "./conversation-helpers";
+import { createConversationIO, type ConversationIO } from "./conversation-io";
+import {
+	claimTransfer,
+	dispatchPaymentAction,
+	paymentTick,
+	recheckTransfer,
+	type PaymentTickResult,
+} from "./conversation-payments";
 import { ConversationStore, type InboxRow, type TurnOutcome } from "./conversation-store";
 import { HANDOFF, IMAGE_UNREADABLE } from "./copy";
 import type { Env } from "./env";
 import { errorFields, log, logError, turnFailedLog, turnLog } from "./log";
 import { createModel, modelName, providerOptions } from "./model";
-import { fetchImageParts } from "./photos";
 import { stateNote, systemPrompt } from "./prompt";
 import { renderTurn } from "./render";
 import { botClient, storeClient, withTimeout } from "./store";
@@ -29,88 +41,19 @@ import {
 	handoffInputSchema,
 	replyInputSchema,
 	type AdProduct,
-	type HandoffResult,
 	type PaymentAction,
 	type ReplyResult,
 	type SearchHit,
 	type ToolDeps,
 } from "./tools";
-import { adProductIds, listMessages, send, type ZernioSendBody } from "./zernio";
+import { adProductIds, listMessages } from "./zernio";
 
+export { normalizeInboundItem, type InboundItem } from "./conversation-helpers";
 export type { PaymentTickResult } from "./conversation-payments";
-
-const inboundItemSchema = v.looseObject({
-	attachments: v.optional(
-		v.array(v.looseObject({ type: v.string(), url: v.optional(v.nullable(v.string())) })),
-	),
-	id: v.string(),
-	raw: v.optional(v.unknown()),
-	text: v.string(),
-});
-const inboundItemsSchema = v.array(inboundItemSchema);
-export type InboundItem = v.InferOutput<typeof inboundItemSchema>;
-
-// Messenger stickers (including thumbs-up "like") arrive as image attachments
-// on /t39.1997-6/; real photos live on /t1.15752-9/. Replace stickers with
-// "[стикер]" so they never fetch as photos and can confirm via text matcher.
-const isStickerAttachment = (a: { type: string; url?: null | string }): boolean => {
-	if (a.type !== "image" || !a.url) {
-		return false;
-	}
-	try {
-		return new URL(a.url).pathname.includes("/t39.1997-6/");
-	} catch {
-		return a.url.includes("/t39.1997-6/");
-	}
-};
-
-export const normalizeInboundItem = (item: InboundItem): InboundItem => {
-	const attachments = item.attachments ?? [];
-	const stickers = attachments.filter(isStickerAttachment).length;
-	if (stickers === 0) {
-		return item;
-	}
-	const parts = [item.text, ...Array.from({ length: stickers }, () => "[стикер]")];
-	return {
-		...item,
-		attachments: attachments.filter((a) => !isStickerAttachment(a)),
-		text: parts.filter((t) => t.length > 0).join("\n"),
-	};
-};
-
-const inboundRawSchema = v.looseObject({
-	id: v.optional(v.string()),
-	metadata: v.optional(
-		v.nullable(
-			v.looseObject({
-				postbackPayload: v.optional(v.string()),
-				quickReplyPayload: v.optional(v.string()),
-				referral: v.optional(v.nullable(v.looseObject({ ad_id: v.optional(v.string()) }))),
-			}),
-		),
-	),
-	platformMessageId: v.optional(v.string()),
-});
 
 const noteInboundSchema = v.object({
 	eventId: v.pipe(v.string(), v.minLength(1)),
 	payload: zernioMessageEventSchema,
-});
-
-const paymentResultSchema = v.object({
-	action: v.optional(
-		v.variant("kind", [
-			v.object({ kind: v.literal("already_paid") }),
-			v.object({ kind: v.literal("ambiguous") }),
-			v.object({
-				kind: v.literal("claim"),
-				paymentNumber: v.string(),
-				receiptAmount: v.optional(v.number()),
-			}),
-			v.object({ kind: v.literal("details"), paymentNumber: v.string() }),
-		]),
-	),
-	handled: v.boolean(),
 });
 
 const HISTORY_TURNS = 20;
@@ -118,7 +61,8 @@ const MAX_STEPS = 5;
 const MAX_ATTEMPTS = 3;
 const REPROCESS_MAX_AGE_MS = 10 * 60_000;
 const FALLBACK_TEXT = "Шалгаад хэлье.";
-const PAUSE_MS = 12 * 60 * 60_000;
+const HANDOFF_PAUSE_MS = 12 * 60 * 60_000;
+const HUMAN_PAUSE_MS = 2 * 60 * 60_000;
 const HUMAN_SETTLE_MS = 15_000;
 
 type RowAction =
@@ -128,36 +72,24 @@ type RowAction =
 	| { kind: "none" }
 	| { kind: "tap"; payload: string };
 
-const prefillLog = (outcome: string, thread: string): void =>
-	log({ event: "history_prefill", outcome, thread });
-
-// Thin Durable Object orchestrator for one Messenger conversation. Persistence
-// lives in ConversationStore, checkout/taps in CheckoutCoordinator, and payment
-// watch/reminders/claims in PaymentCoordinator.
+// Durable Object orchestrator for one Messenger conversation.
 export class Conversation extends Agent<Env> {
 	private readonly store = new ConversationStore(this);
-	private readonly payments = new PaymentCoordinator({
-		ensurePaymentWatch: (paymentNumber) => this.ensurePaymentWatch(paymentNumber),
-		env: this.env,
-		handoffToAdmin: (reason, sendKey, extraLines) =>
-			this.handoffToAdmin(reason, sendKey, extraLines),
-		sendPart: (key, body) => this.sendPart(key, body),
-		store: this.store,
-		thread: () => this.name ?? "",
-	});
-	private readonly checkoutFlow = new CheckoutCoordinator({
-		accountId: () => this.accountId(),
-		adProducts: () => this.adProducts(),
-		conversationId: () => this.conversationId(),
-		ensurePaymentWatch: (paymentNumber) => this.ensurePaymentWatch(paymentNumber),
-		env: this.env,
-		markAdPivoted: () => this.store.setMeta("ad_pivoted", "1"),
-		sendPart: (key, body) => this.sendPart(key, body),
-		store: this.store,
-		thread: () => this.name ?? "",
-	});
-
+	private ioCache?: ConversationIO;
 	private processing = false;
+
+	private io(): ConversationIO {
+		this.ioCache ??= createConversationIO({
+			adProducts: () => this.adProducts(),
+			ensurePaymentWatch: (paymentNumber) => this.ensurePaymentWatch(paymentNumber),
+			env: this.env,
+			handoffToAdmin: (reason, sendKey, extraLines) =>
+				this.handoffToAdmin(reason, sendKey, extraLines),
+			store: this.store,
+			thread: this.name ?? "",
+		});
+		return this.ioCache;
+	}
 
 	onStart(): void {
 		this.store.migrate();
@@ -174,6 +106,10 @@ export class Conversation extends Agent<Env> {
 		const parsed = v.safeParse(noteInboundSchema, input);
 		if (!parsed.success) {
 			throw new Error("noteInbound: bad input");
+		}
+		const adId = parsed.output.payload.metadata?.referral?.ad_id;
+		if (adId && this.store.getMeta("ad_id") === undefined) {
+			this.store.setMeta("ad_id", adId);
 		}
 		const inserted = this.store.insertInbox(
 			parsed.output.eventId,
@@ -200,18 +136,15 @@ export class Conversation extends Agent<Env> {
 			});
 			return;
 		}
-		const rows: Array<InboxRow> = [];
-		for (const item of parsed.output) {
+		const rows = parsed.output.flatMap((item) => {
 			const row = this.findPendingRow(item);
-			if (row !== undefined) {
-				rows.push(row);
-			}
-		}
+			return row === undefined ? [] : [row];
+		});
 		await this.processItems(rows);
 	}
 
 	async paymentTick(paymentNumber: string): Promise<PaymentTickResult> {
-		return this.payments.paymentTick(paymentNumber);
+		return paymentTick(this.io(), paymentNumber);
 	}
 
 	async recoverInbox(): Promise<void> {
@@ -221,8 +154,7 @@ export class Conversation extends Agent<Env> {
 			await this.processItems(rows);
 		}
 		if (this.store.hasUnfinishedInbox()) {
-			const pending = this.getSchedules().filter((s) => s.callback === "recoverInbox");
-			for (const s of pending) {
+			for (const s of this.getSchedules().filter((x) => x.callback === "recoverInbox")) {
 				await this.cancelSchedule(s.id);
 			}
 			await this.schedule(this.recoverSeconds(), "recoverInbox", {});
@@ -232,26 +164,24 @@ export class Conversation extends Agent<Env> {
 	// ─── Admin RPCs ──────────────────────────────────────────────────────────
 
 	adminSnapshot() {
-		const messages = this.store.allMessages().map((row) => ({
-			role: row.role,
-			text: this.messageText(row.content),
-		}));
-		const inbox = this.store
-			.allInboxRows()
-			.map(({ at, attempts, claimed_at, event_id, seq, status, turn_id }) => ({
-				at,
-				attempts,
-				claimed_at,
-				event_id,
-				seq,
-				status,
-				turn_id,
-			}));
 		return {
 			cart: this.store.cartLines(),
 			checkout: this.store.checkout(),
-			inbox,
-			messages,
+			inbox: this.store
+				.allInboxRows()
+				.map(({ at, attempts, claimed_at, event_id, seq, status, turn_id }) => ({
+					at,
+					attempts,
+					claimed_at,
+					event_id,
+					seq,
+					status,
+					turn_id,
+				})),
+			messages: this.store.allMessages().map((row) => ({
+				role: row.role,
+				text: messageText(row.content),
+			})),
 			paused_until: this.store.getMeta("paused_until") ?? null,
 			payments: this.store.allPayments(),
 		};
@@ -306,13 +236,12 @@ export class Conversation extends Agent<Env> {
 			try {
 				await this.runClaimed(claimed);
 			} catch (error) {
-				const turnIds = this.store.resetProcessingInbox(claimed);
 				turnFailedLog({
 					attempts: Math.max(...claimed.map((r) => r.attempts)),
 					error: errorFields(error),
 					event_ids: claimed.map((r) => r.event_id),
 					thread: this.name ?? "",
-					turn_ids: turnIds,
+					turn_ids: this.store.resetProcessingInbox(claimed),
 				});
 			}
 		} finally {
@@ -325,101 +254,82 @@ export class Conversation extends Agent<Env> {
 	}
 
 	private async runClaimed(claimed: Array<InboxRow>): Promise<void> {
-		const cutoff = Date.now() - REPROCESS_MAX_AGE_MS;
 		const seqAtStart = this.store.latestSeq();
 		await this.pauseIfHumanReplied();
 
 		let items: Array<InboundItem> = [];
 		let modelRows: Array<InboxRow> = [];
+		let handedOff = false;
+		let rechecked = false;
+
 		const flush = async (): Promise<void> => {
 			if (items.length === 0) {
 				return;
 			}
-			const turnId = await this.turnIdFor(modelRows);
+			const turnId = await turnIdFor(modelRows);
 			this.store.tagInboxTurn(modelRows, turnId);
 			await this.respond({ items, rows: modelRows, seqAtStart, turnId });
 			items = [];
 			modelRows = [];
 		};
 
-		let handedOff = false;
-		let rechecked = false;
-		for (let i = 0; i < claimed.length; i++) {
-			const row = claimed[i];
-			if (row === undefined) {
-				continue;
-			}
-			if (row.attempts >= MAX_ATTEMPTS || row.at < cutoff) {
+		for (const seg of segmentClaimed(claimed, Date.now() - REPROCESS_MAX_AGE_MS, MAX_ATTEMPTS)) {
+			if (seg.kind === "dead") {
 				await flush();
-				this.store.markInboxFailed(row.event_id);
+				this.store.markInboxFailed(seg.row.event_id);
 				if (!handedOff) {
 					handedOff = true;
-					await this.handoffToAdmin("bot_failed", `bot_failed:${row.event_id}`);
+					await this.handoffToAdmin("bot_failed", `bot_failed:${seg.row.event_id}`);
 				}
 				continue;
 			}
-			if (row.turn_id !== null) {
-				const turnId = row.turn_id;
-				const group: Array<InboxRow> = [];
-				while (i < claimed.length && claimed[i]?.turn_id === turnId) {
-					const grouped = claimed[i];
-					if (grouped !== undefined) {
-						group.push(grouped);
-					}
-					i++;
-				}
-				i--;
+			if (seg.kind === "replay") {
 				await flush();
-				await this.respond({
-					items: group.flatMap((r) => {
-						const item = this.itemFromRow(r);
-						return item === undefined ? [] : [item];
-					}),
-					rows: group,
-					seqAtStart,
-					turnId,
+				const replayItems = seg.rows.flatMap((r) => {
+					const item = this.itemFromRow(r);
+					return item === undefined ? [] : [item];
 				});
+				await this.respond({ items: replayItems, rows: seg.rows, seqAtStart, turnId: seg.turnId });
 				continue;
 			}
 
-			const action = this.classifyRow(row, this.store.isPaused(), items.length === 0);
+			const action = this.classifyRow(seg.row, items.length === 0);
 			if (action.kind === "model") {
 				if (!rechecked) {
 					rechecked = true;
-					this.ctx.waitUntil(this.payments.recheckTransfer());
+					this.ctx.waitUntil(recheckTransfer(this.io()));
 				}
 				items.push(action.item);
-				modelRows.push(row);
+				modelRows.push(seg.row);
 				continue;
 			}
 			await flush();
 			if (action.kind !== "claim" && this.store.isPaused()) {
-				this.store.markInboxDone(row.event_id);
+				this.store.markInboxDone(seg.row.event_id);
 				continue;
 			}
-			await this.runRowAction(row, action);
-			this.store.markInboxDone(row.event_id);
+			await this.runRowAction(seg.row, action);
+			this.store.markInboxDone(seg.row.event_id);
 		}
 		await flush();
 	}
 
-	private classifyRow(row: InboxRow, paused: boolean, queueEmpty: boolean): RowAction {
+	private classifyRow(row: InboxRow, queueEmpty: boolean): RowAction {
 		const item = this.itemFromRow(row);
 		if (item === undefined) {
 			return { kind: "none" };
 		}
 		const raw = v.safeParse(inboundRawSchema, item.raw ?? {});
 		const metadata = raw.success ? raw.output.metadata : undefined;
-		this.noteAdId(metadata);
 		const tapPayload = metadata?.postbackPayload ?? metadata?.quickReplyPayload;
 		if (tapPayload !== undefined) {
 			const done = parseTransferDonePayload(tapPayload);
 			if (done !== undefined) {
 				return { kind: "claim", paymentNumber: done };
 			}
-			return paused ? { kind: "none" } : { kind: "tap", payload: tapPayload };
+			return this.store.isPaused() ? { kind: "none" } : { kind: "tap", payload: tapPayload };
 		}
-		if (paused) {
+		if (this.store.isPaused()) {
 			return { kind: "none" };
 		}
 		if (this.shouldAffirmativeConfirm(item, queueEmpty)) {
@@ -438,13 +348,13 @@ export class Conversation extends Agent<Env> {
 	}
 
 	private async runRowAction(row: InboxRow, action: RowAction): Promise<void> {
+		const io = this.io();
 		if (action.kind === "tap") {
-			await this.checkoutFlow.handleTap(row, action.payload);
+			await handleTap(io, row, action.payload);
 		} else if (action.kind === "claim") {
-			await this.payments.claimTransfer(row.event_id, action.paymentNumber);
+			await claimTransfer(io, row.event_id, action.paymentNumber);
 		} else if (action.kind === "affirmative_confirm") {
-			const rev = this.store.checkoutRow().revision;
-			await this.checkoutFlow.confirmOrder(row.event_id, rev, "text");
+			await confirmOrder(io, row.event_id, this.store.checkout().revision, "text");
 		}
 	}
 
@@ -458,27 +368,28 @@ export class Conversation extends Agent<Env> {
 	}): Promise<void> {
 		const { items, rows, seqAtStart, turnId } = opts;
 		const started = Date.now();
-		const thread = this.name ?? "";
 		const attempt = Math.max(...rows.map((r) => r.attempts));
 
 		const saved = this.store.turnOutcome(turnId);
 		if (saved !== undefined) {
-			await this.replayTurn({ attempt, items, rows, saved, started, thread, turnId });
+			await this.replaySavedTurn({ attempt, inputs: items.length, rows, saved, started, turnId });
 			return;
 		}
 
-		await this.prefillDeliveryFromHistory();
+		await this.prefillFromHistory();
 		const { firstPhotoUrl, hadPhotos, persistedUserMessage, photoCount, text, userMessage } =
-			await this.buildUserMessages(items);
+			await buildUserMessages(this.env, items);
 
 		if (text.length === 0 && hadPhotos && photoCount === 0) {
-			await this.handleUnreadablePhotos({
+			this.store.persistTurn(turnId, persistedUserMessage, [], false);
+			await this.io().sendPart(`${turnId}:text`, { message: IMAGE_UNREADABLE });
+			this.finishTurn(rows);
+			this.logTurn({
 				attempt,
 				inputs: items.length,
-				persistedUserMessage,
-				rows,
+				outcome: "image_unreadable",
+				reply_text: IMAGE_UNREADABLE,
 				started,
-				thread,
 				turnId,
 			});
 			return;
@@ -489,10 +400,83 @@ export class Conversation extends Agent<Env> {
 			[...this.store.historyByTurns(HISTORY_TURNS), this.stateMessage(adProducts), userMessage],
 			adProducts,
 		);
+		await this.completeModelTurn({
+			attempt,
+			firstPhotoUrl,
+			inputs: items.length,
+			persistedUserMessage,
+			photoCount,
+			result,
+			rows,
+			seqAtStart,
+			started,
+			stepMs,
+			turnId,
+		});
+	}
 
-		const reply = this.extractReply(result.steps);
-		const handoff = this.extractHandoff(result.steps);
-		const paymentAction = this.extractPaymentAction(result.steps);
+	private async replaySavedTurn(opts: {
+		attempt: number;
+		inputs: number;
+		rows: Array<InboxRow>;
+		saved: TurnOutcome;
+		started: number;
+		turnId: string;
+	}): Promise<void> {
+		const { attempt, inputs, rows, saved, started, turnId } = opts;
+		const outcome = await this.dispatchTurn({
+			handoffMessage: saved.handoffMessage,
+			handoffReason: saved.handoff,
+			paymentAction: saved.payment,
+			reply: saved.reply,
+			superseded: saved.superseded ?? false,
+			turnId,
+		});
+		this.finishTurn(rows);
+		this.logTurn({
+			action: saved.reply?.action,
+			attempt,
+			handoff: saved.handoff !== undefined,
+			inputs,
+			outcome,
+			payment_action: saved.payment?.kind,
+			product_ids: saved.reply?.productIds ?? [],
+			replayed: true,
+			reply_text: saved.reply?.text,
+			started,
+			turnId,
+		});
+	}
+
+	private async completeModelTurn(opts: {
+		attempt: number;
+		firstPhotoUrl: string | undefined;
+		inputs: number;
+		persistedUserMessage: ModelMessage;
+		photoCount: number;
+		result: Awaited<ReturnType<Conversation["runModel"]>>["result"];
+		rows: Array<InboxRow>;
+		seqAtStart: number;
+		started: number;
+		stepMs: Array<number>;
+		turnId: string;
+	}): Promise<void> {
+		const {
+			attempt,
+			firstPhotoUrl,
+			inputs,
+			persistedUserMessage,
+			photoCount,
+			result,
+			rows,
+			seqAtStart,
+			started,
+			stepMs,
+			turnId,
+		} = opts;
+		const reply = lastToolCallInput(result.steps, "reply", replyInputSchema);
+		const handoff = lastToolCallInput(result.steps, "handoff", handoffInputSchema);
+		const paymentAction = extractPaymentAction(result.steps);
 		const superseded = this.store.latestSeq() > seqAtStart;
 
 		this.store.saveTurnOutcome(turnId, {
@@ -502,7 +486,8 @@ export class Conversation extends Agent<Env> {
 			reply,
 			superseded,
 		});
-		this.store.persistTurn(turnId, persistedUserMessage, result.response.messages, superseded);
+		// ai@7: responseMessages is cumulative across all steps (response.messages is last step only).
+		this.store.persistTurn(turnId, persistedUserMessage, result.responseMessages, superseded);
 
 		const outcome = await this.dispatchTurn({
 			handoffMessage: handoff?.message,
@@ -515,26 +500,35 @@ export class Conversation extends Agent<Env> {
 		});
 		this.finishTurn(rows);
 
-		this.logModelTurn({
+		this.logTurn({
+			action: reply?.action,
 			attempt,
 			handoff: handoff !== undefined,
-			inputs: items.length,
+			inputs,
 			outcome,
-			paymentAction,
-			photoCount,
-			reply,
-			result,
+			payment_action: paymentAction?.kind,
+			photos: photoCount,
+			product_ids: reply?.productIds ?? [],
+			reply_text: reply?.text,
 			started,
-			stepMs,
-			thread,
+			step_ms: stepMs,
+			steps: result.steps.length,
+			tokens_cached: result.usage.inputTokenDetails?.cacheReadTokens ?? 0,
+			tokens_in: result.usage.inputTokens ?? 0,
+			tokens_out: result.usage.outputTokens ?? 0,
+			tool_calls: result.steps.flatMap((s) =>
+				s.toolCalls.map((c) => ({ input: c.input, name: c.toolName })),
+			),
+			tools: result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName)),
 			turnId,
 		});
 	}
 
 	private async runModel(messages: Array<ModelMessage>, adProducts: Array<AdProduct>) {
+		const io = this.io();
 		const toolDeps: ToolDeps = {
 			cartLines: () => this.store.cartLines(),
-			cartReplace: (nextItems) => this.checkoutFlow.cartReplace(nextItems),
+			cartReplace: (nextItems) => cartReplace(io, nextItems),
 			checkout: () => this.store.checkout(),
 			latestPayment: () => this.store.latestPayment(),
 			markSeen: (ids) => this.store.markSeen(ids),
@@ -547,6 +541,7 @@ export class Conversation extends Agent<Env> {
 		const stepMs: Array<number> = [];
 		let lastStepAt = Date.now();
 		const result = await generateText({
+			instructions: systemPrompt(adProducts.length > 0),
 			messages,
 			model: createModel(this.env),
 			onStepFinish: () => {
@@ -562,151 +557,60 @@ export class Conversation extends Agent<Env> {
 			stopWhen: [
 				hasToolCall("reply"),
 				hasToolCall("handoff"),
-				({ steps }) => this.extractPaymentAction(steps) !== undefined,
-				stepCountIs(MAX_STEPS),
+				({ steps }) => extractPaymentAction(steps) !== undefined,
+				isStepCount(MAX_STEPS),
 			],
-			system: systemPrompt(adProducts.length > 0),
 			toolChoice: "required",
 			tools,
 		});
 		return { result, stepMs };
 	}
 
-	private logModelTurn(opts: {
+	private logTurn(opts: {
+		action?: string;
 		attempt: number;
-		handoff: boolean;
+		handoff?: boolean;
 		inputs: number;
 		outcome: string;
-		paymentAction: PaymentAction | undefined;
-		photoCount: number;
-		reply: ReplyResult | undefined;
-		result: Awaited<ReturnType<Conversation["runModel"]>>["result"];
+		payment_action?: string;
+		photos?: number;
+		product_ids?: Array<number>;
+		replayed?: boolean;
+		reply_text?: string;
 		started: number;
-		stepMs: Array<number>;
-		thread: string;
+		step_ms?: Array<number>;
+		steps?: number;
+		tokens_cached?: number;
+		tokens_in?: number;
+		tokens_out?: number;
+		tool_calls?: Array<{ input: unknown; name: string }>;
+		tools?: Array<string>;
 		turnId: string;
 	}): void {
-		const {
-			attempt,
-			handoff,
-			inputs,
-			outcome,
-			paymentAction,
-			photoCount,
-			reply,
-			result,
-			started,
-			stepMs,
-			thread,
-			turnId,
-		} = opts;
 		turnLog({
-			action: reply?.action,
+			action: opts.action,
 			ad_id: this.store.getMeta("ad_id"),
-			attempt,
-			conversation: this.conversationId(),
-			handoff,
-			inputs,
+			attempt: opts.attempt,
+			conversation: this.io().conversationId,
+			handoff: opts.handoff ?? false,
+			inputs: opts.inputs,
 			model: modelName(this.env),
-			outcome,
-			payment_action: paymentAction?.kind,
-			photos: photoCount,
-			product_ids: reply?.productIds ?? [],
-			reply_text: reply?.text,
-			step_ms: stepMs,
-			steps: result.steps.length,
-			thread,
-			tokens_cached: result.usage.inputTokenDetails?.cacheReadTokens ?? 0,
-			tokens_in: result.usage.inputTokens ?? 0,
-			tokens_out: result.usage.outputTokens ?? 0,
-			tool_calls: result.steps.flatMap((s) =>
-				s.toolCalls.map((c) => ({ input: c.input, name: c.toolName })),
-			),
-			tools: result.steps.flatMap((s) => s.toolCalls.map((c) => c.toolName)),
-			total_ms: Date.now() - started,
-			turn_id: turnId,
-		});
-	}
-
-	private async handleUnreadablePhotos(opts: {
-		attempt: number;
-		inputs: number;
-		persistedUserMessage: ModelMessage;
-		rows: Array<InboxRow>;
-		started: number;
-		thread: string;
-		turnId: string;
-	}): Promise<void> {
-		const { attempt, inputs, persistedUserMessage, rows, started, thread, turnId } = opts;
-		this.store.persistTurn(turnId, persistedUserMessage, [], false);
-		await this.sendPart(`${turnId}:text`, { message: IMAGE_UNREADABLE });
-		this.finishTurn(rows);
-		turnLog({
-			attempt,
-			conversation: this.conversationId(),
-			handoff: false,
-			inputs,
-			model: modelName(this.env),
-			outcome: "image_unreadable",
-			photos: 0,
-			product_ids: [],
-			reply_text: IMAGE_UNREADABLE,
-			step_ms: [],
-			steps: 0,
-			thread,
-			tokens_cached: 0,
-			tokens_in: 0,
-			tokens_out: 0,
-			tool_calls: [],
-			tools: [],
-			total_ms: Date.now() - started,
-			turn_id: turnId,
-		});
-	}
-
-	private async replayTurn(opts: {
-		attempt: number;
-		items: Array<InboundItem>;
-		rows: Array<InboxRow>;
-		saved: TurnOutcome;
-		started: number;
-		thread: string;
-		turnId: string;
-	}): Promise<void> {
-		const { attempt, items, rows, saved, started, thread, turnId } = opts;
-		const outcome = await this.dispatchTurn({
-			handoffMessage: saved.handoffMessage,
-			handoffReason: saved.handoff,
-			paymentAction: saved.payment,
-			reply: saved.reply,
-			superseded: saved.superseded ?? false,
-			turnId,
-		});
-		this.finishTurn(rows);
-		turnLog({
-			action: saved.reply?.action,
-			ad_id: this.store.getMeta("ad_id"),
-			attempt,
-			conversation: this.conversationId(),
-			handoff: saved.handoff !== undefined,
-			inputs: items.length,
-			model: modelName(this.env),
-			outcome,
-			payment_action: saved.payment?.kind,
-			photos: 0,
-			product_ids: saved.reply?.productIds ?? [],
-			replayed: true,
-			reply_text: saved.reply?.text,
-			step_ms: [],
-			steps: 0,
-			thread,
-			tokens_cached: 0,
-			tokens_in: 0,
-			tokens_out: 0,
-			tool_calls: [],
-			tools: [],
-			total_ms: Date.now() - started,
-			turn_id: turnId,
+			outcome: opts.outcome,
+			payment_action: opts.payment_action,
+			photos: opts.photos ?? 0,
+			product_ids: opts.product_ids ?? [],
+			replayed: opts.replayed,
+			reply_text: opts.reply_text,
+			step_ms: opts.step_ms ?? [],
+			steps: opts.steps ?? 0,
+			thread: this.name ?? "",
+			tokens_cached: opts.tokens_cached ?? 0,
+			tokens_in: opts.tokens_in ?? 0,
+			tokens_out: opts.tokens_out ?? 0,
+			tool_calls: opts.tool_calls ?? [],
+			tools: opts.tools ?? [],
+			total_ms: Date.now() - opts.started,
+			turn_id: opts.turnId,
 		});
 	}
 
@@ -721,6 +625,7 @@ export class Conversation extends Agent<Env> {
 	}): Promise<string> {
 		const { handoffMessage, handoffReason, paymentAction, receiptUrl, reply, superseded, turnId } =
 			opts;
+		const io = this.io();
 		if (superseded) {
 			return "superseded";
 		}
@@ -729,28 +634,18 @@ export class Conversation extends Agent<Env> {
 		}
 		if (handoffReason !== undefined) {
 			if (handoffMessage && handoffMessage.trim().length > 0) {
-				await this.sendPart(`${turnId}:handoff_msg`, { message: handoffMessage.trim() });
+				await io.sendPart(`${turnId}:handoff_msg`, { message: handoffMessage.trim() });
 			}
 			await this.handoffToAdmin(handoffReason, `${turnId}:handoff`);
 			return "handoff";
 		}
 		if (paymentAction !== undefined) {
 			this.store.clearLastOutbound();
-			return this.payments.dispatchPaymentAction(turnId, paymentAction, receiptUrl);
+			return dispatchPaymentAction(io, turnId, paymentAction, receiptUrl);
 		}
-		await this.sendReply(reply, turnId);
-		if (reply?.action === "confirm") {
-			await this.checkoutFlow.sendConfirmOrNeed(`${turnId}:confirm`);
-		} else {
-			this.store.clearLastOutbound();
-		}
-		return reply === undefined ? "no_reply" : "sent";
-	}
-
-	private async sendReply(reply: ReplyResult | undefined, turnId: string): Promise<void> {
 		const shown = await renderTurn({
-			accountId: this.accountId(),
-			conversationId: this.conversationId(),
+			accountId: io.accountId,
+			conversationId: io.conversationId,
 			env: this.env,
 			hasSent: (key) => this.store.outboxHas(key),
 			markSent: (key) => this.store.markOutbox(key),
@@ -760,17 +655,15 @@ export class Conversation extends Agent<Env> {
 		if (shown.length > 0) {
 			this.store.markSeen(shown);
 		}
+		if (reply?.action === "confirm") {
+			await sendConfirmOrNeed(io, `${turnId}:confirm`);
+		} else {
+			this.store.clearLastOutbound();
+		}
+		return reply === undefined ? "no_reply" : "sent";
 	}
 
 	// ─── Shared helpers ──────────────────────────────────────────────────────
-
-	private async sendPart(key: string, body: Omit<ZernioSendBody, "accountId">): Promise<void> {
-		if (this.store.outboxHas(key)) {
-			return;
-		}
-		await send(this.env, this.conversationId(), { accountId: this.accountId(), ...body }, key);
-		this.store.markOutbox(key);
-	}
 
 	private async handoffToAdmin(
 		reason: string,
@@ -778,7 +671,7 @@ export class Conversation extends Agent<Env> {
 		extraLines?: Array<string>,
 	): Promise<void> {
 		this.store.clearLastOutbound();
-		await this.sendPart(sendKey, { message: HANDOFF });
+		await this.io().sendPart(sendKey, { message: HANDOFF });
 		const alertKey = `${sendKey}:alert`;
 		let alert: "already_sent" | "failed" | "not_configured" | "sent";
 		let alertStatus: number | undefined;
@@ -801,7 +694,7 @@ export class Conversation extends Agent<Env> {
 				alert = "sent";
 			}
 		}
-		this.store.setMeta("paused_until", String(Date.now() + PAUSE_MS));
+		this.store.setMeta("paused_until", String(Date.now() + HANDOFF_PAUSE_MS));
 		const fields = {
 			alert,
 			alert_status: alertStatus,
@@ -834,40 +727,40 @@ export class Conversation extends Agent<Env> {
 		}
 	}
 
-	// Pause immediately when Zernio attributes an outgoing message to "human".
-	// Ambiguous null echoes still settle for 15s to avoid self-pausing on our own send.
+	// Pause for 2h when a human admin replies live after cutover. Human replies
+	// sent before CUTOVER_AT do not freeze active threads when the bot takes over.
 	private async pauseIfHumanReplied(): Promise<void> {
 		if (this.store.isPaused()) {
 			return;
 		}
 		const now = Date.now();
+		const io = this.io();
 		try {
 			const messages = await listMessages(
 				this.env,
-				this.conversationId(),
-				this.accountId(),
+				io.conversationId,
+				io.accountId,
 				20,
 				AbortSignal.timeout(3000),
 			);
 			const resumedAt = Number(this.store.getMeta("resumed_at") ?? "0");
+			const cutoverAt = this.env.CUTOVER_AT ? Date.parse(this.env.CUTOVER_AT) : 0;
+			const floorAt = Math.max(resumedAt, Number.isFinite(cutoverAt) ? cutoverAt : 0);
 			const humanMsg = messages.find((m) => {
 				if (m.direction !== "outgoing") {
 					return false;
 				}
 				const at = Date.parse(m.createdAt ?? "");
-				if (!Number.isFinite(at) || at <= resumedAt) {
+				if (!Number.isFinite(at) || at <= floorAt) {
 					return false;
 				}
-				if (m.sentVia === "human") {
-					return true;
-				}
-				return m.sentVia === null && now - at > HUMAN_SETTLE_MS;
+				return m.sentVia === "human" || (m.sentVia === null && now - at > HUMAN_SETTLE_MS);
 			});
 			const humanAt = humanMsg ? Date.parse(humanMsg.createdAt ?? "") : undefined;
-			if (humanAt === undefined || humanAt + PAUSE_MS <= now) {
+			if (humanAt === undefined || humanAt + HUMAN_PAUSE_MS <= now) {
 				return;
 			}
-			this.store.setMeta("paused_until", String(humanAt + PAUSE_MS));
+			this.store.setMeta("paused_until", String(humanAt + HUMAN_PAUSE_MS));
 			log({
 				event: "human_pause",
 				human_at: new Date(humanAt).toISOString(),
@@ -883,39 +776,27 @@ export class Conversation extends Agent<Env> {
 		}
 	}
 
-	private async prefillDeliveryFromHistory(): Promise<void> {
+	// Once per conversation, pull recent Zernio history to:
+	// 1) seed up to 20 recent messages into empty DO history (no post-cutover amnesia)
+	// 2) prefill saved customer phone + address from the Store API.
+	private async prefillFromHistory(): Promise<void> {
 		if (this.store.getMeta("history_checked") !== undefined) {
 			return;
 		}
 		this.store.setMeta("history_checked", "1");
-		const client = botClient(this.env);
-		if (this.store.checkoutRow().phone !== null || client === undefined) {
-			return;
-		}
+		const io = this.io();
 		try {
 			const budget = AbortSignal.timeout(4000);
-			const messages = await listMessages(
-				this.env,
-				this.conversationId(),
-				this.accountId(),
-				100,
-				budget,
-			);
-			const candidates: Array<string> = [];
-			for (const message of messages) {
-				if (message.direction !== "incoming" || message.message === undefined) {
-					continue;
-				}
-				for (const phone of phonesInText(message.message)) {
-					if (!candidates.includes(phone)) {
-						candidates.push(phone);
-					}
-				}
-				if (candidates.length >= 3) {
-					break;
-				}
+			const messages = await listMessages(this.env, io.conversationId, io.accountId, 100, budget);
+			if (!this.store.hasMessages() && messages.length > 0) {
+				this.store.seedZernioHistory(toSeedModelMessages(messages));
 			}
-			for (const phone of candidates.slice(0, 3)) {
+			const client = botClient(this.env);
+			if (this.store.checkout().phone !== undefined || client === undefined) {
+				log({ event: "history_prefill", outcome: "seeded_only", thread: this.name ?? "" });
+				return;
+			}
+			for (const phone of incomingPhones(messages)) {
 				try {
 					const customer = await client.customer.getCustomerByPhone.query(
 						{ phone: Number(phone) },
@@ -923,16 +804,16 @@ export class Conversation extends Agent<Env> {
 					);
 					if (customer.address) {
 						this.store.saveDelivery({ address: customer.address, phone });
-						prefillLog("found", this.name);
+						log({ event: "history_prefill", outcome: "found", thread: this.name ?? "" });
 						return;
 					}
 				} catch {
 					// Try next candidate.
 				}
 			}
-			prefillLog("none", this.name);
+			log({ event: "history_prefill", outcome: "none", thread: this.name ?? "" });
 		} catch {
-			prefillLog("error", this.name);
+			log({ event: "history_prefill", outcome: "error", thread: this.name ?? "" });
 		}
 	}
 
@@ -982,8 +863,7 @@ export class Conversation extends Agent<Env> {
 			return;
 		}
 		const adKeys = new Set(adProducts.map((p) => listingKey(p.name)));
-		const matchesAd = hits.some((h) => adKeys.has(listingKey(h.name)));
-		if (!matchesAd) {
+		if (!hits.some((h) => adKeys.has(listingKey(h.name)))) {
 			this.store.setMeta("ad_pivoted", "1");
 		}
 	}
@@ -1004,93 +884,6 @@ export class Conversation extends Agent<Env> {
 			}),
 			role: "user",
 		};
-	}
-
-	private async buildUserMessages(items: Array<InboundItem>): Promise<{
-		firstPhotoUrl: string | undefined;
-		hadPhotos: boolean;
-		persistedUserMessage: ModelMessage;
-		photoCount: number;
-		text: string;
-		userMessage: ModelMessage;
-	}> {
-		const text = items
-			.map((i) => i.text)
-			.filter((t) => t.length > 0)
-			.join("\n");
-		const firstPhotoUrl =
-			items
-				.flatMap((i) => i.attachments ?? [])
-				.find(
-					(a) => a.type === "image" && a.url !== undefined && a.url !== null && a.url.length > 0,
-				)?.url ?? undefined;
-		const hadPhotos = firstPhotoUrl !== undefined;
-		const imageParts = (
-			await Promise.all(items.map((i) => fetchImageParts(this.env, i.attachments ?? [])))
-		).flat();
-		const userParts: Array<ImagePart | TextPart> = [
-			...(text.length > 0 ? [{ text, type: "text" as const }] : []),
-			...imageParts,
-		];
-		return {
-			firstPhotoUrl,
-			hadPhotos,
-			persistedUserMessage: {
-				content: userParts.map((part) =>
-					part.type === "image" ? { text: "[зураг]", type: "text" as const } : part,
-				),
-				role: "user",
-			},
-			photoCount: imageParts.length,
-			text,
-			userMessage: { content: userParts, role: "user" },
-		};
-	}
-
-	private extractReply(
-		steps: Array<{ toolCalls: Array<{ input: unknown; toolName: string }> }>,
-	): ReplyResult | undefined {
-		for (const step of [...steps].reverse()) {
-			for (const call of [...step.toolCalls].reverse()) {
-				if (call.toolName === "reply") {
-					const parsed = v.safeParse(replyInputSchema, call.input);
-					if (parsed.success) {
-						return parsed.output;
-					}
-				}
-			}
-		}
-		return undefined;
-	}
-
-	private extractHandoff(
-		steps: Array<{ toolCalls: Array<{ input: unknown; toolName: string }> }>,
-	): HandoffResult | undefined {
-		for (const step of [...steps].reverse()) {
-			for (const call of [...step.toolCalls].reverse()) {
-				if (call.toolName === "handoff") {
-					const parsed = v.safeParse(handoffInputSchema, call.input);
-					return parsed.success ? parsed.output : { reason: "unspecified" };
-				}
-			}
-		}
-		return undefined;
-	}
-
-	private extractPaymentAction(
-		steps: Array<{ toolResults: Array<{ output: unknown; toolName: string }> }>,
-	): PaymentAction | undefined {
-		for (const step of [...steps].reverse()) {
-			for (const res of [...step.toolResults].reverse()) {
-				if (res.toolName === "payment") {
-					const parsed = v.safeParse(paymentResultSchema, res.output);
-					if (parsed.success && parsed.output.handled && parsed.output.action !== undefined) {
-						return parsed.output.action;
-					}
-				}
-			}
-		}
-		return undefined;
 	}
 
 	private findPendingRow(item: InboundItem): InboxRow | undefined {
@@ -1126,15 +919,6 @@ export class Conversation extends Agent<Env> {
 		});
 	}
 
-	private noteAdId(
-		metadata: { referral?: { ad_id?: string } | null | undefined } | null | undefined,
-	): void {
-		const adId = metadata?.referral?.ad_id;
-		if (adId !== undefined && adId.length > 0 && this.store.getMeta("ad_id") === undefined) {
-			this.store.setMeta("ad_id", adId);
-		}
-	}
-
 	private finishTurn(rows: Array<InboxRow>): void {
 		for (const row of rows) {
 			this.store.markInboxDone(row.event_id);
@@ -1142,46 +926,14 @@ export class Conversation extends Agent<Env> {
 	}
 
 	private async armRecovery(): Promise<void> {
-		const pending = this.getSchedules().filter((s) => s.callback === "recoverInbox");
-		if (pending.length === 0) {
-			await this.schedule(this.recoverSeconds(), "recoverInbox", {});
+		if (this.getSchedules().some((s) => s.callback === "recoverInbox")) {
+			return;
 		}
+		await this.schedule(this.recoverSeconds(), "recoverInbox", {});
 	}
 
 	private recoverSeconds(): number {
 		const raw = Number(this.env.INBOX_RECOVER_SECONDS ?? "120");
 		return Number.isFinite(raw) && raw > 0 ? raw : 120;
-	}
-
-	private async turnIdFor(rows: Array<InboxRow>): Promise<string> {
-		const ids = rows
-			.map((r) => r.event_id)
-			.sort()
-			.join(",");
-		const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ids));
-		const hex = Array.from(new Uint8Array(digest).slice(0, 6), (b) =>
-			b.toString(16).padStart(2, "0"),
-		).join("");
-		return `t_${hex}`;
-	}
-
-	private messageText(message: ModelMessage): string {
-		if (!Array.isArray(message.content)) {
-			return message.content;
-		}
-		return message.content
-			.filter((part) => part.type === "text")
-			.map((part) => part.text)
-			.join(" ");
-	}
-
-	private conversationId(): string {
-		const name = this.name ?? "";
-		return name.slice(name.indexOf(":", "zernio:".length) + 1);
-	}
-
-	private accountId(): string {
-		const name = this.name ?? "";
-		return name.slice("zernio:".length, name.indexOf(":", "zernio:".length));
 	}
 }

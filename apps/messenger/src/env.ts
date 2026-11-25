@@ -13,6 +13,7 @@ export interface Env extends Cloudflare.Env {
 	BRIDGE_MODEL?: string;
 	BRIDGE_SHADOW_TELEGRAM?: string;
 	Conversation: DurableObjectNamespace<Conversation>;
+	CUTOVER_AT?: string;
 	INBOX_RECOVER_SECONDS?: string;
 	Ingress: DurableObjectNamespace<Ingress>;
 	LLM?: Fetcher;

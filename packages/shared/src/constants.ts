@@ -136,7 +136,7 @@ export const bankTransfer = {
 // number from env, while customer-facing payment screens show the full IBAN.
 export const formatTransferAccountNumber = (raw?: string | null): string => {
 	const trimmed = raw?.trim();
-	if (!trimmed || trimmed === "5041724145") {
+	if (!trimmed || bankTransfer.accountNumber.endsWith(trimmed)) {
 		return bankTransfer.accountNumber;
 	}
 	return trimmed;

@@ -2,10 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { bankTransfer, formatTransferAccountNumber } from "@vit/shared/constants";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 import { db } from "~/db/client";
-import { DeliveryDispatchesTable } from "~/db/schema";
+import { DeliveryDispatchesTable, OrdersTable } from "~/db/schema";
+import { getDeliveryStatus } from "~/lib/integrations/delivery";
 import {
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
@@ -21,6 +22,54 @@ import {
 } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
 import type { Context } from "~/lib/context";
+
+const TU_POLL_TTL_SECONDS = 15 * 60;
+const TU_DELIVERED_RE = /хүргэгдсэн|delivered/i;
+
+// Best-effort TU Delivery status sync for shipped orders when polled by the
+// Messenger bot (never runs on storefront checkout polling). Throttled via KV
+// so each order hits TU Delivery at most once every 15 minutes until delivered.
+async function syncShippedOrderStatus(
+	ctx: Context,
+	orderId: number,
+): Promise<"delivered" | "shipped"> {
+	if (ctx.c.req.header("x-vit-client") !== "messenger") {
+		return "shipped";
+	}
+	const key = `tu:poll:${orderId}`;
+	try {
+		if ((await kv().get(key)) !== null) {
+			return "shipped";
+		}
+		await kv().put(key, "1", { expirationTtl: TU_POLL_TTL_SECONDS });
+		const live = await getDeliveryStatus(orderId);
+		if ("orderStatus" in live && TU_DELIVERED_RE.test(live.orderStatus)) {
+			const now = new Date();
+			await db()
+				.update(OrdersTable)
+				.set({ status: "delivered" })
+				.where(and(eq(OrdersTable.id, orderId), eq(OrdersTable.status, "shipped")));
+			await db()
+				.update(DeliveryDispatchesTable)
+				.set({
+					driverComment: live.driverComment || null,
+					driverName: live.driverName || null,
+					tuStatus: "delivered",
+					tuStatusName: live.orderStatus,
+					tuUpdatedAt: now.toISOString(),
+				})
+				.where(eq(DeliveryDispatchesTable.orderId, orderId));
+			ctx.log.info("tu.poll_marked_delivered", { orderId, tuStatus: live.orderStatus });
+			return "delivered";
+		}
+	} catch (error) {
+		ctx.log.warn("tu.poll_failed", {
+			error: error instanceof Error ? error.message : String(error),
+			orderId,
+		});
+	}
+	return "shipped";
+}
 
 async function createOrReuseQpayInvoice(
 	ctx: Context,
@@ -259,24 +308,18 @@ export const payment = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const payment = await assertCanAccessPayment(ctx, input.paymentNumber, input.checkoutToken);
-				const dispatch = await db()
-					.select({
-						tuStatus: DeliveryDispatchesTable.tuStatus,
-						tuUpdatedAt: DeliveryDispatchesTable.tuUpdatedAt,
-					})
-					.from(DeliveryDispatchesTable)
-					.where(eq(DeliveryDispatchesTable.orderId, payment.order.id))
-					.limit(1);
+				const orderStatus =
+					payment.order.status === "shipped"
+						? await syncShippedOrderStatus(ctx, payment.order.id)
+						: payment.order.status;
 				ctx.log.info("payment.status_checked", {
-					order_status: payment.order.status,
+					order_status: orderStatus,
 					payment_status: payment.status,
 					paymentNumber: input.paymentNumber,
 					provider: payment.provider,
 				});
 				return {
-					deliveryStatus: dispatch[0]?.tuStatus ?? null,
-					deliveryUpdatedAt: dispatch[0]?.tuUpdatedAt ?? null,
-					orderStatus: payment.order.status,
+					orderStatus,
 					provider: payment.provider,
 					status: payment.status,
 				};
