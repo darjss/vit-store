@@ -272,6 +272,7 @@ export const product = router({
 					name: product.name,
 					potency: product.potency ?? "",
 					price: product.price,
+					stockStatus: mapStockStatus(product.status, product.stock),
 				}));
 		}),
 
