@@ -6,13 +6,14 @@ import {
 	ALREADY_PAID,
 	CLAIM_ACK,
 	formatBankDue,
+	formatExternalBankDetails,
 	formatPaid,
 	formatReminder,
 	TRANSFER_PROMPT,
 } from "./copy";
 import { errorFields, log, logError } from "./log";
 import { storeClient, withTimeout } from "./store";
-import { sendTelegramOpsNudge } from "./telegram";
+import { sendTelegramAlert, sendTelegramOpsNudge } from "./telegram";
 import type { PaymentAction } from "./tools";
 
 const checkPaymentSchema = v.object({ paymentNumber: v.pipe(v.string(), v.minLength(1)) });
@@ -471,6 +472,34 @@ export const sendBankDetails = async (
 	});
 };
 
+const handleExternalClaim = async (
+	io: ConversationIO,
+	turnId: string,
+	receiptAmount?: number,
+	receiptUrl?: string,
+): Promise<string> => {
+	await io.sendPart(`${turnId}:ext_claim`, { message: CLAIM_ACK });
+	const alertKey = `${turnId}:ext_claim_alert`;
+	if (!io.store.outboxHas(alertKey)) {
+		const phone = io.store.checkout().phone;
+		const extraLines = [
+			...(phone ? [`Утас: ${phone}`] : []),
+			...(receiptAmount ? [`Баримтын дүн: ${receiptAmount.toLocaleString("en-US")}₮`] : []),
+			...(receiptUrl ? [`Баримт: ${receiptUrl}`] : []),
+		];
+		const res = await sendTelegramAlert(io.env, {
+			extraLines,
+			reason: "external_transfer_claim",
+			recentTexts: io.store.recentCustomerTexts(6),
+			threadId: io.thread,
+		}).catch(() => undefined);
+		if (res?.ok) {
+			io.store.markOutbox(alertKey);
+		}
+	}
+	return "payment_external_claimed";
+};
+
 export const dispatchPaymentAction = async (
 	io: ConversationIO,
 	turnId: string,
@@ -484,6 +513,15 @@ export const dispatchPaymentAction = async (
 	if (action.kind === "ambiguous") {
 		await io.handoffToAdmin("payment_ambiguous", `${turnId}:ambiguous`);
 		return "handoff";
+	}
+	if (action.kind === "external_details") {
+		await io.sendPart(`${turnId}:ext_bank`, {
+			message: formatExternalBankDetails(io.store.checkout().phone),
+		});
+		return "payment_external_details";
+	}
+	if (action.kind === "external_claim") {
+		return handleExternalClaim(io, turnId, action.receiptAmount, receiptUrl);
 	}
 	if (action.kind === "claim") {
 		await claimTransfer(io, turnId, action.paymentNumber, {
