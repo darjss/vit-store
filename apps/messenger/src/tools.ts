@@ -341,21 +341,28 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 				{ signal: withTimeout() },
 			);
 			const byId = new Map(details.map((d) => [d.id, d]));
-			const found = hits.map((h) => {
+			const found = hits.flatMap((h) => {
 				const detail = byId.get(h.id);
-				return toHit({
-					amount: detail?.amount,
-					brand: detail?.brand ?? h.brand,
-					dailyIntake: detail?.dailyIntake,
-					description: detail?.description,
-					expirationDate: detail?.expirationDate,
-					id: h.id,
-					ingredients: detail?.ingredients,
-					name: detail?.name ?? h.name,
-					potency: detail?.potency,
-					price: detail?.price ?? h.price,
-					stockStatus: h.stockStatus,
-				});
+				// Drop stale Upstash hits for deleted or inactive Postgres rows,
+				// and always trust live Postgres stockStatus over the search cache.
+				if (detail === undefined) {
+					return [];
+				}
+				return [
+					toHit({
+						amount: detail.amount,
+						brand: detail.brand || h.brand,
+						dailyIntake: detail.dailyIntake,
+						description: detail.description,
+						expirationDate: detail.expirationDate,
+						id: h.id,
+						ingredients: detail.ingredients,
+						name: detail.name || h.name,
+						potency: detail.potency,
+						price: detail.price,
+						stockStatus: detail.stockStatus,
+					}),
+				];
 			});
 			const ordered = leadWithAdProducts(found, adProducts);
 			deps.markSeen(ordered.map((h) => h.id));
