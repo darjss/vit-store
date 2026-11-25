@@ -118,9 +118,9 @@ export const productColors = [
 ];
 
 // Flat delivery fee added to every order (storefront cart, the order API total,
-// and the Messenger order summary). 6,000₮ going forward; the zone is recorded
+// and the Messenger order summary). 7,000₮ going forward; the zone is recorded
 // for routing but does not change the fee.
-export const deliveryFee = 6000;
+export const deliveryFee = 7000;
 
 // Single source of truth for the bank-transfer destination shown to customers
 // (storefront payment page AND the Messenger payment surface, #25). The transfer
@@ -128,9 +128,19 @@ export const deliveryFee = 6000;
 // of this static account record.
 export const bankTransfer = {
 	accountName: "Aviddaram Bazarragchaa",
-	accountNumber: "5011147435",
+	accountNumber: "MN080005005041724145",
 	bankName: "Хаан банк",
 } as const;
+
+// Khaan Bank's API (TransferReconciliationObject) requires the 10-digit account
+// number from env, while customer-facing payment screens show the full IBAN.
+export const formatTransferAccountNumber = (raw?: string | null): string => {
+	const trimmed = raw?.trim();
+	if (!trimmed || trimmed === "5041724145") {
+		return bankTransfer.accountNumber;
+	}
+	return trimmed;
+};
 
 export const productTagSuggestions = [
 	"витамин",

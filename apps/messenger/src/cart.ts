@@ -1,153 +1,55 @@
-import * as v from "valibot";
-
-// Ported from packages/assistant/src/cart.ts + products.ts (the package's root
-// re-exports pull in @flue/runtime, which this worker does not use). Payload
-// strings are identical to the old channel grammar.
+// Customer cart types, postback payload parsers, phone/address/confirm matchers.
 
 export type CartLine = { name: string; price: number; productId: number; qty: number };
-
-const mnt = (amount: number): string => `${Math.round(amount).toLocaleString("en-US")}₮`;
 
 export const cartSubtotal = (lines: Array<CartLine>): number =>
 	lines.reduce((s, l) => s + l.price * l.qty, 0);
 
-export const formatCartSummary = (lines: Array<CartLine>): string => {
-	const items = lines.map(
-		(item, index) =>
-			`${index + 1}. ${item.name} — ${mnt(item.price)} × ${item.qty} = ${mnt(item.price * item.qty)}`,
-	);
-	return [
-		"🛒 Таны сагс:",
-		...items,
-		"",
-		`Нийт: ${mnt(cartSubtotal(lines))} (${lines.reduce((s, l) => s + l.qty, 0)} ширхэг)`,
-	].join("\n");
-};
+// The catalogue lists some products twice under different ids and prices
+// ("D3 + K2" 110k and "D3 & K2" 135k): the names differ only in punctuation.
+export const listingKey = (name: string): string =>
+	name.toLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
 
 // ─── Payloads ────────────────────────────────────────────────────────────────
 
-const ORDER_PAYLOAD_RE = /^order_product:(\d+)$/;
-export const parseOrderPayload = (payload: string): number | undefined => {
-	const match = ORDER_PAYLOAD_RE.exec(payload);
+const parseNumericSuffix = (payload: string, re: RegExp): number | undefined => {
+	const match = re.exec(payload);
 	if (!match) {
 		return undefined;
 	}
-	const id = Number(match[1]);
-	return Number.isSafeInteger(id) ? id : undefined;
+	const value = Number(match[1]);
+	return Number.isSafeInteger(value) ? value : undefined;
 };
 
-// Welcome-screen ice-breaker buttons, set on the page through Zernio.
-const ICE_PAYLOADS = ["ice:order", "ice:price", "ice:delivery"] as const;
-export type IcePayload = (typeof ICE_PAYLOADS)[number];
-export const parseIcePayload = (payload: string) => ICE_PAYLOADS.find((p) => p === payload);
+const ORDER_PAYLOAD_RE = /^order_product:(\d+)$/;
+export const parseOrderPayload = (payload: string): number | undefined =>
+	parseNumericSuffix(payload, ORDER_PAYLOAD_RE);
 
 const ORDER_CONFIRM_RE = /^order_confirm:(\d+)$/;
-export const parseOrderConfirmPayload = (payload: string): number | undefined => {
-	const match = ORDER_CONFIRM_RE.exec(payload);
-	if (!match) {
-		return undefined;
-	}
-	const rev = Number(match[1]);
-	return Number.isSafeInteger(rev) ? rev : undefined;
-};
+export const parseOrderConfirmPayload = (payload: string): number | undefined =>
+	parseNumericSuffix(payload, ORDER_CONFIRM_RE);
 
-const PAY_TRANSFER_RE = /^pay_transfer:(\S+)$/;
-export const parsePayTransferPayload = (payload: string): string | undefined =>
-	PAY_TRANSFER_RE.exec(payload)?.[1];
+const ORDER_EDIT_RE = /^order_edit:(\d+)$/;
+export const parseOrderEditPayload = (payload: string): number | undefined =>
+	parseNumericSuffix(payload, ORDER_EDIT_RE);
+
+const DELIVERY_CHANGE_RE = /^delivery_change:(\d+)$/;
+export const parseDeliveryChangePayload = (payload: string): number | undefined =>
+	parseNumericSuffix(payload, DELIVERY_CHANGE_RE);
+
+export const isCartClearPayload = (payload: string): boolean => payload === "cart_clear";
 
 const TRANSFER_DONE_RE = /^transfer_done:(\S+)$/;
 export const parseTransferDonePayload = (payload: string): string | undefined =>
 	TRANSFER_DONE_RE.exec(payload)?.[1];
 
-const DELIVERY_CHANGE_RE = /^delivery_change:(\d+)$/;
-export const parseDeliveryChangePayload = (payload: string): number | undefined => {
-	const match = DELIVERY_CHANGE_RE.exec(payload);
-	if (!match) {
-		return undefined;
-	}
-	const rev = Number(match[1]);
-	return Number.isSafeInteger(rev) ? rev : undefined;
-};
+// Welcome-screen ice-breaker buttons, set on the page through Zernio.
+const ICE_PAYLOADS = ["ice:order", "ice:price", "ice:delivery"] as const;
+export type IcePayload = (typeof ICE_PAYLOADS)[number];
+export const parseIcePayload = (payload: string): IcePayload | undefined =>
+	ICE_PAYLOADS.find((p) => p === payload);
 
-// ─── Cart commands ───────────────────────────────────────────────────────────
-
-const ID_RE = /^(\d+)$/;
-const parseIdSuffix = (payload: string, prefix: string): number | undefined => {
-	if (!payload.startsWith(`${prefix}:`)) {
-		return undefined;
-	}
-	const match = ID_RE.exec(payload.slice(prefix.length + 1));
-	if (!match) {
-		return undefined;
-	}
-	const id = Number(match[1]);
-	return Number.isSafeInteger(id) ? id : undefined;
-};
-
-export const cartCommandSchema = v.variant("kind", [
-	v.object({ kind: v.literal("view") }),
-	v.object({ kind: v.literal("confirm") }),
-	v.object({ kind: v.literal("clear") }),
-	v.object({ kind: v.literal("inc"), productId: v.number() }),
-	v.object({ kind: v.literal("dec"), productId: v.number() }),
-	v.object({ kind: v.literal("remove"), productId: v.number() }),
-]);
-export type CartCommand = v.InferOutput<typeof cartCommandSchema>;
-
-export const parseCartPayload = (payload: string): CartCommand | undefined => {
-	if (payload === "cart_view") {
-		return { kind: "view" };
-	}
-	if (payload === "cart_confirm") {
-		return { kind: "confirm" };
-	}
-	if (payload === "cart_clear") {
-		return { kind: "clear" };
-	}
-	const inc = parseIdSuffix(payload, "cart_inc");
-	if (inc !== undefined) {
-		return { kind: "inc", productId: inc };
-	}
-	const dec = parseIdSuffix(payload, "cart_dec");
-	if (dec !== undefined) {
-		return { kind: "dec", productId: dec };
-	}
-	const remove = parseIdSuffix(payload, "cart_remove");
-	if (remove !== undefined) {
-		return { kind: "remove", productId: remove };
-	}
-	return undefined;
-};
-
-// ─── Quick replies (Zernio caps at 13, title <= 20 chars) ────────────────────
-
-const qr = (title: string, payload: string) => ({
-	payload,
-	title: title.length <= 20 ? title : `${title.slice(0, 19).trimEnd()}…`,
-});
-
-export const cartQuickReplies = (
-	lines: Array<CartLine>,
-): Array<{ payload: string; title: string }> => {
-	if (lines.length === 0) {
-		return [];
-	}
-	const global = [qr("✅ Баталгаажуулах", "cart_confirm"), qr("🗑 Сагс хоослох", "cart_clear")];
-	const perItem: Array<{ payload: string; title: string }> = [];
-	for (const line of lines) {
-		if (perItem.length + 3 > 11) {
-			break;
-		}
-		perItem.push(
-			qr(`➕ ${line.name}`, `cart_inc:${line.productId}`),
-			qr(`➖ ${line.name}`, `cart_dec:${line.productId}`),
-			qr(`✖ ${line.name}`, `cart_remove:${line.productId}`),
-		);
-	}
-	return [...global, ...perItem];
-};
-
-// ─── Phone / address ─────────────────────────────────────────────────────────
+// ─── Phone, countryside & affirmative confirm ───────────────────────────────
 
 // Mongolian mobile: 8 digits starting 6-9. Normalize spaces/dashes/+976/leading 0.
 export const normalizePhone = (raw: string): string => {
@@ -169,27 +71,25 @@ export const phonesInText = (text: string): Array<string> =>
 		(m) => `${m[1]}${m[2]}`,
 	);
 
-// Past-tense "transferred / did / paid" in Cyrillic and Latin: шилжүүлсэн,
-// шилжүүлчихлээ, хийлээ, төлсөн, shiljuulchlee, hiichihlee, tulluu. Future
-// and wish forms (шилжүүлэх, shiljuulmeer, төлөө) don't match.
-const TRANSFER_DONE = [
-	/(шилжүүл|хий|төл)(с[эөо]н|л[эө]{2}|ч(их)?(л[эө]{2}|с[эөо]н))/,
-	/(shilj(uu|vv|u|v)l|hii|tul|tol)(s[eou]n|l(ee|uu|oo)|ch(ih?)?(l(ee|uu|oo)|s[eoa]n))/,
-];
+// Deterministic countryside safety net when the model forgets countryside: true.
+const COUNTRYSIDE_RE =
+	/(?:аймаг|дархан|эрдэнэт|орон нутаг|хөдөө|замын унаа|драгон|автобус|хот хоорондын|aimag|darhan|darkhan|erdenet|oron nutag|huduu|hodoo|dragon|\bсум\b|\bsum\b)/iu;
 
-// Recognises a free-text transfer claim. Only meaningful while a pending
-// payment exists; the caller gates on that.
-export const isTransferDoneText = (text: string | undefined): boolean => {
-	const normalized = text?.trim().toLowerCase() ?? "";
-	return TRANSFER_DONE.some((re) => re.test(normalized));
-};
+export const isCountrysideAddress = (address: string): boolean => COUNTRYSIDE_RE.test(address);
 
-// The QPay-only page authorises with paymentNumber (path) + checkoutToken (ct).
-export const buildQpayPageUrl = (
-	storeBaseUrl: string,
-	ref: { checkoutToken: string | null; paymentNumber: string },
-): string => {
-	const base = storeBaseUrl.replace(/\/+$/, "");
-	const url = `${base}/payment/qpay/${encodeURIComponent(ref.paymentNumber)}`;
-	return ref.checkoutToken ? `${url}?ct=${encodeURIComponent(ref.checkoutToken)}` : url;
+// Code-only affirmative confirmation matcher (used only when the bot just sent
+// a confirm summary for the current revision and no attachments are present).
+const AFFIRMATIVE_RE =
+	/^(?:(?:за|za)\s+)?(?:за|za|тийм|тийм\s*ээ|tiim|tiimee|ок|ok|болно|bolno|авъя|авья|avya|авна|avna|зөв|zuv|захиал(?:ъя|ья|на|ах)?|zahial(?:ya|na|ah)?|явуулаарай|👍+|\[стикер\])$/u;
+
+export const isAffirmativeConfirm = (text: string): boolean => {
+	const trimmed = text.trim();
+	if (trimmed.length === 0 || trimmed.length > 20) {
+		return false;
+	}
+	const cleaned = trimmed
+		.toLowerCase()
+		.replace(/[.!?,~😊🙏]+$/u, "")
+		.trim();
+	return cleaned.length > 0 && AFFIRMATIVE_RE.test(cleaned);
 };

@@ -17,6 +17,7 @@ type TurnLogFields = {
 	inputs: number;
 	model: string;
 	outcome: string;
+	payment_action?: string;
 	photos: number;
 	product_ids: Array<number>;
 	replayed?: boolean;
@@ -91,11 +92,15 @@ export type LogEvent =
 	| {
 			action:
 				| "claimed"
+				| "delivered_sent"
+				| "expired"
 				| "failed"
 				| "gone"
 				| "handoff"
+				| "ops_nudged"
 				| "paid_send_failed"
 				| "paid_sent"
+				| "reminder_sent"
 				| "wait"
 				| "window_end";
 			claimed: number;

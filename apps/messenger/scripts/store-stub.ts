@@ -14,10 +14,11 @@ const LOG = "/tmp/messenger-store-stub.jsonl";
 const PORT = 8798;
 
 const paid = new Set<string>();
+const delivered = new Set<string>();
 let orderSeq = 0;
 
 // Every stub result is a flat record of scalars.
-type StubData = Record<string, number | string>;
+type StubData = Record<string, null | number | string>;
 
 const ok = (data: StubData): Response => Response.json({ result: { data: { json: data } } });
 
@@ -76,12 +77,12 @@ const mutations = new Map<string, (body: string) => Response>([
 		() => {
 			orderSeq += 1;
 			return ok({
-				accountName: "Test Account",
-				accountNumber: "0000000000",
+				accountName: "Aviddaram Bazarragchaa",
+				accountNumber: "MN080005005041724145",
 				checkoutToken: "ct_local",
 				orderNumber: `ORD-LOCAL-${orderSeq}`,
 				paymentNumber: `PAY-LOCAL-${orderSeq}`,
-				total: 131_000,
+				total: 132_000,
 			});
 		},
 	],
@@ -133,7 +134,11 @@ const botRoute = async (request: Request, url: URL, procedure: string): Promise<
 const storeRoute = async (request: Request, url: URL, procedure: string): Promise<Response> => {
 	if (request.method === "GET" && procedure === "payment.getPaymentStatus") {
 		const { paymentNumber } = queryParamInput(url);
+		const isDelivered = paymentNumber !== undefined && delivered.has(paymentNumber);
 		return ok({
+			deliveryStatus: isDelivered ? "delivered" : null,
+			deliveryUpdatedAt: isDelivered ? new Date().toISOString() : null,
+			orderStatus: isDelivered ? "delivered" : "pending",
 			provider: "transfer",
 			status: paymentNumber !== undefined && paid.has(paymentNumber) ? "success" : "pending",
 		});
@@ -162,6 +167,11 @@ Bun.serve({
 		if (payMatch && request.method === "POST") {
 			paid.add(payMatch[1]);
 			return Response.json({ ok: true, paymentNumber: payMatch[1] });
+		}
+		const deliverMatch = /^\/stub\/deliver\/([^/]+)$/.exec(url.pathname);
+		if (deliverMatch && request.method === "POST") {
+			delivered.add(deliverMatch[1]);
+			return Response.json({ ok: true, paymentNumber: deliverMatch[1] });
 		}
 		if (url.pathname.startsWith("/trpc/bot/")) {
 			return botRoute(request, url, url.pathname.slice("/trpc/bot/".length));

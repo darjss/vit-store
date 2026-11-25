@@ -155,7 +155,7 @@ export const CATEGORIES = [
 // facts in the plan 029 prompt). `expect` runs on the reply text.
 export const FAQ_THEMES = [
 	{
-		expect: /6[,\s.]?000/,
+		expect: /7[,\s.]?000/,
 		match:
 			/hurgelt (hed\b|une)|hurgeltiin (une|mungu|tolbor)|хүргэлт (хэд\b|хэд вэ|үнэ)|хүргэлтийн (үнэ|төлбөр)/i,
 		name: "delivery_fee",

@@ -1,8 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
-import { bankTransfer } from "@vit/shared/constants";
+import { bankTransfer, formatTransferAccountNumber } from "@vit/shared/constants";
+import { eq } from "drizzle-orm";
 import * as v from "valibot";
+import { db } from "~/db/client";
+import { DeliveryDispatchesTable } from "~/db/schema";
 import {
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
@@ -227,7 +230,7 @@ export const payment = router({
 					total: payment.order.total,
 					transferAccount: {
 						accountName: ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
-						accountNumber: ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+						accountNumber: formatTransferAccountNumber(ctx.c.env.KHAAN_ACCOUNT_NUMBER),
 						bankName: bankTransfer.bankName,
 					},
 				};
@@ -256,12 +259,24 @@ export const payment = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const payment = await assertCanAccessPayment(ctx, input.paymentNumber, input.checkoutToken);
+				const dispatch = await db()
+					.select({
+						tuStatus: DeliveryDispatchesTable.tuStatus,
+						tuUpdatedAt: DeliveryDispatchesTable.tuUpdatedAt,
+					})
+					.from(DeliveryDispatchesTable)
+					.where(eq(DeliveryDispatchesTable.orderId, payment.order.id))
+					.limit(1);
 				ctx.log.info("payment.status_checked", {
+					order_status: payment.order.status,
 					payment_status: payment.status,
 					paymentNumber: input.paymentNumber,
 					provider: payment.provider,
 				});
 				return {
+					deliveryStatus: dispatch[0]?.tuStatus ?? null,
+					deliveryUpdatedAt: dispatch[0]?.tuUpdatedAt ?? null,
+					orderStatus: payment.order.status,
 					provider: payment.provider,
 					status: payment.status,
 				};
