@@ -48,7 +48,7 @@ import {
 	type SearchHit,
 	type ToolDeps,
 } from "./tools";
-import { adProductIds, listMessages } from "./zernio";
+import { adProductIds, listMessages, type ListedMessage } from "./zernio";
 
 export { normalizeInboundItem, type InboundItem } from "./conversation-helpers";
 export type { PaymentTickResult } from "./conversation-payments";
@@ -66,12 +66,33 @@ const FALLBACK_TEXT = "Шалгаад хэлье.";
 const HANDOFF_PAUSE_MS = 12 * 60 * 60_000;
 const HUMAN_PAUSE_MS = 2 * 60 * 60_000;
 const HUMAN_SETTLE_MS = 15_000;
+const DUP_REPLY_WINDOW_MS = 15_000;
+const lastReplySigSchema = v.object({ at: v.number(), sig: v.string() });
 // Meta Page Instant Reply echoes back as outgoing with sentVia=null; never treat it as a human reply.
 const META_AUTO_REPLIES = new Set([
 	"sain baina uu? bid tanii asuultand udahgui tun udahgui hariulna.",
 ]);
 const isMetaAutoReply = (text: string | undefined): boolean =>
 	text !== undefined && META_AUTO_REPLIES.has(text.trim().toLowerCase());
+
+const isHumanOutgoing = (m: ListedMessage, floorAt: number, now: number): number | undefined => {
+	if (m.direction !== "outgoing" || isMetaAutoReply(m.message)) {
+		return undefined;
+	}
+	const at = Date.parse(m.createdAt ?? "");
+	if (!Number.isFinite(at) || at <= floorAt) {
+		return undefined;
+	}
+	return m.sentVia === "human" || (m.sentVia === null && now - at > HUMAN_SETTLE_MS)
+		? at
+		: undefined;
+};
+
+const replySignature = (reply: ReplyResult | undefined): string => {
+	const text = (reply?.text ?? FALLBACK_TEXT).trim().toLowerCase();
+	const ids = (reply?.productIds ?? []).join(",");
+	return `${text}|${ids}|${reply?.action ?? ""}`;
+};
 
 type RowAction =
 	| { kind: "affirmative_confirm" }
@@ -689,6 +710,9 @@ export class Conversation extends Agent<Env> {
 			this.store.clearLastOutbound();
 			return dispatchPaymentAction(io, turnId, paymentAction, receiptUrl);
 		}
+		if (reply?.action !== "confirm" && this.isRecentDuplicateReply(reply)) {
+			return "duplicate_suppressed";
+		}
 		const shown = await renderTurn({
 			accountId: io.accountId,
 			conversationId: io.conversationId,
@@ -698,6 +722,7 @@ export class Conversation extends Agent<Env> {
 			reply: reply ?? { text: FALLBACK_TEXT },
 			turnId,
 		});
+		this.recordReplySignature(reply);
 		if (shown.length > 0) {
 			this.store.markSeen(shown);
 		}
@@ -707,6 +732,30 @@ export class Conversation extends Agent<Env> {
 			this.store.clearLastOutbound();
 		}
 		return reply === undefined ? "no_reply" : "sent";
+	}
+
+	private isRecentDuplicateReply(reply: ReplyResult | undefined): boolean {
+		const raw = this.store.getMeta("last_reply_sig");
+		if (raw === undefined) {
+			return false;
+		}
+		try {
+			const parsed = v.safeParse(lastReplySigSchema, JSON.parse(raw));
+			return (
+				parsed.success &&
+				Date.now() - parsed.output.at < DUP_REPLY_WINDOW_MS &&
+				parsed.output.sig === replySignature(reply)
+			);
+		} catch {
+			return false;
+		}
+	}
+
+	private recordReplySignature(reply: ReplyResult | undefined): void {
+		this.store.setMeta(
+			"last_reply_sig",
+			JSON.stringify({ at: Date.now(), sig: replySignature(reply) }),
+		);
 	}
 
 	// ─── Shared helpers ──────────────────────────────────────────────────────
@@ -773,8 +822,8 @@ export class Conversation extends Agent<Env> {
 		}
 	}
 
-	// Pause for 2h when a human admin replies live after cutover. Human replies
-	// sent before CUTOVER_AT do not freeze active threads when the bot takes over.
+	// Pause for 2h when a human admin replies live after cutover, and sync older
+	// post-pause human replies into DO history so the bot never contradicts admin.
 	private async pauseIfHumanReplied(): Promise<void> {
 		if (this.store.isPaused()) {
 			return;
@@ -792,17 +841,10 @@ export class Conversation extends Agent<Env> {
 			const resumedAt = Number(this.store.getMeta("resumed_at") ?? "0");
 			const cutoverAt = this.env.CUTOVER_AT ? Date.parse(this.env.CUTOVER_AT) : 0;
 			const floorAt = Math.max(resumedAt, Number.isFinite(cutoverAt) ? cutoverAt : 0);
-			const humanMsg = messages.find((m) => {
-				if (m.direction !== "outgoing" || isMetaAutoReply(m.message)) {
-					return false;
-				}
-				const at = Date.parse(m.createdAt ?? "");
-				if (!Number.isFinite(at) || at <= floorAt) {
-					return false;
-				}
-				return m.sentVia === "human" || (m.sentVia === null && now - at > HUMAN_SETTLE_MS);
-			});
-			const humanAt = humanMsg ? Date.parse(humanMsg.createdAt ?? "") : undefined;
+			this.syncHumanReplies(messages, floorAt, now);
+			const humanAt = messages
+				.map((m) => isHumanOutgoing(m, floorAt, now))
+				.find((at): at is number => at !== undefined);
 			if (humanAt === undefined || humanAt + HUMAN_PAUSE_MS <= now) {
 				return;
 			}
@@ -819,6 +861,31 @@ export class Conversation extends Agent<Env> {
 				thread: this.name ?? "",
 				where: "human_pause",
 			});
+		}
+	}
+
+	private syncHumanReplies(messages: Array<ListedMessage>, floorAt: number, now: number): void {
+		if (!this.store.hasMessages()) {
+			return;
+		}
+		const prevSync = Number(this.store.getMeta("human_synced_at") ?? "0");
+		const since = Math.max(floorAt, Number.isFinite(prevSync) ? prevSync : 0);
+		let maxAt = since;
+		for (const m of [...messages].reverse()) {
+			const at = isHumanOutgoing(m, since, now);
+			if (at === undefined) {
+				continue;
+			}
+			const text = m.message?.trim() || ((m.attachments ?? []).length > 0 ? "[зураг]" : "");
+			if (text.length > 0) {
+				this.store.appendHumanReply(m.id ?? String(at), text, at);
+			}
+			if (at > maxAt) {
+				maxAt = at;
+			}
+		}
+		if (maxAt > since) {
+			this.store.setMeta("human_synced_at", String(maxAt));
 		}
 	}
 
