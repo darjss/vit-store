@@ -30,7 +30,7 @@ import {
 	type PaymentTickResult,
 } from "./conversation-payments";
 import { ConversationStore, type InboxRow, type TurnOutcome } from "./conversation-store";
-import { HANDOFF, IMAGE_UNREADABLE } from "./copy";
+import { HANDOFF, IMAGE_UNREADABLE, STOREPAY_LINK } from "./copy";
 import type { Env } from "./env";
 import { errorFields, log, logError, turnFailedLog, turnLog } from "./log";
 import { createModel, modelName, providerOptions } from "./model";
@@ -64,6 +64,7 @@ const MAX_ATTEMPTS = 3;
 const REPROCESS_MAX_AGE_MS = 10 * 60_000;
 const FALLBACK_TEXT = "Шалгаад хэлье.";
 const HANDOFF_PAUSE_MS = 12 * 60 * 60_000;
+const PAUSE_FOLLOWUP_ALERT_MS = 15 * 60_000;
 const HUMAN_PAUSE_MS = 2 * 60 * 60_000;
 const HUMAN_SETTLE_MS = 15_000;
 const DUP_REPLY_WINDOW_MS = 15_000;
@@ -86,6 +87,17 @@ const isHumanOutgoing = (m: ListedMessage, floorAt: number, now: number): number
 	return m.sentVia === "human" || (m.sentVia === null && now - at > HUMAN_SETTLE_MS)
 		? at
 		: undefined;
+};
+
+const followupPayload = (
+	item: InboundItem | undefined,
+): { photoUrl?: string; text: string } | undefined => {
+	if (item === undefined) {
+		return undefined;
+	}
+	const photoUrl = (item.attachments ?? []).find((a) => a.type === "image" && a.url)?.url;
+	const text = item.text.trim();
+	return photoUrl || text.length > 0 ? { photoUrl: photoUrl ?? undefined, text } : undefined;
 };
 
 const replySignature = (reply: ReplyResult | undefined): string => {
@@ -218,6 +230,9 @@ export class Conversation extends Agent<Env> {
 
 	adminResume() {
 		this.store.deleteMeta("paused_until");
+		this.store.deleteMeta("pause_kind");
+		this.store.deleteMeta("paused_at");
+		this.store.deleteMeta("pause_alert_at");
 		this.store.setMeta("resumed_at", String(Date.now()));
 		return { resumed: true };
 	}
@@ -334,6 +349,7 @@ export class Conversation extends Agent<Env> {
 			}
 			await flush();
 			if (action.kind !== "claim" && this.store.isPaused()) {
+				await this.notifyPausedFollowup(seg.row);
 				this.store.markInboxDone(seg.row.event_id);
 				continue;
 			}
@@ -489,7 +505,7 @@ export class Conversation extends Agent<Env> {
 	}): Promise<void> {
 		const { attempt, inputs, rows, saved, started, turnId } = opts;
 		const outcome = await this.dispatchTurn({
-			handoffMessage: saved.handoffMessage,
+			handoffNote: saved.handoffNote,
 			handoffReason: saved.handoff,
 			paymentAction: saved.payment,
 			reply: saved.reply,
@@ -548,7 +564,7 @@ export class Conversation extends Agent<Env> {
 
 		this.store.saveTurnOutcome(turnId, {
 			handoff: handoff?.reason,
-			handoffMessage: handoff?.message,
+			handoffNote: handoff?.note,
 			payment: paymentAction,
 			reply,
 			superseded,
@@ -557,7 +573,7 @@ export class Conversation extends Agent<Env> {
 		this.store.persistTurn(turnId, persistedUserMessage, result.responseMessages, superseded);
 
 		const outcome = await this.dispatchTurn({
-			handoffMessage: handoff?.message,
+			handoffNote: handoff?.note,
 			handoffReason: handoff?.reason,
 			paymentAction,
 			receiptUrl: firstPhotoUrl,
@@ -682,7 +698,7 @@ export class Conversation extends Agent<Env> {
 	}
 
 	private async dispatchTurn(opts: {
-		handoffMessage?: string;
+		handoffNote?: string;
 		handoffReason: string | undefined;
 		paymentAction: PaymentAction | undefined;
 		receiptUrl?: string;
@@ -690,7 +706,7 @@ export class Conversation extends Agent<Env> {
 		superseded: boolean;
 		turnId: string;
 	}): Promise<string> {
-		const { handoffMessage, handoffReason, paymentAction, receiptUrl, reply, superseded, turnId } =
+		const { handoffNote, handoffReason, paymentAction, receiptUrl, reply, superseded, turnId } =
 			opts;
 		const io = this.io();
 		if (superseded) {
@@ -700,10 +716,7 @@ export class Conversation extends Agent<Env> {
 			return "paused_drop";
 		}
 		if (handoffReason !== undefined) {
-			if (handoffMessage && handoffMessage.trim().length > 0) {
-				await io.sendPart(`${turnId}:handoff_msg`, { message: handoffMessage.trim() });
-			}
-			await this.handoffToAdmin(handoffReason, `${turnId}:handoff`);
+			await this.dispatchHandoff(turnId, handoffReason, handoffNote);
 			return "handoff";
 		}
 		if (paymentAction !== undefined) {
@@ -789,7 +802,11 @@ export class Conversation extends Agent<Env> {
 				alert = "sent";
 			}
 		}
-		this.store.setMeta("paused_until", String(Date.now() + HANDOFF_PAUSE_MS));
+		const now = Date.now();
+		this.store.setMeta("paused_until", String(now + HANDOFF_PAUSE_MS));
+		this.store.setMeta("pause_kind", "handoff");
+		this.store.setMeta("paused_at", String(now));
+		this.store.setMeta("pause_alert_at", String(now));
 		const fields = {
 			alert,
 			alert_status: alertStatus,
@@ -802,6 +819,72 @@ export class Conversation extends Agent<Env> {
 			logError(fields);
 		} else {
 			log(fields);
+		}
+	}
+
+	private async dispatchHandoff(turnId: string, reason: string, note?: string): Promise<void> {
+		if (reason === "storepay_insist") {
+			await this.io().sendPart(`${turnId}:handoff_msg`, { message: STOREPAY_LINK });
+		}
+		const trimmedNote = note?.trim();
+		const extraLines = trimmedNote ? [`Тайлбар: ${trimmedNote}`] : undefined;
+		await this.handoffToAdmin(reason, `${turnId}:handoff`, extraLines);
+	}
+
+	private async notifyPausedFollowup(row: InboxRow): Promise<void> {
+		if (this.store.getMeta("pause_kind") !== "handoff") {
+			return;
+		}
+		const payload = followupPayload(this.itemFromRow(row));
+		if (payload === undefined) {
+			return;
+		}
+		const now = Date.now();
+		const lastAlertAt = Number(this.store.getMeta("pause_alert_at") ?? "0");
+		const alertKey = `followup:${row.event_id}`;
+		if (
+			(!payload.photoUrl && now - lastAlertAt < PAUSE_FOLLOWUP_ALERT_MS) ||
+			this.store.outboxHas(alertKey)
+		) {
+			return;
+		}
+		if (await this.hasHumanRepliedSincePause(now)) {
+			this.store.setMeta("pause_kind", "human");
+			return;
+		}
+		const extraLines = [
+			...(payload.text ? [`Шинэ мессеж: ${payload.text.slice(0, 300)}`] : []),
+			...(payload.photoUrl ? [`Зураг: ${payload.photoUrl}`] : []),
+		];
+		const res = await sendTelegramAlert(this.env, {
+			extraLines,
+			reason: payload.photoUrl ? "handoff_followup_photo" : "handoff_followup",
+			recentTexts: this.store.recentCustomerTexts(6),
+			threadId: this.name ?? "",
+		}).catch(() => undefined);
+		if (res?.ok) {
+			this.store.markOutbox(alertKey);
+			this.store.setMeta("pause_alert_at", String(now));
+		}
+	}
+
+	private async hasHumanRepliedSincePause(now: number): Promise<boolean> {
+		const pausedAt = Number(this.store.getMeta("paused_at") ?? "0");
+		if (!Number.isFinite(pausedAt) || pausedAt <= 0) {
+			return false;
+		}
+		const io = this.io();
+		try {
+			const messages = await listMessages(
+				this.env,
+				io.conversationId,
+				io.accountId,
+				15,
+				AbortSignal.timeout(3000),
+			);
+			return messages.some((m) => isHumanOutgoing(m, pausedAt, now) !== undefined);
+		} catch {
+			return false;
 		}
 	}
 
@@ -849,6 +932,8 @@ export class Conversation extends Agent<Env> {
 				return;
 			}
 			this.store.setMeta("paused_until", String(humanAt + HUMAN_PAUSE_MS));
+			this.store.setMeta("pause_kind", "human");
+			this.store.setMeta("paused_at", String(humanAt));
 			log({
 				event: "human_pause",
 				human_at: new Date(humanAt).toISOString(),

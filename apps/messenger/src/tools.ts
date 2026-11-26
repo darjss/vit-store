@@ -38,11 +38,13 @@ export const paymentActionSchema = v.variant("kind", [
 		kind: v.literal("claim"),
 		paymentNumber: v.string(),
 		receiptAmount: v.optional(v.number()),
+		replyText: v.optional(v.string()),
 	}),
 	v.object({ kind: v.literal("details"), paymentNumber: v.string() }),
 	v.object({
 		kind: v.literal("external_claim"),
 		receiptAmount: v.optional(v.number()),
+		replyText: v.optional(v.string()),
 	}),
 	v.object({ kind: v.literal("external_details") }),
 ]);
@@ -79,7 +81,7 @@ export const replyInputSchema = v.object({
 export type ReplyResult = v.InferOutput<typeof replyInputSchema>;
 
 export const handoffInputSchema = v.object({
-	message: v.optional(v.pipe(v.string(), v.maxLength(200))),
+	note: v.optional(v.pipe(v.string(), v.maxLength(200))),
 	reason: v.pipe(v.string(), v.minLength(1), v.maxLength(300)),
 });
 
@@ -88,6 +90,7 @@ export type HandoffResult = v.InferOutput<typeof handoffInputSchema>;
 export const paymentInputSchema = v.object({
 	kind: v.picklist(["claim", "details"]),
 	receiptAmount: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	replyText: v.optional(v.pipe(v.string(), v.maxLength(120))),
 });
 
 export type AdProduct = { id: number; name: string; price: number; stockStatus: string };
@@ -217,8 +220,8 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 
 	handoff: tool({
 		description:
-			"Админ руу шилжүүлэх. Бараа ирээгүй, гэмтэлтэй/буруу ирсэн, захиалга засах/цуцлах, гомдол, гааль/хууль эсвэл хүнтэй ярих хүсэлт. Нэмэлт мэдээлэл (ж: StorePay линк) өгөх бол message-д бич. Дуудсаны дараа reply хэрэггүй.",
-		execute: async ({ message, reason }) => ({ handedOff: true, message, reason }),
+			"Админ руу шилжүүлэх. Бараа ирээгүй, гэмтэлтэй/буруу ирсэн, захиалга засах/цуцлах, гомдол, гааль/хууль, админд өгсөн захиалга олдсонгүй эсвэл хүнтэй ярих хүсэлт. Админд харагдах товч тайлбарыг note-д бич (харилцагчид илгээгдэхгүй). Дуудсаны дараа reply хэрэггүй.",
+		execute: async ({ note, reason }) => ({ handedOff: true, note, reason }),
 		inputSchema: valibotSchema(handoffInputSchema),
 	}),
 
@@ -259,8 +262,9 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 
 	payment: tool({
 		description:
-			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Амжилттай бол код мессеж илгээнэ.',
-		execute: async ({ kind, receiptAmount }) => {
+			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Баримттай хамт асуулт бичсэн бол (ж: "хэзээ хүргэх вэ") товч хариуг replyText-д бич.',
+		execute: async ({ kind, receiptAmount, replyText }) => {
+			const cleanReply = replyText?.trim() || undefined;
 			const pendings = deps.pendingPayments();
 			if (pendings.length === 0) {
 				const latest = deps.latestPayment();
@@ -273,7 +277,7 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 				}
 				const fallback: PaymentAction =
 					kind === "claim"
-						? { kind: "external_claim", receiptAmount }
+						? { kind: "external_claim", receiptAmount, replyText: cleanReply }
 						: { kind: "external_details" };
 				return { action: fallback, handled: true };
 			}
@@ -283,7 +287,12 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 			}
 			const action: PaymentAction =
 				kind === "claim"
-					? { kind: "claim", paymentNumber: pending.paymentNumber, receiptAmount }
+					? {
+							kind: "claim",
+							paymentNumber: pending.paymentNumber,
+							receiptAmount,
+							replyText: cleanReply,
+						}
 					: { kind: "details", paymentNumber: pending.paymentNumber };
 			return { action, handled: true };
 		},
