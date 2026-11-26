@@ -23,8 +23,11 @@ import {
 	formatConfirmSummary,
 	formatItemSelected,
 	formatOrderCreated,
+	NEEDS_ADDRESS,
 	NEEDS_DELIVERY,
+	NEEDS_PHONE,
 	TRANSFER_PROMPT,
+	type MissingDeliveryField,
 } from "./copy";
 import { errorFields, log, logError } from "./log";
 import { storeClient, withTimeout } from "./store";
@@ -69,6 +72,22 @@ export const cartReplace = async (
 	io.store.replaceCart([...merged.values()]);
 };
 
+const missingDeliveryField = (checkout: Checkout): MissingDeliveryField | undefined => {
+	if (checkout.phone === undefined && checkout.address === undefined) {
+		return "both";
+	}
+	if (checkout.phone === undefined) {
+		return "phone";
+	}
+	if (checkout.address === undefined) {
+		return "address";
+	}
+	return undefined;
+};
+
+const needsDeliveryText = (missing: MissingDeliveryField): string =>
+	missing === "phone" ? NEEDS_PHONE : missing === "address" ? NEEDS_ADDRESS : NEEDS_DELIVERY;
+
 export const sendConfirmOrNeed = async (io: ConversationIO, key: string): Promise<void> => {
 	const lines = io.store.cartLines();
 	const checkout = io.store.checkout();
@@ -76,8 +95,9 @@ export const sendConfirmOrNeed = async (io: ConversationIO, key: string): Promis
 		await io.sendPart(key, { message: CART_EMPTY });
 		return;
 	}
-	if (checkout.phone === undefined || checkout.address === undefined) {
-		await io.sendPart(key, { message: NEEDS_DELIVERY });
+	const missing = missingDeliveryField(checkout);
+	if (missing !== undefined || checkout.phone === undefined || checkout.address === undefined) {
+		await io.sendPart(key, { message: needsDeliveryText(missing ?? "both") });
 		return;
 	}
 	await io.sendPart(key, {
@@ -211,9 +231,13 @@ export const confirmOrder = async (
 		io.tapLog(`order_confirm_${source}`, "empty");
 		return;
 	}
-	if (checkout.phone === undefined || checkout.address === undefined) {
-		await io.sendPart(`${key}:tap`, { message: NEEDS_DELIVERY });
+	const missing = missingDeliveryField(checkout);
+	if (missing !== undefined) {
+		await io.sendPart(`${key}:tap`, { message: needsDeliveryText(missing) });
 		io.tapLog(`order_confirm_${source}`, "needs_delivery");
+		return;
+	}
+	if (checkout.phone === undefined || checkout.address === undefined) {
 		return;
 	}
 	await createOrder(
@@ -267,13 +291,17 @@ const orderProductTap = async (
 		selected = io.store.cartLines().find((l) => l.productId === productId);
 	}
 
-	const checkout = io.store.checkout();
-	if (checkout.phone !== undefined && checkout.address !== undefined) {
+	if (io.store.hasNewerPendingInbox(row.seq)) {
+		io.tapLog("order_product", "added_deferred");
+		return;
+	}
+	const missing = missingDeliveryField(io.store.checkout());
+	if (missing === undefined) {
 		await sendConfirmOrNeed(io, `${key}:tap`);
 	} else if (selected !== undefined) {
-		await io.sendPart(`${key}:tap`, { message: formatItemSelected(selected.price) });
+		await io.sendPart(`${key}:tap`, { message: formatItemSelected(selected.price, missing) });
 	} else {
-		await io.sendPart(`${key}:tap`, { message: NEEDS_DELIVERY });
+		await io.sendPart(`${key}:tap`, { message: needsDeliveryText(missing) });
 	}
 	io.tapLog("order_product", "added");
 };

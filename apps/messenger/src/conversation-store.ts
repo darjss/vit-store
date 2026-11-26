@@ -15,7 +15,7 @@ export const CONFIRM_TEXT_TTL_MS = 30 * 60_000;
 
 export type TurnOutcome = {
 	handoff?: string;
-	handoffMessage?: string;
+	handoffNote?: string;
 	payment?: PaymentAction;
 	reply?: ReplyResult;
 	superseded?: boolean;
@@ -331,6 +331,13 @@ export class ConversationStore {
 		return this.agent.sql<InboxRow>`
 			SELECT event_id, seq, payload, status, at, claimed_at, attempts, turn_id FROM inbox
 			WHERE status = 'pending' ORDER BY seq ASC`;
+	}
+
+	hasNewerPendingInbox(seq: number): boolean {
+		return (
+			this.agent.sql`
+				SELECT event_id FROM inbox WHERE seq > ${seq} AND status = 'pending' LIMIT 1`.length > 0
+		);
 	}
 
 	hasUnfinishedInbox(): boolean {

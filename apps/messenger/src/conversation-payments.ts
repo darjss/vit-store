@@ -477,8 +477,12 @@ const handleExternalClaim = async (
 	turnId: string,
 	receiptAmount?: number,
 	receiptUrl?: string,
+	replyText?: string,
 ): Promise<string> => {
 	await io.sendPart(`${turnId}:ext_claim`, { message: CLAIM_ACK });
+	if (replyText) {
+		await io.sendPart(`${turnId}:claim_reply`, { message: replyText });
+	}
 	const alertKey = `${turnId}:ext_claim_alert`;
 	if (!io.store.outboxHas(alertKey)) {
 		const phone = io.store.checkout().phone;
@@ -522,13 +526,16 @@ export const dispatchPaymentAction = async (
 		return "payment_external_details";
 	}
 	if (action.kind === "external_claim") {
-		return handleExternalClaim(io, turnId, action.receiptAmount, receiptUrl);
+		return handleExternalClaim(io, turnId, action.receiptAmount, receiptUrl, action.replyText);
 	}
 	if (action.kind === "claim") {
 		await claimTransfer(io, turnId, action.paymentNumber, {
 			amount: action.receiptAmount,
 			url: receiptUrl,
 		});
+		if (action.replyText) {
+			await io.sendPart(`${turnId}:claim_reply`, { message: action.replyText });
+		}
 		return "payment_claimed";
 	}
 	await sendBankDetails(io, turnId, action.paymentNumber, false);

@@ -7,6 +7,8 @@ export const DISPATCH_COUNTRYSIDE = "Төлбөр орсны дараа унаа
 export const CART_EMPTY = 'Сагс хоосон байна. Бараагаа сонгоод "Сонгох" дараарай.';
 export const CART_CHANGED = "Сагс өөрчлөгдсөн байна, дахин шалгаарай.";
 export const NEEDS_DELIVERY = "За, хаяг утсаа үлдээгээрэй 🙏";
+export const NEEDS_PHONE = "За, утасны дугаараа үлдээгээрэй 🙏";
+export const NEEDS_ADDRESS = "За, хаягаа үлдээгээрэй 🙏";
 export const EDIT_PROMPT = "Юу өөрчлөх вэ?";
 
 // Welcome-screen buttons.
@@ -16,6 +18,8 @@ export const DELIVERY_INFO = `УБ хүргэлт ${Math.round(deliveryFee).toLo
 export const CLAIM_ACK = "Баярлалаа 🙏 Шалгаад баталгаажуулъя.";
 export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
 export const HANDOFF = "Админ удахгүй хариулна 🙏";
+export const STOREPAY_LINK =
+	"StorePay-ээр авах бол +11% нэмэгдээд https://zary.mn/stores/54723 линкээр захиалж болно.";
 export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, дахин явуулна уу.";
 export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин бичээрэй.";
 
@@ -58,8 +62,20 @@ export const cardTitle = (name: string, brand = ""): string => {
 	return `${(space > 24 ? cut.slice(0, space) : cut).replace(/[,\s-]+$/, "")}…`;
 };
 
-export const formatItemSelected = (price: number): string =>
-	`Сонголоо (${mnt(price)}) ✓ Өөр бараа нэмэх үү, эсвэл хаяг утсаа үлдээгээрэй.`;
+export type MissingDeliveryField = "address" | "both" | "phone";
+
+export const formatItemSelected = (
+	price: number,
+	missing: MissingDeliveryField = "both",
+): string => {
+	const ask =
+		missing === "phone"
+			? "утсаа үлдээгээрэй."
+			: missing === "address"
+				? "хаягаа үлдээгээрэй."
+				: "хаяг утсаа үлдээгээрэй.";
+	return `Сонголоо (${mnt(price)}) ✓ Өөр бараа нэмэх үү, эсвэл ${ask}`;
+};
 
 export const formatConfirmSummary = (input: {
 	address: string;
