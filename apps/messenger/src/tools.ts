@@ -73,7 +73,7 @@ export const replyInputSchema = v.object({
 	productIds: v.optional(
 		v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(6)),
 	),
-	text: v.optional(v.pipe(v.string(), v.maxLength(200))),
+	text: v.optional(v.pipe(v.string(), v.maxLength(140))),
 });
 
 export type ReplyResult = v.InferOutput<typeof replyInputSchema>;

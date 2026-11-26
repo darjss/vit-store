@@ -1,26 +1,25 @@
 // Owner-approved customer-facing text. The model never produces these.
 import { bankTransfer, deliveryFee } from "@vit/shared/constants";
 
-export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ.";
-export const DISPATCH_COUNTRYSIDE =
-	"Төлбөр орсны дараа өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна.";
+export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ.";
+export const DISPATCH_COUNTRYSIDE = "Төлбөр орсны дараа унаанд тавьж явуулна.";
 
-export const CART_EMPTY = 'Сагс хоосон байна. Бараагаа сонгоод "Сонгох" дээр дарна уу.';
-export const CART_CHANGED = "Сагс өөрчлөгдсөн байна. Шинэ мэдээллээ шалгаарай.";
+export const CART_EMPTY = 'Сагс хоосон байна. Бараагаа сонгоод "Сонгох" дараарай.';
+export const CART_CHANGED = "Сагс өөрчлөгдсөн байна, дахин шалгаарай.";
 export const NEEDS_DELIVERY = "За, хаяг утсаа үлдээгээрэй 🙏";
-export const EDIT_PROMPT = "Юу өөрчлөх вэ? Бичээд эсвэл доороос сонгоорой:";
+export const EDIT_PROMPT = "Юу өөрчлөх вэ?";
 
 // Welcome-screen buttons.
-export const ASK_PRODUCT = "Ямар бараа сонирхож байна вэ? Нэрийг нь бичээрэй.";
-export const DELIVERY_INFO = `Улаанбаатарт хүргэлт ${Math.round(deliveryFee).toLocaleString("en-US")}₮, өнөөдөр эсвэл маргааш 12 цагаас хойш орой болтол хүргэнэ (бараагаа хүлээж аваад шилжүүлж болно). Орон нутаг руу төлбөр орсны дараа автобус, таксинд тавьж явуулна.`;
+export const ASK_PRODUCT = "Ямар витамин сонирхож байна вэ?";
+export const DELIVERY_INFO = `УБ хүргэлт ${Math.round(deliveryFee).toLocaleString("en-US")}₮, өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ (бараагаа аваад шилжүүлж болно). Орон нутаг руу төлбөр орсны дараа унаанд тавина.`;
 
-export const CLAIM_ACK = "Баярлалаа 🙏 Шилжүүлгийг шалгаад баталгаажуулна.";
+export const CLAIM_ACK = "Баярлалаа 🙏 Шалгаад баталгаажуулъя.";
 export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
 export const HANDOFF = "Админ удахгүй хариулна 🙏";
-export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, дахин илгээнэ үү.";
-export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин оролдоно уу.";
+export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, дахин явуулна уу.";
+export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин бичээрэй.";
 
-export const CONFIRM_PROMPT = 'Зөв бол "За" гэж бичих эсвэл товчоо дараарай 👇';
+export const CONFIRM_PROMPT = 'Зөв бол "За" эсвэл товчоо дараарай 👇';
 export const TRANSFER_PROMPT = "Шилжүүлсний дараа дарна уу 👇";
 
 export const STOCK_LABEL = {
@@ -31,7 +30,7 @@ export const STOCK_LABEL = {
 
 export const mnt = (amount: number): string => `${Math.round(amount).toLocaleString("en-US")}₮`;
 
-const CARD_TITLE_MAX = 68;
+const CARD_TITLE_MAX = 44;
 const IHERB_NOISE_RE =
 	/\b(dietary supplement|flavored with other natural flavors|natural flavors?|per serving)\b/gi;
 
@@ -59,8 +58,8 @@ export const cardTitle = (name: string, brand = ""): string => {
 	return `${(space > 24 ? cut.slice(0, space) : cut).replace(/[,\s-]+$/, "")}…`;
 };
 
-export const formatItemSelected = (name: string, price: number): string =>
-	`${cardTitle(name)} (${mnt(price)}) сонголоо. Өөр бараа нэмэх бол бичээрэй, үгүй бол хаяг утсаа үлдээгээрэй.`;
+export const formatItemSelected = (price: number): string =>
+	`Сонголоо (${mnt(price)}) ✓ Өөр бараа нэмэх үү, эсвэл хаяг утсаа үлдээгээрэй.`;
 
 export const formatConfirmSummary = (input: {
 	address: string;
@@ -92,16 +91,10 @@ export const formatOrderCreated = (input: {
 	total: number;
 }): string =>
 	[
-		`Захиалга авлаа 🙏 №${input.orderNumber}`,
-		input.countryside ? DISPATCH_COUNTRYSIDE : DELIVERY_UB,
-		`Дүн: ${mnt(input.total)}`,
-		"",
-		input.countryside
-			? "Дансаар шилжүүлэх мэдээлэл:"
-			: "Бараагаа хүлээж аваад шилжүүлнэ үү (урьдчилан шилжүүлж болно):",
-		`Хаан банк ${input.accountNumber}`,
-		input.accountName,
-		`Гүйлгээний утга: ${input.phone}`,
+		`Захиалга авлаа 🙏 №${input.orderNumber} · ${mnt(input.total)}`,
+		input.countryside ? DISPATCH_COUNTRYSIDE : `${DELIVERY_UB} Бараагаа аваад шилжүүлээрэй.`,
+		`Хаан банк ${input.accountNumber} (${input.accountName})`,
+		`Утга: ${input.phone}`,
 	].join("\n");
 
 export const formatBankDue = (input: {
@@ -113,11 +106,10 @@ export const formatBankDue = (input: {
 }): string =>
 	[
 		input.delivered
-			? `Бараа тань очлоо 🙏 ${mnt(input.total)}-өө шилжүүлээрэй:`
-			: `${mnt(input.total)}-өө шилжүүлээрэй 🙏`,
-		`Хаан банк ${input.accountNumber}`,
-		input.accountName,
-		`Гүйлгээний утга: ${input.phone}`,
+			? `Бараа тань очлоо 🙏 ${mnt(input.total)}`
+			: `${mnt(input.total)} шилжүүлээрэй 🙏`,
+		`Хаан банк ${input.accountNumber} (${input.accountName})`,
+		`Утга: ${input.phone}`,
 	].join("\n");
 
 export const formatReminder = (input: {
@@ -126,14 +118,14 @@ export const formatReminder = (input: {
 	phone: string;
 	total: number;
 }): string =>
-	`Сайн байна уу 🙏 №${input.orderNumber}-ийн ${mnt(input.total)}-өө шилжүүлээд өгөөрэй. Хаан банк ${input.accountNumber}, утга ${input.phone}`;
+	`№${input.orderNumber}-ийн ${mnt(input.total)} шилжүүлээрэй 🙏 Хаан банк ${input.accountNumber}, утга ${input.phone}`;
 
 export const formatExternalBankDetails = (phone?: string): string =>
 	[
-		`Хаан банк ${bankTransfer.accountNumber}`,
-		bankTransfer.accountName,
-		phone ? `Гүйлгээний утга: ${phone}` : "Гүйлгээний утга дээр утасны дугаараа бичээрэй.",
-		"Шилжүүлээд баримтаа энд илгээгээрэй 🙏",
+		`Хаан банк ${bankTransfer.accountNumber} (${bankTransfer.accountName})`,
+		phone
+			? `Утга: ${phone} · Баримтаа явуулаарай 🙏`
+			: "Утга: утасны дугаар · Баримтаа явуулаарай 🙏",
 	].join("\n");
 
 export const formatPaid = (countryside: boolean): string =>

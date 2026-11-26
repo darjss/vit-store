@@ -271,7 +271,7 @@ const orderProductTap = async (
 	if (checkout.phone !== undefined && checkout.address !== undefined) {
 		await sendConfirmOrNeed(io, `${key}:tap`);
 	} else if (selected !== undefined) {
-		await io.sendPart(`${key}:tap`, { message: formatItemSelected(selected.name, selected.price) });
+		await io.sendPart(`${key}:tap`, { message: formatItemSelected(selected.price) });
 	} else {
 		await io.sendPart(`${key}:tap`, { message: NEEDS_DELIVERY });
 	}
