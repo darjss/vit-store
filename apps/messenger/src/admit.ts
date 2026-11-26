@@ -65,23 +65,29 @@ export type ZernioMessageEvent = v.InferOutput<typeof zernioMessageEventSchema>;
 const envelopeSchema = v.looseObject({ event: v.optional(v.string()) });
 
 // Internal / non-customer accounts the bot must never answer.
-const IGNORED_PARTICIPANT_IDS = new Set([
+const PACKER_PARTICIPANT_IDS = new Set([
 	"8150131448402413", // Tsogzolmaa Jigjidsuren
 ]);
-const IGNORED_PARTICIPANT_NAMES = new Set(["tsogzolmaa jigjidsuren", "aviddaram bazarragchaa"]);
+const PACKER_PARTICIPANT_NAMES = new Set(["tsogzolmaa jigjidsuren"]);
+const IGNORED_PARTICIPANT_NAMES = new Set(["aviddaram bazarragchaa"]);
 
 const normalizeName = (name: string | null | undefined): string =>
 	(name ?? "").trim().toLowerCase().replaceAll(/\s+/g, " ");
 
-const isIgnoredParticipant = (event: ZernioMessageEvent): boolean => {
+const isPackerParticipant = (event: ZernioMessageEvent): boolean => {
 	const ids = [
 		event.message.sender?.id,
 		event.conversation.participantId,
 		event.conversation.platformConversationId,
 	];
-	if (ids.some((id) => id !== undefined && IGNORED_PARTICIPANT_IDS.has(id))) {
+	if (ids.some((id) => id !== undefined && PACKER_PARTICIPANT_IDS.has(id))) {
 		return true;
 	}
+	const names = [event.message.sender?.name, event.conversation.participantName];
+	return names.some((name) => PACKER_PARTICIPANT_NAMES.has(normalizeName(name)));
+};
+
+const isIgnoredParticipant = (event: ZernioMessageEvent): boolean => {
 	const names = [event.message.sender?.name, event.conversation.participantName];
 	return names.some((name) => IGNORED_PARTICIPANT_NAMES.has(normalizeName(name)));
 };
@@ -149,7 +155,8 @@ export type Admission =
 			ok: true;
 			threadId: string;
 	  }
-	| { ok: false; response: Response };
+	| { event: ZernioMessageEvent; kind: "packer"; ok: false; response: Response }
+	| { kind?: "drop"; ok: false; response: Response };
 
 // Admission runs BEFORE Chat SDK: signature gate first, then the event filter,
 // so a rejected event never reaches the adapter or the DOs.
@@ -191,9 +198,14 @@ export const admit = async (request: Request, env: Env, rawBody: string): Promis
 	if (
 		event.message.direction !== "incoming" ||
 		event.message.platform !== "facebook" ||
-		!allowed.includes(event.account.id) ||
-		isIgnoredParticipant(event)
+		!allowed.includes(event.account.id)
 	) {
+		return { ok: false, response: new Response("ok", { status: 200 }) };
+	}
+	if (isPackerParticipant(event)) {
+		return { event, kind: "packer", ok: false, response: new Response("ok", { status: 200 }) };
+	}
+	if (isIgnoredParticipant(event)) {
 		return { ok: false, response: new Response("ok", { status: 200 }) };
 	}
 

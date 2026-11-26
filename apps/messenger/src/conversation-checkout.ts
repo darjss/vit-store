@@ -182,6 +182,9 @@ const createOrder = async (
 		io.store.clearLastOutbound();
 		await io.ensurePaymentWatch(res.paymentNumber);
 		await sendOrderCreated(io, row, `${key}:order`);
+		if (!checkout.countryside) {
+			io.triggerOrderDispatch(res.orderNumber);
+		}
 		log({
 			countryside: checkout.countryside,
 			event: "order",

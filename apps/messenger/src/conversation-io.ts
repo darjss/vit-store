@@ -11,6 +11,7 @@ export type ConversationIO = {
 	accountId: string;
 	adProducts(): Promise<Array<AdProduct>>;
 	conversationId: string;
+	customerName(): string | undefined;
 	ensurePaymentWatch(paymentNumber: string): Promise<void>;
 	env: Env;
 	handoffToAdmin(reason: string, sendKey: string, extraLines?: Array<string>): Promise<void>;
@@ -20,6 +21,7 @@ export type ConversationIO = {
 	store: ConversationStore;
 	tapLog(kind: string, outcome: string, paymentNumber?: string): void;
 	thread: string;
+	triggerOrderDispatch(orderNumber: string): void;
 };
 
 export const parseThreadId = (thread: string) => {
@@ -41,12 +43,14 @@ export const createConversationIO = (opts: {
 	handoffToAdmin(reason: string, sendKey: string, extraLines?: Array<string>): Promise<void>;
 	store: ConversationStore;
 	thread: string;
+	triggerOrderDispatch(orderNumber: string): void;
 }): ConversationIO => {
 	const { accountId, conversationId } = parseThreadId(opts.thread);
 	return {
 		accountId,
 		adProducts: opts.adProducts,
 		conversationId,
+		customerName: () => opts.store.getMeta("customer_name"),
 		ensurePaymentWatch: opts.ensurePaymentWatch,
 		env: opts.env,
 		handoffToAdmin: opts.handoffToAdmin,
@@ -85,5 +89,6 @@ export const createConversationIO = (opts: {
 			});
 		},
 		thread: opts.thread,
+		triggerOrderDispatch: opts.triggerOrderDispatch,
 	};
 };

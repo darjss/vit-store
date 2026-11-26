@@ -1,9 +1,11 @@
+import { getAgentByName } from "agents";
 import type { Api } from "grammy";
 import {
 	parseTelegramCallbackData,
 	TELEGRAM_CALLBACK_ACTIONS,
 } from "@vit/api/lib/integrations/admin-notifications/telegram-callback-data";
 import type { Env } from "../env";
+import { SUMMARY_INLINE_BUTTONS } from "../ops";
 import { shipAllPaidPendingOrders } from "./ship-paid-orders";
 import { adminApi, isAdminUser, type TelegramCallbackQuery } from "./telegram";
 import { withTelegramTyping } from "./telegram-typing";
@@ -125,6 +127,58 @@ const handleConfirmCallback = async (
 	await deps.enqueueTurn(buildConfirmText(boundMessageId), updateId, chatId);
 };
 
+const handleOpsCallback = async (
+	env: Env,
+	api: Api,
+	chatId: number,
+	messageId: number,
+	data: string,
+): Promise<boolean> => {
+	const ingress = await getAgentByName(env.Ingress, "default");
+	if (data === "ops_refresh") {
+		const summary = await ingress.buildDailySummary();
+		await api
+			.editMessageText(chatId, messageId, summary, {
+				link_preview_options: { is_disabled: true },
+				reply_markup: { inline_keyboard: SUMMARY_INLINE_BUTTONS },
+			})
+			.catch(() =>
+				api.sendMessage(chatId, summary, {
+					link_preview_options: { is_disabled: true },
+					reply_markup: { inline_keyboard: SUMMARY_INLINE_BUTTONS },
+				}),
+			);
+		return true;
+	}
+	if (data === "ops_dispatch") {
+		const res = await ingress.dispatchPendingOrders();
+		const msg =
+			res.dispatched > 0
+				? `✅ Цогзолмаа руу ${res.dispatched} шинэ захиалга илгээлээ.`
+				: res.failed > 0
+					? `⚠️ ${res.failed} захиалга илгээгдсэнгүй (Цогзолмаагийн 24ц цонх шалгана уу).`
+					: "Илгээгүй шинэ захиалга алга байна.";
+		await api.sendMessage(chatId, msg, { link_preview_options: { is_disabled: true } });
+		return true;
+	}
+	if (data.startsWith("resume:")) {
+		const convId = data.slice("resume:".length).trim();
+		const resolved = await ingress.resolveThread(convId);
+		if (resolved.threadId === undefined) {
+			await api.sendMessage(chatId, "Энэ чат олдсонгүй.");
+			return true;
+		}
+		const conversation = await getAgentByName(env.Conversation, resolved.threadId);
+		await conversation.adminResume();
+		await ingress.clearHandoff(resolved.threadId);
+		await clearInlineButtons(api, chatId, messageId).catch(() => {});
+		const who = resolved.customerName ? ` — ${resolved.customerName}` : "";
+		await api.sendMessage(chatId, `✅ Бот дахин аслаа${who}`);
+		return true;
+	}
+	return false;
+};
+
 export const handleTelegramCallback = async (
 	env: Env,
 	deps: CallbackDeps,
@@ -144,12 +198,15 @@ export const handleTelegramCallback = async (
 
 	const data = query.data?.trim() ?? "";
 	const previewAction = parseTelegramCallbackData(data).action;
-	if (previewAction === TELEGRAM_CALLBACK.SHIP_ALL) {
+	if (previewAction === TELEGRAM_CALLBACK.SHIP_ALL || data === "ops_dispatch") {
 		await api.answerCallbackQuery(query.id, { text: "Илгээж байна…" });
 	} else {
 		await api.answerCallbackQuery(query.id);
 	}
 	if (data === "") {
+		return;
+	}
+	if (await handleOpsCallback(env, api, query.message.chat.id, query.message.message_id, data)) {
 		return;
 	}
 

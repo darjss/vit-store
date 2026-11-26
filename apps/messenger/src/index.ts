@@ -133,8 +133,11 @@ export default {
 		return new Response("not found", { status: 404 });
 	},
 	async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
-		const bridge = await getAgentByName(env.OrderBridge, "default");
-		await bridge.tick();
+		const [bridge, ingress] = await Promise.all([
+			getAgentByName(env.OrderBridge, "default"),
+			getAgentByName(env.Ingress, "default"),
+		]);
+		await Promise.all([bridge.tick(), ingress.opsTick()]);
 	},
 } satisfies ExportedHandler<Env>;
 
