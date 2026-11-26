@@ -1,5 +1,5 @@
 import { generateText, hasToolCall, isStepCount, type ModelMessage, type ToolSet } from "ai";
-import { Agent } from "agents";
+import { Agent, getAgentByName } from "agents";
 import * as v from "valibot";
 
 import { zernioMessageEventSchema } from "./admit";
@@ -128,6 +128,13 @@ export class Conversation extends Agent<Env> {
 				this.handoffToAdmin(reason, sendKey, extraLines),
 			store: this.store,
 			thread: this.name ?? "",
+			triggerOrderDispatch: (orderNumber) => {
+				this.ctx.waitUntil(
+					getAgentByName(this.env.Ingress, "default")
+						.then((ingress) => ingress.dispatchOrderByNumber(orderNumber))
+						.catch(() => {}),
+				);
+			},
 		});
 		return this.ioCache;
 	}
@@ -151,6 +158,12 @@ export class Conversation extends Agent<Env> {
 		const adId = parsed.output.payload.metadata?.referral?.ad_id;
 		if (adId && this.store.getMeta("ad_id") === undefined) {
 			this.store.setMeta("ad_id", adId);
+		}
+		const participantName =
+			parsed.output.payload.conversation.participantName?.trim() ||
+			parsed.output.payload.message.sender?.name?.trim();
+		if (participantName) {
+			this.store.setMeta("customer_name", participantName);
 		}
 		const inserted = this.store.insertInbox(
 			parsed.output.eventId,
@@ -234,6 +247,7 @@ export class Conversation extends Agent<Env> {
 		this.store.deleteMeta("paused_at");
 		this.store.deleteMeta("pause_alert_at");
 		this.store.setMeta("resumed_at", String(Date.now()));
+		this.clearHandoffInIngress();
 		return { resumed: true };
 	}
 
@@ -786,10 +800,12 @@ export class Conversation extends Agent<Env> {
 		if (this.store.outboxHas(alertKey)) {
 			alert = "already_sent";
 		} else {
+			const recentTexts = this.store.recentCustomerTexts(10);
 			const result = await sendTelegramAlert(this.env, {
+				customerName: this.store.getMeta("customer_name"),
 				extraLines,
 				reason,
-				recentTexts: this.store.recentCustomerTexts(10),
+				recentTexts,
 				threadId: this.name ?? "",
 			}).catch(() => undefined);
 			if (result === undefined) {
@@ -807,6 +823,7 @@ export class Conversation extends Agent<Env> {
 		this.store.setMeta("pause_kind", "handoff");
 		this.store.setMeta("paused_at", String(now));
 		this.store.setMeta("pause_alert_at", String(now));
+		this.recordHandoffInIngress(reason, extraLines);
 		const fields = {
 			alert,
 			alert_status: alertStatus,
@@ -850,6 +867,7 @@ export class Conversation extends Agent<Env> {
 		}
 		if (await this.hasHumanRepliedSincePause(now)) {
 			this.store.setMeta("pause_kind", "human");
+			this.clearHandoffInIngress();
 			return;
 		}
 		const extraLines = [
@@ -857,6 +875,7 @@ export class Conversation extends Agent<Env> {
 			...(payload.photoUrl ? [`Зураг: ${payload.photoUrl}`] : []),
 		];
 		const res = await sendTelegramAlert(this.env, {
+			customerName: this.store.getMeta("customer_name"),
 			extraLines,
 			reason: payload.photoUrl ? "handoff_followup_photo" : "handoff_followup",
 			recentTexts: this.store.recentCustomerTexts(6),
@@ -866,6 +885,32 @@ export class Conversation extends Agent<Env> {
 			this.store.markOutbox(alertKey);
 			this.store.setMeta("pause_alert_at", String(now));
 		}
+	}
+
+	private recordHandoffInIngress(reason: string, extraLines?: Array<string>): void {
+		const threadId = this.name ?? "";
+		if (!threadId) {
+			return;
+		}
+		const summary = extraLines?.[0] ?? this.store.recentCustomerTexts(1)[0] ?? "";
+		const customerName = this.store.getMeta("customer_name") ?? "";
+		this.ctx.waitUntil(
+			getAgentByName(this.env.Ingress, "default")
+				.then((ingress) => ingress.recordHandoff({ customerName, reason, summary, threadId }))
+				.catch(() => {}),
+		);
+	}
+
+	private clearHandoffInIngress(): void {
+		const threadId = this.name ?? "";
+		if (!threadId) {
+			return;
+		}
+		this.ctx.waitUntil(
+			getAgentByName(this.env.Ingress, "default")
+				.then((ingress) => ingress.clearHandoff(threadId))
+				.catch(() => {}),
+		);
 	}
 
 	private async hasHumanRepliedSincePause(now: number): Promise<boolean> {
@@ -934,6 +979,7 @@ export class Conversation extends Agent<Env> {
 			this.store.setMeta("paused_until", String(humanAt + HUMAN_PAUSE_MS));
 			this.store.setMeta("pause_kind", "human");
 			this.store.setMeta("paused_at", String(humanAt));
+			this.clearHandoffInIngress();
 			log({
 				event: "human_pause",
 				human_at: new Date(humanAt).toISOString(),

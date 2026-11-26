@@ -1,9 +1,10 @@
 import { generateText, isStepCount, type ModelMessage, type ToolSet } from "ai";
-import { Agent } from "agents";
+import { Agent, getAgentByName } from "agents";
 import * as v from "valibot";
 import type { Env } from "../env";
 import { errorFields } from "../log";
 import { createModel, modelName } from "../model";
+import { SUMMARY_INLINE_BUTTONS } from "../ops";
 import { handleTelegramCallback } from "./callbacks";
 import { serializeCodemodeJson } from "./codemode-boundary";
 import { buildChatOrderImageExtractTool, buildPurchaseImageExtractTool } from "./extract-tools";
@@ -111,6 +112,14 @@ export class Admin extends Agent<Env> {
 		if (admitted !== "ok") {
 			return admitted === "reply";
 		}
+		if (this.seenBefore(updateId)) {
+			return true;
+		}
+		const rawText = message.text?.trim() ?? "";
+		if ((message.photo?.length ?? 0) === 0 && /^\/(today|status|тайлан)$/i.test(rawText)) {
+			await this.sendDailySummary(message.chat.id, updateId);
+			return true;
+		}
 		return this.dispatchMessage(message, updateId);
 	}
 
@@ -119,9 +128,6 @@ export class Admin extends Agent<Env> {
 		const hasPhoto = (message.photo?.length ?? 0) > 0;
 		if (text === "" && !hasPhoto) {
 			return false;
-		}
-		if (this.seenBefore(updateId)) {
-			return true;
 		}
 
 		const imageKeys = hasPhoto ? await this.stagePhoto(message) : [];
@@ -146,6 +152,20 @@ export class Admin extends Agent<Env> {
 		// no-op for it.
 		void this.sql`INSERT OR IGNORE INTO seen (update_id) VALUES (${updateId})`;
 		return true;
+	}
+
+	private async sendDailySummary(chatId: number, updateId: number): Promise<void> {
+		void this.sql`INSERT OR IGNORE INTO seen (update_id) VALUES (${updateId})`;
+		const api = adminApi(this.env);
+		if (api === undefined) {
+			return;
+		}
+		const ingress = await getAgentByName(this.env.Ingress, "default");
+		const summary = await ingress.buildDailySummary();
+		await api.sendMessage(chatId, summary, {
+			link_preview_options: { is_disabled: true },
+			reply_markup: { inline_keyboard: SUMMARY_INLINE_BUTTONS },
+		});
 	}
 
 	// The turn itself is durable-queue work: the webhook returns once the

@@ -13,7 +13,7 @@ import {
 } from "./copy";
 import { errorFields, log, logError } from "./log";
 import { storeClient, withTimeout } from "./store";
-import { sendTelegramAlert, sendTelegramOpsNudge } from "./telegram";
+import { sendTelegramAlert, sendTelegramOpsNote, sendTelegramOpsNudge } from "./telegram";
 import type { PaymentAction } from "./tools";
 
 const checkPaymentSchema = v.object({ paymentNumber: v.pipe(v.string(), v.minLength(1)) });
@@ -96,6 +96,7 @@ const nudgeOps = async (io: ConversationIO, row: Payment, reason: string): Promi
 		return false;
 	}
 	const res = await sendTelegramOpsNudge(io.env, {
+		customerName: io.customerName(),
 		orderNumber: row.orderNumber,
 		phone: row.phone,
 		reason,
@@ -109,9 +110,28 @@ const nudgeOps = async (io: ConversationIO, row: Payment, reason: string): Promi
 	return false;
 };
 
+const notifyMomPaidOnce = async (io: ConversationIO, row: Payment): Promise<void> => {
+	const key = `pay_${row.paymentNumber}:mom_paid`;
+	if (io.store.outboxHas(key)) {
+		return;
+	}
+	const name = io.customerName();
+	const lines = [
+		"💰 Төлбөр орлоо (Хаан банк)",
+		...(name ? [`👤 ${name}`] : []),
+		`№${row.orderNumber} · ${Math.round(row.total).toLocaleString("en-US")}₮ · Утас: ${row.phone}`,
+	];
+	const res = await sendTelegramOpsNote(io.env, lines.join("\n")).catch(() => undefined);
+	if (res?.ok) {
+		io.store.markOutbox(key);
+	}
+};
+
 const handlePaid = async (io: ConversationIO, row: Payment, status: string): Promise<boolean> => {
 	const paidKey = `pay_${row.paymentNumber}:paid`;
 	io.store.markPaymentStatus(row.paymentNumber, "success");
+	await notifyMomPaidOnce(io, row);
+	io.triggerOrderDispatch(row.orderNumber);
 	// Past Meta's 23h window, mark skipped in outbox instead of failing with error 10.
 	if (!io.store.within23h()) {
 		io.store.markOutbox(paidKey);
@@ -492,6 +512,7 @@ const handleExternalClaim = async (
 			...(receiptUrl ? [`Баримт: ${receiptUrl}`] : []),
 		];
 		const res = await sendTelegramAlert(io.env, {
+			customerName: io.customerName(),
 			extraLines,
 			reason: "external_transfer_claim",
 			recentTexts: io.store.recentCustomerTexts(6),

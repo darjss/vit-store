@@ -63,6 +63,14 @@ export type LogEvent =
 	| { event: "history_prefill"; outcome: string; thread: string }
 	| { event: "human_pause"; human_at: string; thread: string }
 	| {
+			error?: { message: string; name: string };
+			event: "packer_dispatch";
+			order_number: string;
+			outcome: "error" | "sent";
+			seq: number;
+			total?: number;
+	  }
+	| {
 			ad_id?: string;
 			event: "inbound";
 			event_id: string;
