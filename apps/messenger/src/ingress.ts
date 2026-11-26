@@ -37,7 +37,7 @@ export class Ingress extends Agent<Env> {
 		const bot = new Chat({
 			adapters: { zernio },
 			concurrency: {
-				debounceMs: 1000,
+				debounceMs: 2500,
 				maxQueueSize: 30,
 				onQueueFull: "drop-newest",
 				strategy: "burst",

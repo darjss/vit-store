@@ -612,6 +612,14 @@ export class ConversationStore {
 		}
 	}
 
+	appendHumanReply(id: string, text: string, at: number): void {
+		const message: ModelMessage = {
+			content: [{ text: text.slice(0, 500), type: "text" }],
+			role: "assistant",
+		};
+		this.saveMessage(`t_human_${id}`, 0, message, at);
+	}
+
 	turnOutcome(turnId: string): TurnOutcome | undefined {
 		const row = this.agent.sql<{ reply: string }>`
 			SELECT reply FROM turns WHERE turn_id = ${turnId}`[0];
