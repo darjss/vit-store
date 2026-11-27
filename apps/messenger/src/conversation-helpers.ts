@@ -42,6 +42,9 @@ const AUTO_GREET_RE = /Bid tanii asuultand udahgui|Tanid yuugaar tuslah/i;
 const SEED_ZERNIO_LIMIT = 20;
 
 const isStickerAttachment = (a: { type: string; url?: null | string }): boolean => {
+	if (a.type === "sticker") {
+		return true;
+	}
 	if (a.type !== "image" || !a.url) {
 		return false;
 	}
@@ -54,11 +57,11 @@ const isStickerAttachment = (a: { type: string; url?: null | string }): boolean 
 
 export const normalizeInboundItem = (item: InboundItem): InboundItem => {
 	const attachments = item.attachments ?? [];
-	const stickers = attachments.filter(isStickerAttachment).length;
-	if (stickers === 0) {
+	const hasSticker = attachments.some(isStickerAttachment);
+	if (!hasSticker) {
 		return item;
 	}
-	const parts = [item.text, ...Array.from({ length: stickers }, () => "[стикер]")];
+	const parts = [item.text, "[стикер]"];
 	return {
 		...item,
 		attachments: attachments.filter((a) => !isStickerAttachment(a)),

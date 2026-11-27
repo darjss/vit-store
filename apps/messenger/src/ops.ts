@@ -215,11 +215,13 @@ export const formatMomDispatchNotice = (order: DispatchableOrder, seq: number): 
 
 const REASON_LABELS = new Map<string, string>([
 	["bot_failed", "Бот алдаа заасан"],
+	["external_transfer_claim", "Төлбөрийн баримт / мэдэгдэл ирлээ"],
 	["handoff_followup", "Хэрэглэгч дахин бичлээ"],
 	["handoff_followup_photo", "Хэрэглэгч зураг/баримт явууллаа"],
 	["order_not_in_bot", "Өмнө нь админд өгсөн захиалга шалгах"],
 	["payment_ambiguous", "Олон төлбөр давхцсан"],
 	["storepay_insist", "StorePay хүссэн (линк илгээсэн)"],
+	["transfer_claim", "Шилжүүлсэн гэж мэдэгдлээ"],
 ]);
 
 export const humanReasonLabel = (reason: string): string => REASON_LABELS.get(reason) ?? reason;
@@ -241,7 +243,16 @@ export const fetchPendingOrders = async (env: Env): Promise<Array<DispatchableOr
 	if (client === undefined) {
 		return [];
 	}
-	return client.order.getPendingOrders.query(undefined, { signal: withTimeout() });
+	const res = await client.order.getPaginatedOrders.query(
+		{
+			createdAfter: new Date(DISPATCH_CUTOVER_MS),
+			orderStatus: "pending",
+			page: 1,
+			pageSize: 50,
+		},
+		{ signal: withTimeout() },
+	);
+	return res.orders;
 };
 
 export const formatDailySummary = (input: {

@@ -26,7 +26,6 @@ import {
 	claimTransfer,
 	dispatchPaymentAction,
 	paymentTick,
-	recheckTransfer,
 	type PaymentTickResult,
 } from "./conversation-payments";
 import { ConversationStore, type InboxRow, type TurnOutcome } from "./conversation-store";
@@ -122,7 +121,6 @@ export class Conversation extends Agent<Env> {
 	private io(): ConversationIO {
 		this.ioCache ??= createConversationIO({
 			adProducts: () => this.adProducts(),
-			ensurePaymentWatch: (paymentNumber) => this.ensurePaymentWatch(paymentNumber),
 			env: this.env,
 			handoffToAdmin: (reason, sendKey, extraLines) =>
 				this.handoffToAdmin(reason, sendKey, extraLines),
@@ -318,7 +316,6 @@ export class Conversation extends Agent<Env> {
 		let items: Array<InboundItem> = [];
 		let modelRows: Array<InboxRow> = [];
 		let handedOff = false;
-		let rechecked = false;
 
 		const flush = async (): Promise<void> => {
 			if (items.length === 0) {
@@ -353,10 +350,6 @@ export class Conversation extends Agent<Env> {
 
 			const action = this.classifyRow(seg.row, items.length === 0);
 			if (action.kind === "model") {
-				if (!rechecked) {
-					rechecked = true;
-					this.ctx.waitUntil(recheckTransfer(this.io()));
-				}
 				items.push(action.item);
 				modelRows.push(seg.row);
 				continue;
@@ -930,23 +923,6 @@ export class Conversation extends Agent<Env> {
 			return messages.some((m) => isHumanOutgoing(m, pausedAt, now) !== undefined);
 		} catch {
 			return false;
-		}
-	}
-
-	private async ensurePaymentWatch(paymentNumber: string): Promise<void> {
-		const id = `pay_${paymentNumber}`;
-		if (this.getWorkflow(id) !== undefined) {
-			return;
-		}
-		try {
-			await this.runWorkflow("PAYMENT_WATCH", { paymentNumber }, { id });
-		} catch (error) {
-			logError({
-				error: errorFields(error),
-				event: "error",
-				thread: this.name ?? "",
-				where: "payment_watch_start",
-			});
 		}
 	}
 

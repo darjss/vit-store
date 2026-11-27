@@ -17,7 +17,6 @@ import {
 	createCheckoutAccessToken,
 	type CustomerSessionClaims,
 } from "~/lib/session/checkout-access";
-import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import {
 	trackOrderCreatedServerSide,
@@ -418,20 +417,7 @@ function schedulePostCheckoutPaymentWork(
 	provider: "qpay" | "transfer",
 	reused: boolean,
 ) {
-	if (!paymentNumber) {
-		return;
-	}
-	if (provider === "transfer") {
-		ctx.c.executionCtx.waitUntil(
-			getTransferReconciliationStub(ctx.c.env, paymentNumber)
-				.start({ paymentNumber })
-				.catch((error) => {
-					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
-						error: error instanceof Error ? error.message : String(error),
-						paymentNumber,
-					});
-				}),
-		);
+	if (!paymentNumber || provider === "transfer") {
 		return;
 	}
 	if (!reused) {
