@@ -5,6 +5,8 @@ import { errorFields, log, logError } from "./log";
 
 export type ZernioSendBody = {
 	accountId: string;
+	attachmentType?: "image";
+	attachmentUrl?: string;
 	buttons?: Array<{ payload?: string; title: string; type: "url" | "postback"; url?: string }>;
 	message?: string;
 	quickReplies?: Array<{ payload: string; title: string }>;
@@ -108,6 +110,9 @@ export const listMessages = async (
 const matchesSend = (listed: ListedMessage, body: ZernioSendBody): boolean => {
 	if (body.message !== undefined) {
 		return listed.message === body.message;
+	}
+	if (body.attachmentUrl !== undefined) {
+		return (listed.attachments ?? []).length > 0;
 	}
 	const title = body.template?.elements[0]?.title;
 	if (title === undefined) {

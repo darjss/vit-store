@@ -558,6 +558,10 @@ export const dispatchPaymentAction = async (
 		await io.handoffToAdmin("payment_ambiguous", `${turnId}:ambiguous`);
 		return "handoff";
 	}
+	if (action.kind === "total_unknown") {
+		await io.handoffToAdmin("payment_total_unknown", `${turnId}:total_unknown`);
+		return "handoff";
+	}
 	if (action.kind === "external_details") {
 		await io.sendPart(`${turnId}:ext_bank`, {
 			message: formatExternalBankDetails(io.store.checkout().phone),

@@ -10,6 +10,9 @@ export const TSOGZOLMAA_ACCOUNT_ID = "6abf80aecb476a6db0a17892";
 export const TSOGZOLMAA_CONVERSATION_ID = "8150131448402413";
 // Only auto-dispatch orders created after our manual 01:11 UB batch on 2026-11-27.
 export const DISPATCH_CUTOVER_MS = Date.parse("2026-11-26T17:15:00Z");
+// Hold unpaid UB COD orders for 10 min before auto-dispatching to Tsogzolmaa
+// so immediate buyer edits/cancellations land before packing.
+const COD_DISPATCH_DELAY_MS = 10 * 60_000;
 // For 2026-11-27 delivery, #1-#6 were already sent to Tsogzolmaa manually at 01:06-01:11 UB.
 const SEEDED_SEQ_BY_DATE = new Map<string, number>([["2026-11-27", 6]]);
 
@@ -86,7 +89,7 @@ const cleanProductName = (name: string): string =>
 		.replace(/^([A-Za-z0-9'’.-]+(?:\s+[A-Za-z0-9'’.-]+)?)[,\s]+\1\b[,\s]*/i, "$1, ")
 		.trim();
 
-export const shouldAutoDispatchOrder = (order: DispatchableOrder): boolean => {
+export const shouldAutoDispatchOrder = (order: DispatchableOrder, now = Date.now()): boolean => {
 	if (order.status !== "pending") {
 		return false;
 	}
@@ -101,8 +104,8 @@ export const shouldAutoDispatchOrder = (order: DispatchableOrder): boolean => {
 	if (order.paymentProvider === "qpay") {
 		return false;
 	}
-	// Hold unpaid countryside orders until transfer clears; UB COD goes immediately.
-	return !isCountrysideAddress(order.address);
+	// Hold unpaid countryside orders until transfer clears; UB COD waits 10m for edits.
+	return !isCountrysideAddress(order.address) && now - createdMs >= COD_DISPATCH_DELAY_MS;
 };
 
 export const formatPackerOrderText = (order: DispatchableOrder, seq: number): string => {
@@ -216,10 +219,15 @@ const REASON_LABELS = new Map<string, string>([
 	["external_transfer_claim", "Төлбөрийн баримт / мэдэгдэл ирлээ"],
 	["handoff_followup", "Хэрэглэгч дахин бичлээ"],
 	["handoff_followup_photo", "Хэрэглэгч зураг/баримт явууллаа"],
+	["missing_item", "Бараа дутуу ирсэн"],
+	["order_change", "Захиалга өөрчлөх / цуцлах"],
+	["order_create_failed", "Захиалга үүсгэхэд алдаа гарлаа"],
 	["order_not_in_bot", "Өмнө нь админд өгсөн захиалга шалгах"],
 	["payment_ambiguous", "Олон төлбөр давхцсан"],
+	["payment_total_unknown", "Захиалгын нийт дүнг баталгаажуулах"],
 	["storepay_insist", "StorePay хүссэн (линк илгээсэн)"],
 	["transfer_claim", "Шилжүүлсэн гэж мэдэгдлээ"],
+	["wrong_item", "Буруу бараа ирсэн"],
 ]);
 
 export const humanReasonLabel = (reason: string): string => REASON_LABELS.get(reason) ?? reason;

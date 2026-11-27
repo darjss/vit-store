@@ -74,6 +74,21 @@ const COUNTRYSIDE_RE =
 
 export const isCountrysideAddress = (address: string): boolean => COUNTRYSIDE_RE.test(address);
 
+// Catches bare UB district/complex names ("hunnu 2222", "Олимп хотхон", "БЗД 8-р хороо")
+// that lack a building/apartment/street number so we ask for байр, тоот before auto-ordering.
+const STRIP_COMPLEX_NUMBERS_RE =
+	/(?:(?:хүннү|hunnu)\s*2222|\b\d{1,2}\s*-?\s*(?:р|r)?\s*(?:хороолол|хороо|horoolol|horoo)\b)/giu;
+const ADDRESS_DETAIL_RE =
+	/(?:байр|тоот|орц|давхар|гудамж|хашаа|тоотын|bair|toot|orts|davhar|gudamj|hashaa|apt|door|block|блок|\d)/iu;
+
+export const isIncompleteUbAddress = (address: string): boolean => {
+	if (isCountrysideAddress(address)) {
+		return false;
+	}
+	const stripped = address.replaceAll(STRIP_COMPLEX_NUMBERS_RE, " ").trim();
+	return !ADDRESS_DETAIL_RE.test(stripped);
+};
+
 // Code-only affirmative confirmation matcher (used only when the bot just sent
 // a confirm summary for the current revision and no attachments are present).
 const AFFIRMATIVE_RE =

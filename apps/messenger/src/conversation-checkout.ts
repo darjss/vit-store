@@ -1,5 +1,6 @@
 import {
 	isCartClearPayload,
+	isIncompleteUbAddress,
 	listingKey,
 	parseDeliveryChangePayload,
 	parseIcePayload,
@@ -16,18 +17,16 @@ import {
 	ASK_PRODUCT,
 	CART_CHANGED,
 	CART_EMPTY,
-	CONFIRM_PROMPT,
 	DELIVERY_INFO,
 	EDIT_PROMPT,
 	ERROR,
-	formatConfirmSummary,
 	formatItemSelected,
 	formatOrderCreated,
 	MESSENGER_BANK_TRANSFER,
 	NEEDS_ADDRESS,
+	NEEDS_APT,
 	NEEDS_DELIVERY,
 	NEEDS_PHONE,
-	TRANSFER_PROMPT,
 	type MissingDeliveryField,
 } from "./copy";
 import { errorFields, log, logError } from "./log";
@@ -89,59 +88,76 @@ const missingDeliveryField = (checkout: Checkout): MissingDeliveryField | undefi
 const needsDeliveryText = (missing: MissingDeliveryField): string =>
 	missing === "phone" ? NEEDS_PHONE : missing === "address" ? NEEDS_ADDRESS : NEEDS_DELIVERY;
 
-export const sendConfirmOrNeed = async (io: ConversationIO, key: string): Promise<void> => {
+const resolveCartLines = async (io: ConversationIO): Promise<Array<CartLine>> => {
 	const lines = io.store.cartLines();
-	const checkout = io.store.checkout();
+	if (lines.length > 0) {
+		return lines;
+	}
+	const lastShown = Number(io.store.getMeta("last_shown_product_id") ?? "0");
+	if (!Number.isSafeInteger(lastShown) || lastShown <= 0 || !io.store.isProductKnown(lastShown)) {
+		return [];
+	}
+	try {
+		await cartReplace(io, [{ productId: lastShown, quantity: 1 }]);
+		return io.store.cartLines();
+	} catch {
+		return [];
+	}
+};
+
+export const sendConfirmOrNeed = async (io: ConversationIO, key: string): Promise<void> => {
+	const lines = await resolveCartLines(io);
 	if (lines.length === 0) {
 		await io.sendPart(key, { message: CART_EMPTY });
 		return;
 	}
+	const checkout = io.store.checkout();
 	const missing = missingDeliveryField(checkout);
 	if (missing !== undefined || checkout.phone === undefined || checkout.address === undefined) {
 		await io.sendPart(key, { message: needsDeliveryText(missing ?? "both") });
 		return;
 	}
-	await io.sendPart(key, {
-		message: formatConfirmSummary({
-			address: checkout.address,
-			items: lines.map((l) => ({ name: l.name, price: l.price, qty: l.qty })),
-			note: checkout.note,
-			phone: checkout.phone,
-		}),
-	});
-	await io.sendPart(`${key}:btn`, {
-		buttons: [
-			{ payload: `order_confirm:${checkout.revision}`, title: "✅ Захиалах", type: "postback" },
-			{ payload: `order_edit:${checkout.revision}`, title: "✏️ Засах", type: "postback" },
-		],
-		message: CONFIRM_PROMPT,
-	});
-	io.store.recordConfirmSent(checkout.revision);
+	if (!checkout.countryside && isIncompleteUbAddress(checkout.address)) {
+		await io.sendPart(key, { message: NEEDS_APT });
+		return;
+	}
+	if (io.store.getMeta("delivery_source") !== "user") {
+		await io.sendPart(key, {
+			message: `Өмнөх хаяг (${checkout.address}, ${checkout.phone}) руугаа авах уу?`,
+		});
+		io.store.recordConfirmSent(checkout.revision);
+		return;
+	}
+	const existing = io.store.paymentByRevision(checkout.revision);
+	if (existing !== undefined) {
+		await sendOrderCreated(io, existing, `${key}:order`, lines);
+		return;
+	}
+	await createOrder(
+		io,
+		key,
+		{ ...checkout, address: checkout.address, phone: checkout.phone },
+		lines,
+	);
 };
 
-const sendOrderCreated = async (io: ConversationIO, row: Payment, key: string): Promise<void> => {
+const sendOrderCreated = async (
+	io: ConversationIO,
+	row: Payment,
+	key: string,
+	items?: Array<CartLine>,
+): Promise<void> => {
 	await io.sendPart(key, {
 		message: formatOrderCreated({
 			accountName: MESSENGER_BANK_TRANSFER.accountName,
 			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
 			countryside: row.countryside,
+			items: items?.map((l) => ({ name: l.name, price: l.price, qty: l.qty })),
 			orderNumber: row.orderNumber,
 			phone: row.phone,
 			total: row.total,
 		}),
 	});
-	if (row.countryside) {
-		await io.sendPart(`${key}:btn`, {
-			buttons: [
-				{
-					payload: `transfer_done:${row.paymentNumber}`,
-					title: "Шилжүүлсэн",
-					type: "postback",
-				},
-			],
-			message: TRANSFER_PROMPT,
-		});
-	}
 };
 
 const createOrder = async (
@@ -181,10 +197,9 @@ const createOrder = async (
 		});
 		io.store.clearCart();
 		io.store.clearLastOutbound();
-		await sendOrderCreated(io, row, `${key}:order`);
-		if (!checkout.countryside) {
-			io.triggerOrderDispatch(res.orderNumber);
-		}
+		io.store.deleteMeta("delivery_source");
+		io.store.deleteMeta("last_shown_product_id");
+		await sendOrderCreated(io, row, `${key}:order`, lines);
 		log({
 			countryside: checkout.countryside,
 			event: "order",
@@ -204,7 +219,11 @@ const createOrder = async (
 			outcome: "error",
 			thread: io.thread,
 		});
-		await io.sendPart(`${key}:tap`, { message: ERROR });
+		const itemSummary = lines.map((l) => `${l.name} ×${l.qty}`).join(", ");
+		await io.handoffToAdmin("order_create_failed", `${key}:tap`, [
+			`Бараа: ${itemSummary}`,
+			`Утас: ${checkout.phone} · Хаяг: ${checkout.address}`,
+		]);
 	}
 };
 

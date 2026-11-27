@@ -10,30 +10,31 @@ export const MESSENGER_BANK_TRANSFER = {
 	bankName: "Хаан банк",
 } as const;
 
-export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ.";
-export const DISPATCH_COUNTRYSIDE = "Төлбөр орсны дараа унаанд тавьж явуулна.";
+export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ";
+export const DISPATCH_COUNTRYSIDE = "Төлбөр орсны дараа унаанд тавьж явуулна";
 
-export const CART_EMPTY = 'Сагс хоосон байна. Бараагаа сонгоод "Сонгох" дараарай.';
-export const CART_CHANGED = "Сагс өөрчлөгдсөн байна, дахин шалгаарай.";
-export const NEEDS_DELIVERY = "За, хаяг утсаа үлдээгээрэй 🙏";
-export const NEEDS_PHONE = "За, утасны дугаараа үлдээгээрэй 🙏";
-export const NEEDS_ADDRESS = "За, хаягаа үлдээгээрэй 🙏";
+export const CART_EMPTY = "Ямар бараа авах вэ?";
+export const CART_CHANGED = "Сагс өөрчлөгдсөн байна, дахин бичээрэй.";
+export const NEEDS_DELIVERY = "За хаяг утсаа үлдээгээрэй";
+export const NEEDS_PHONE = "Утасны дугаараа үлдээгээрэй";
+export const NEEDS_ADDRESS = "Хаягаа үлдээгээрэй";
+export const NEEDS_APT = "Байр, тоотоо нэмээд бичээрэй";
 export const EDIT_PROMPT = "Юу өөрчлөх вэ?";
 
 // Welcome-screen buttons.
 export const ASK_PRODUCT = "Ямар витамин сонирхож байна вэ?";
-export const DELIVERY_INFO = `УБ хүргэлт ${Math.round(deliveryFee).toLocaleString("en-US")}₮, өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ (бараагаа аваад шилжүүлж болно). Орон нутаг руу төлбөр орсны дараа унаанд тавина.`;
+export const DELIVERY_INFO = `УБ хүргэлт ${Math.round(deliveryFee).toLocaleString("en-US")}₮, өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ (бараагаа аваад шилжүүлнэ). Орон нутаг руу төлбөр орсны дараа унаанд тавина.`;
 
-export const CLAIM_ACK = "Баярлалаа 🙏 Шалгаад баталгаажуулъя.";
-export const ALREADY_PAID = "Энэ захиалгын төлбөр баталгаажсан байна 🙏";
-export const HANDOFF = "Админ удахгүй хариулна 🙏";
+export const CLAIM_ACK = "За шалгаад хэлье";
+export const ALREADY_PAID = "Төлбөр орсон байна";
+export const HANDOFF = "Шалгаад хэлье";
 export const STOREPAY_LINK =
-	"StorePay-ээр авах бол +11% нэмэгдээд https://zary.mn/stores/54723 линкээр захиалж болно.";
+	"StorePay-ээр авах бол +11% нэмэгдээд https://zary.mn/stores/54723 линкээр авч болно.";
 export const IMAGE_UNREADABLE = "Зураг харагдахгүй байна, дахин явуулна уу.";
-export const ERROR = "Уучлаарай, түр алдаа гарлаа. Дахин бичээрэй.";
+export const ERROR = "Шалгаад хэлье";
 
-export const CONFIRM_PROMPT = 'Зөв бол "За" эсвэл товчоо дараарай 👇';
-export const TRANSFER_PROMPT = "Шилжүүлсний дараа дарна уу 👇";
+export const CONFIRM_PROMPT = 'Зөв бол "За" гэж бичээрэй';
+export const TRANSFER_PROMPT = "Шилжүүлээд баримтаа явуулаарай";
 
 export const STOCK_LABEL = {
 	in_stock: "Бэлэн байгаа",
@@ -74,16 +75,33 @@ export const cardTitle = (name: string, brand = ""): string => {
 export type MissingDeliveryField = "address" | "both" | "phone";
 
 export const formatItemSelected = (
-	price: number,
+	_price: number,
 	missing: MissingDeliveryField = "both",
+): string =>
+	missing === "phone" ? NEEDS_PHONE : missing === "address" ? NEEDS_ADDRESS : NEEDS_DELIVERY;
+
+const formatShortK = (amount: number): string =>
+	amount % 1000 === 0 ? `${amount / 1000}` : mnt(amount);
+
+const formatPriceEquation = (
+	total: number,
+	items?: Array<{ price: number; qty: number }>,
 ): string => {
-	const ask =
-		missing === "phone"
-			? "утсаа үлдээгээрэй."
-			: missing === "address"
-				? "хаягаа үлдээгээрэй."
-				: "хаяг утсаа үлдээгээрэй.";
-	return `Сонголоо (${mnt(price)}) ✓ Өөр бараа нэмэх үү, эсвэл ${ask}`;
+	if (!items || items.length === 0) {
+		return mnt(total);
+	}
+	const parts = items.flatMap((i) => Array.from({ length: i.qty }, () => Math.round(i.price)));
+	const expected = parts.reduce((sum, p) => sum + p, 0) + deliveryFee;
+	const allThousands =
+		expected === total &&
+		total % 1000 === 0 &&
+		deliveryFee % 1000 === 0 &&
+		parts.every((p) => p % 1000 === 0);
+	if (allThousands && parts.length <= 5) {
+		const lhs = [...parts.map(formatShortK), formatShortK(deliveryFee)].join("+");
+		return `${lhs}=${total / 1000}к`;
+	}
+	return mnt(total);
 };
 
 export const formatConfirmSummary = (input: {
@@ -97,12 +115,9 @@ export const formatConfirmSummary = (input: {
 	);
 	const subtotal = input.items.reduce((s, i) => s + i.price * i.qty, 0);
 	return [
-		"Захиалгаа шалгаарай:",
 		...lines,
-		`Хүргэлт: ${mnt(deliveryFee)}`,
-		`Нийт: ${mnt(subtotal + deliveryFee)}`,
-		`Утас: ${input.phone}`,
-		`Хаяг: ${input.address}`,
+		`Хүргэлт: ${mnt(deliveryFee)} · Нийт: ${mnt(subtotal + deliveryFee)}`,
+		`Утас: ${input.phone} · Хаяг: ${input.address}`,
 		...(input.note ? [`Тэмдэглэл: ${input.note}`] : []),
 	].join("\n");
 };
@@ -111,16 +126,25 @@ export const formatOrderCreated = (input: {
 	accountName: string;
 	accountNumber: string;
 	countryside: boolean;
+	items?: Array<{ name: string; price: number; qty: number }>;
 	orderNumber: string;
 	phone: string;
 	total: number;
-}): string =>
-	[
-		`Захиалга авлаа 🙏 №${input.orderNumber} · ${mnt(input.total)}`,
-		input.countryside ? DISPATCH_COUNTRYSIDE : `${DELIVERY_UB} Бараагаа аваад шилжүүлээрэй.`,
+}): string => {
+	const priceText = formatPriceEquation(input.total, input.items);
+	if (!input.countryside) {
+		const itemText =
+			input.items && input.items.length > 0
+				? `${input.items.map((i) => (i.qty > 1 ? `${cardTitle(i.name)} ×${i.qty}` : cardTitle(i.name))).join(", ")} · `
+				: "";
+		return `За авлаа. ${itemText}${priceText}, ${DELIVERY_UB.toLowerCase()} (бараагаа аваад шилжүүлнэ). Өөрчлөх бол бичээрэй`;
+	}
+	return [
+		`За авлаа. ${priceText}, ${DISPATCH_COUNTRYSIDE.toLowerCase()}.`,
 		`Хаан банк ${input.accountNumber} (${input.accountName})`,
-		`Утга: ${input.phone}`,
+		`Утга: ${input.phone} · шилжүүлээд баримтаа явуулаарай`,
 	].join("\n");
+};
 
 export const formatBankDue = (input: {
 	accountName: string;
@@ -130,11 +154,9 @@ export const formatBankDue = (input: {
 	total: number;
 }): string =>
 	[
-		input.delivered
-			? `Бараа тань очлоо 🙏 ${mnt(input.total)}`
-			: `${mnt(input.total)} шилжүүлээрэй 🙏`,
+		input.delivered ? `Бараа очлоо. ${mnt(input.total)}` : `${mnt(input.total)} шилжүүлээрэй`,
 		`Хаан банк ${input.accountNumber} (${input.accountName})`,
-		`Утга: ${input.phone}`,
+		`Утга: ${input.phone} · баримтаа явуулаарай`,
 	].join("\n");
 
 export const formatReminder = (input: {
@@ -143,17 +165,15 @@ export const formatReminder = (input: {
 	phone: string;
 	total: number;
 }): string =>
-	`№${input.orderNumber}-ийн ${mnt(input.total)} шилжүүлээрэй 🙏 Хаан банк ${input.accountNumber}, утга ${input.phone}`;
+	`${mnt(input.total)} шилжүүлээрэй. Хаан банк ${input.accountNumber}, утга ${input.phone}`;
 
 export const formatExternalBankDetails = (phone?: string): string =>
 	[
 		`Хаан банк ${MESSENGER_BANK_TRANSFER.accountNumber} (${MESSENGER_BANK_TRANSFER.accountName})`,
-		phone
-			? `Утга: ${phone} · Баримтаа явуулаарай 🙏`
-			: "Утга: утасны дугаар · Баримтаа явуулаарай 🙏",
+		`Утга: ${phone ?? "утасны дугаар"} (барааны үнэ + хүргэлт ${mnt(deliveryFee)}) · шилжүүлээд баримтаа явуулаарай`,
 	].join("\n");
 
 export const formatPaid = (countryside: boolean): string =>
 	countryside
-		? "Төлбөр баталгаажлаа 🙏 Өнөөдөр эсвэл маргааш автобус, таксинд тавьж явуулна."
-		: "Төлбөр баталгаажлаа 🙏 Баярлалаа!";
+		? "Төлбөр орсон байна, өнөөдөр эсвэл маргааш унаанд тавьж явуулна."
+		: "Төлбөр орсон байна, баярлалаа.";

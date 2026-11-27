@@ -47,6 +47,7 @@ export const paymentActionSchema = v.variant("kind", [
 		replyText: v.optional(v.string()),
 	}),
 	v.object({ kind: v.literal("external_details") }),
+	v.object({ kind: v.literal("total_unknown") }),
 ]);
 
 export type PaymentAction = v.InferOutput<typeof paymentActionSchema>;
@@ -89,6 +90,7 @@ export type HandoffResult = v.InferOutput<typeof handoffInputSchema>;
 
 export const paymentInputSchema = v.object({
 	kind: v.picklist(["claim", "details"]),
+	needsTotal: v.optional(v.boolean()),
 	receiptAmount: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	replyText: v.optional(v.pipe(v.string(), v.maxLength(120))),
 });
@@ -262,8 +264,8 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 
 	payment: tool({
 		description:
-			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Баримттай хамт асуулт бичсэн бол (ж: "хэзээ хүргэх вэ") товч хариуг replyText-д бич.',
-		execute: async ({ kind, receiptAmount, replyText }) => {
+			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Хэрэглэгч үнийн дүн/нийт хэд болохыг давхар асуусан бол needsTotal: true. Баримттай хамт асуулт бичсэн бол товч хариуг replyText-д бич.',
+		execute: async ({ kind, needsTotal, receiptAmount, replyText }) => {
 			const cleanReply = replyText?.trim() || undefined;
 			const pendings = deps.pendingPayments();
 			if (pendings.length === 0) {
@@ -281,7 +283,9 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 				const fallback: PaymentAction =
 					kind === "claim"
 						? { kind: "external_claim", receiptAmount, replyText: cleanReply }
-						: { kind: "external_details" };
+						: needsTotal === true
+							? { kind: "total_unknown" }
+							: { kind: "external_details" };
 				return { action: fallback, handled: true };
 			}
 			const pending = pendings[0];
