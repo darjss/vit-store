@@ -23,6 +23,7 @@ import {
 	formatConfirmSummary,
 	formatItemSelected,
 	formatOrderCreated,
+	MESSENGER_BANK_TRANSFER,
 	NEEDS_ADDRESS,
 	NEEDS_DELIVERY,
 	NEEDS_PHONE,
@@ -121,8 +122,8 @@ export const sendConfirmOrNeed = async (io: ConversationIO, key: string): Promis
 const sendOrderCreated = async (io: ConversationIO, row: Payment, key: string): Promise<void> => {
 	await io.sendPart(key, {
 		message: formatOrderCreated({
-			accountName: row.accountName,
-			accountNumber: row.accountNumber,
+			accountName: MESSENGER_BANK_TRANSFER.accountName,
+			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
 			countryside: row.countryside,
 			orderNumber: row.orderNumber,
 			phone: row.phone,
@@ -166,8 +167,8 @@ const createOrder = async (
 		}
 		const now = Date.now();
 		const row = io.store.upsertPayment({
-			accountName: res.accountName,
-			accountNumber: res.accountNumber,
+			accountName: MESSENGER_BANK_TRANSFER.accountName,
+			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
 			checkoutToken: res.checkoutToken,
 			countryside: checkout.countryside,
 			createdAt: now,
@@ -180,7 +181,6 @@ const createOrder = async (
 		});
 		io.store.clearCart();
 		io.store.clearLastOutbound();
-		await io.ensurePaymentWatch(res.paymentNumber);
 		await sendOrderCreated(io, row, `${key}:order`);
 		if (!checkout.countryside) {
 			io.triggerOrderDispatch(res.orderNumber);
@@ -216,7 +216,6 @@ export const confirmOrder = async (
 ): Promise<void> => {
 	const existing = io.store.paymentByRevision(revision);
 	if (existing !== undefined) {
-		await io.ensurePaymentWatch(existing.paymentNumber);
 		await sendOrderCreated(io, existing, `${key}:order`);
 		io.tapLog(`order_confirm_${source}`, "resent");
 		return;

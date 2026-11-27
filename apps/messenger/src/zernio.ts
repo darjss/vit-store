@@ -31,7 +31,15 @@ const listedMessageSchema = v.looseObject({
 				attachments: v.optional(
 					v.array(
 						v.looseObject({
-							payload: v.optional(v.string()),
+							payload: v.optional(
+								v.union([
+									v.string(),
+									v.pipe(
+										v.looseObject({ url: v.optional(v.string()) }),
+										v.transform((p) => p.url),
+									),
+								]),
+							),
 							subject: v.optional(v.string()),
 						}),
 					),

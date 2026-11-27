@@ -9,6 +9,8 @@ import {
 	formatExternalBankDetails,
 	formatPaid,
 	formatReminder,
+	MESSENGER_BANK_TRANSFER,
+	mnt,
 	TRANSFER_PROMPT,
 } from "./copy";
 import { errorFields, log, logError } from "./log";
@@ -364,7 +366,12 @@ export const paymentTick = async (
 ): Promise<PaymentTickResult> => {
 	const parsed = v.safeParse(checkPaymentSchema, { paymentNumber });
 	const row = io.store.paymentByNumber(paymentNumber);
-	if (!parsed.success || row === undefined || io.store.outboxHas(`pay_${paymentNumber}:paid`)) {
+	if (
+		!parsed.success ||
+		row === undefined ||
+		row.accountNumber === MESSENGER_BANK_TRANSFER.accountNumber ||
+		io.store.outboxHas(`pay_${paymentNumber}:paid`)
+	) {
 		log({
 			action: "gone",
 			claimed: row?.claimed ? 1 : 0,
@@ -432,13 +439,31 @@ export const claimTransfer = async (
 		io.tapLog("transfer_done", "not_pending", paymentNumber);
 		return false;
 	}
-	await io.ensurePaymentWatch(paymentNumber);
 	const store = storeClient(io.env);
 	const ref = { checkoutToken: row.checkoutToken, paymentNumber };
-	await store.payment.claimTransferPaid.mutate(ref, { signal: withTimeout() });
-	await store.payment.selectTransfer.mutate(ref, { signal: withTimeout() }).catch(() => {});
+	await store.payment.claimTransferPaid.mutate(ref, { signal: withTimeout() }).catch(() => {});
 	io.store.markPaymentClaimed(paymentNumber, receipt);
 	await io.sendPart(`${key}:claim`, { message: CLAIM_ACK });
+	const alertKey = `${key}:claim_alert`;
+	if (!io.store.outboxHas(alertKey)) {
+		const extraLines = [
+			`Захиалга: №${row.orderNumber} · ${mnt(row.total)}`,
+			`Утас: ${row.phone}`,
+			...(receipt?.amount ? [`Баримтын дүн: ${mnt(receipt.amount)}`] : []),
+			...(receipt?.url ? [`Баримт: ${receipt.url}`] : []),
+		];
+		const res = await sendTelegramAlert(io.env, {
+			customerName: io.customerName(),
+			extraLines,
+			reason: "transfer_claim",
+			recentTexts: io.store.recentCustomerTexts(6),
+			tag: "payment",
+			threadId: io.thread,
+		}).catch(() => undefined);
+		if (res?.ok) {
+			io.store.markOutbox(alertKey);
+		}
+	}
 	io.tapLog("transfer_done", "claimed", paymentNumber);
 	log({
 		action: "claimed",
@@ -460,21 +485,14 @@ export const sendBankDetails = async (
 	if (row === undefined) {
 		return;
 	}
-	await io.ensurePaymentWatch(paymentNumber);
-	const store = storeClient(io.env);
-	const ref = { checkoutToken: row.checkoutToken, paymentNumber };
-	try {
-		await store.payment.selectTransfer.mutate(ref, { signal: withTimeout() });
-	} catch (error) {
-		if (error instanceof Error && error.message.includes("ALREADY_PAID")) {
-			await io.sendPart(`${key}:bank`, { message: ALREADY_PAID });
-			return;
-		}
+	if (row.status === "success") {
+		await io.sendPart(`${key}:bank`, { message: ALREADY_PAID });
+		return;
 	}
 	await io.sendPart(`${key}:bank`, {
 		message: formatBankDue({
-			accountName: row.accountName,
-			accountNumber: row.accountNumber,
+			accountName: MESSENGER_BANK_TRANSFER.accountName,
+			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
 			delivered,
 			phone: row.phone,
 			total: row.total,
@@ -561,24 +579,4 @@ export const dispatchPaymentAction = async (
 	}
 	await sendBankDetails(io, turnId, action.paymentNumber, false);
 	return "payment_details";
-};
-
-// Best-effort Khaan poll restart only when transfer is actually expected
-// (countryside prepay, claimed transfer, or UB order already delivered).
-export const recheckTransfer = async (io: ConversationIO): Promise<void> => {
-	const row = io.store
-		.pendingPayments()
-		.find((p) => p.countryside || p.claimed || p.deliveredAt !== undefined);
-	if (row === undefined) {
-		return;
-	}
-	const store = storeClient(io.env);
-	const ref = { checkoutToken: row.checkoutToken, paymentNumber: row.paymentNumber };
-	const live = await store.payment.getPaymentStatus
-		.query(ref, { signal: withTimeout() })
-		.catch(() => undefined);
-	if (live?.provider !== "transfer" || live.status === "success" || live.status === "failed") {
-		return;
-	}
-	await store.payment.selectTransfer.mutate(ref, { signal: withTimeout() }).catch(() => {});
 };

@@ -12,7 +12,6 @@ export type ConversationIO = {
 	adProducts(): Promise<Array<AdProduct>>;
 	conversationId: string;
 	customerName(): string | undefined;
-	ensurePaymentWatch(paymentNumber: string): Promise<void>;
 	env: Env;
 	handoffToAdmin(reason: string, sendKey: string, extraLines?: Array<string>): Promise<void>;
 	markAdPivoted(): void;
@@ -38,7 +37,6 @@ export const parseThreadId = (thread: string) => {
 
 export const createConversationIO = (opts: {
 	adProducts(): Promise<Array<AdProduct>>;
-	ensurePaymentWatch(paymentNumber: string): Promise<void>;
 	env: Env;
 	handoffToAdmin(reason: string, sendKey: string, extraLines?: Array<string>): Promise<void>;
 	store: ConversationStore;
@@ -51,7 +49,6 @@ export const createConversationIO = (opts: {
 		adProducts: opts.adProducts,
 		conversationId,
 		customerName: () => opts.store.getMeta("customer_name"),
-		ensurePaymentWatch: opts.ensurePaymentWatch,
 		env: opts.env,
 		handoffToAdmin: opts.handoffToAdmin,
 		markAdPivoted: () => opts.store.setMeta("ad_pivoted", "1"),

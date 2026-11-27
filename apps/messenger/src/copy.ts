@@ -1,5 +1,14 @@
 // Owner-approved customer-facing text. The model never produces these.
-import { bankTransfer, deliveryFee } from "@vit/shared/constants";
+import { deliveryFee } from "@vit/shared/constants";
+
+// Messenger-only bank transfer destination (Batdelger's Khaan account, verified
+// manually via Telegram alerts — no Khaan API reconciliation). The website
+// storefront stays on `@vit/shared/constants` `bankTransfer`.
+export const MESSENGER_BANK_TRANSFER = {
+	accountName: "Batdelger Jigjidsuren",
+	accountNumber: "MN070005005011147435",
+	bankName: "Хаан банк",
+} as const;
 
 export const DELIVERY_UB = "Өнөөдөр эсвэл маргааш 12-с хойш хүргэнэ.";
 export const DISPATCH_COUNTRYSIDE = "Төлбөр орсны дараа унаанд тавьж явуулна.";
@@ -138,7 +147,7 @@ export const formatReminder = (input: {
 
 export const formatExternalBankDetails = (phone?: string): string =>
 	[
-		`Хаан банк ${bankTransfer.accountNumber} (${bankTransfer.accountName})`,
+		`Хаан банк ${MESSENGER_BANK_TRANSFER.accountNumber} (${MESSENGER_BANK_TRANSFER.accountName})`,
 		phone
 			? `Утга: ${phone} · Баримтаа явуулаарай 🙏`
 			: "Утга: утасны дугаар · Баримтаа явуулаарай 🙏",
