@@ -630,7 +630,10 @@ export class Conversation extends Agent<Env> {
 			onSearch: (hits) => this.detectAdPivot(adProducts, hits),
 			pendingPayments: () => this.store.pendingPayments(),
 			recentCustomerTexts: () => this.store.recentCustomerTexts(25),
-			saveDelivery: (patch) => this.store.saveDelivery(patch),
+			saveDelivery: (patch) => {
+				this.store.saveDelivery(patch);
+				this.store.setMeta("delivery_source", "user");
+			},
 		};
 		const tools = createTools(this.env, toolDeps, adProducts) satisfies ToolSet;
 		const stepMs: Array<number> = [];
@@ -750,6 +753,11 @@ export class Conversation extends Agent<Env> {
 		this.recordReplySignature(reply);
 		if (shown.length > 0) {
 			this.store.markSeen(shown);
+			if (shown.length === 1 && shown[0] !== undefined) {
+				this.store.setMeta("last_shown_product_id", String(shown[0]));
+			} else {
+				this.store.deleteMeta("last_shown_product_id");
+			}
 		}
 		if (reply?.action === "confirm") {
 			await sendConfirmOrNeed(io, `${turnId}:confirm`);

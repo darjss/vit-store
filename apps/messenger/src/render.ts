@@ -64,6 +64,27 @@ export const sendCards = async (opts: {
 	if (products.length === 0) {
 		return false;
 	}
+	const [only] = products;
+	// Single in-stock product: send a full zoomable bottle photo (Mom's UX)
+	// instead of a 1-card generic carousel widget with a "Сонгох" button.
+	if (
+		products.length === 1 &&
+		only !== undefined &&
+		only.stockStatus !== "out_of_stock" &&
+		only.image
+	) {
+		await send(
+			env,
+			conversationId,
+			{
+				accountId,
+				attachmentType: "image",
+				attachmentUrl: squareImage(only.image),
+			},
+			key,
+		);
+		return true;
+	}
 	await send(
 		env,
 		conversationId,
