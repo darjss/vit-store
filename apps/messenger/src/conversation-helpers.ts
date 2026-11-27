@@ -31,6 +31,7 @@ export const inboundRawSchema = v.looseObject({
 			v.looseObject({
 				postbackPayload: v.optional(v.string()),
 				quickReplyPayload: v.optional(v.string()),
+				quotedMessageId: v.optional(v.nullable(v.string())),
 				referral: v.optional(v.nullable(v.looseObject({ ad_id: v.optional(v.string()) }))),
 			}),
 		),
@@ -67,6 +68,47 @@ export const normalizeInboundItem = (item: InboundItem): InboundItem => {
 		attachments: attachments.filter((a) => !isStickerAttachment(a)),
 		text: parts.filter((t) => t.length > 0).join("\n"),
 	};
+};
+
+export const quotedMessageIdOf = (item: InboundItem): string | undefined => {
+	const raw = v.safeParse(inboundRawSchema, item.raw ?? {});
+	const id = raw.success ? raw.output.metadata?.quotedMessageId : undefined;
+	return id && id.length > 0 ? id : undefined;
+};
+
+export const attachQuotedContext = (
+	items: Array<InboundItem>,
+	history: Array<ListedMessage>,
+): Array<InboundItem> => {
+	if (history.length === 0) {
+		return items;
+	}
+	const byId = new Map<string, ListedMessage>();
+	for (const m of history) {
+		if (m.id) {
+			byId.set(m.id, m);
+		}
+	}
+	return items.map((item) => {
+		const qid = quotedMessageIdOf(item);
+		if (qid === undefined) {
+			return item;
+		}
+		const target = byId.get(qid);
+		if (target === undefined) {
+			return item;
+		}
+		const qText =
+			target.message?.trim() || ((target.attachments ?? []).length > 0 ? "[зураг]" : "");
+		if (qText.length === 0) {
+			return item;
+		}
+		const prefix = `[Хариулсан мессеж: "${qText.slice(0, 200)}"]`;
+		return {
+			...item,
+			text: item.text.length > 0 ? `${prefix}\n${item.text}` : prefix,
+		};
+	});
 };
 
 export type ClaimedSegment =

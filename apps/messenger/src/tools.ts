@@ -268,11 +268,14 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 			const pendings = deps.pendingPayments();
 			if (pendings.length === 0) {
 				const latest = deps.latestPayment();
-				if (
+				const isRecentSameOrderClaim =
 					latest !== undefined &&
 					latest.status === "success" &&
-					Date.now() - latest.createdAt < SEVEN_DAYS_MS
-				) {
+					(kind === "details"
+						? Date.now() - latest.createdAt < SEVEN_DAYS_MS
+						: Date.now() - latest.createdAt < 30 * 60_000 &&
+							(receiptAmount === undefined || receiptAmount === latest.total));
+				if (isRecentSameOrderClaim) {
 					return { action: { kind: "already_paid" } satisfies PaymentAction, handled: true };
 				}
 				const fallback: PaymentAction =
