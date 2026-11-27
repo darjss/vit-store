@@ -6,6 +6,7 @@ import { zernioMessageEventSchema } from "./admit";
 import { isAffirmativeConfirm, listingKey, parseTransferDonePayload } from "./cart";
 import { cartReplace, confirmOrder, handleTap, sendConfirmOrNeed } from "./conversation-checkout";
 import {
+	attachQuotedContext,
 	buildUserMessages,
 	extractPaymentAction,
 	inboundItemsSchema,
@@ -15,6 +16,7 @@ import {
 	messageText,
 	normalizeInboundItem,
 	pendingAttachmentsSchema,
+	quotedMessageIdOf,
 	segmentClaimed,
 	toSeedModelMessages,
 	turnIdFor,
@@ -83,7 +85,8 @@ const isHumanOutgoing = (m: ListedMessage, floorAt: number, now: number): number
 	if (!Number.isFinite(at) || at <= floorAt) {
 		return undefined;
 	}
-	return m.sentVia === "human" || (m.sentVia === null && now - at > HUMAN_SETTLE_MS)
+	return m.sentVia === "human" ||
+		(m.sentVia === null && (m.senderName === "You" || now - at > HUMAN_SETTLE_MS))
 		? at
 		: undefined;
 };
@@ -311,7 +314,7 @@ export class Conversation extends Agent<Env> {
 
 	private async runClaimed(claimed: Array<InboxRow>): Promise<void> {
 		const seqAtStart = this.store.latestSeq();
-		await this.pauseIfHumanReplied();
+		const recentMessages = await this.pauseIfHumanReplied();
 
 		let items: Array<InboundItem> = [];
 		let modelRows: Array<InboxRow> = [];
@@ -323,7 +326,7 @@ export class Conversation extends Agent<Env> {
 			}
 			const turnId = await turnIdFor(modelRows);
 			this.store.tagInboxTurn(modelRows, turnId);
-			await this.respond({ items, rows: modelRows, seqAtStart, turnId });
+			await this.respond({ items, recentMessages, rows: modelRows, seqAtStart, turnId });
 			items = [];
 			modelRows = [];
 		};
@@ -414,11 +417,12 @@ export class Conversation extends Agent<Env> {
 
 	private async respond(opts: {
 		items: Array<InboundItem>;
+		recentMessages?: Array<ListedMessage>;
 		rows: Array<InboxRow>;
 		seqAtStart: number;
 		turnId: string;
 	}): Promise<void> {
-		const { items, rows, seqAtStart, turnId } = opts;
+		const { items, recentMessages = [], rows, seqAtStart, turnId } = opts;
 		const started = Date.now();
 		const attempt = Math.max(...rows.map((r) => r.attempts));
 
@@ -429,11 +433,12 @@ export class Conversation extends Agent<Env> {
 		}
 
 		await this.prefillFromHistory();
+		const resolvedItems = await this.resolveQuotedItems(items, recentMessages);
 		const carriedAttachments = this.readPendingAttachments();
 		const effectiveItems: Array<InboundItem> =
 			carriedAttachments.length > 0
-				? [{ attachments: carriedAttachments, id: "carried", text: "" }, ...items]
-				: items;
+				? [{ attachments: carriedAttachments, id: "carried", text: "" }, ...resolvedItems]
+				: resolvedItems;
 		const turnAttachments = effectiveItems
 			.flatMap((i) => i.attachments ?? [])
 			.filter(
@@ -928,9 +933,9 @@ export class Conversation extends Agent<Env> {
 
 	// Pause for 2h when a human admin replies live after cutover, and sync older
 	// post-pause human replies into DO history so the bot never contradicts admin.
-	private async pauseIfHumanReplied(): Promise<void> {
+	private async pauseIfHumanReplied(): Promise<Array<ListedMessage>> {
 		if (this.store.isPaused()) {
-			return;
+			return [];
 		}
 		const now = Date.now();
 		const io = this.io();
@@ -939,7 +944,7 @@ export class Conversation extends Agent<Env> {
 				this.env,
 				io.conversationId,
 				io.accountId,
-				20,
+				30,
 				AbortSignal.timeout(3000),
 			);
 			const resumedAt = Number(this.store.getMeta("resumed_at") ?? "0");
@@ -950,7 +955,7 @@ export class Conversation extends Agent<Env> {
 				.map((m) => isHumanOutgoing(m, floorAt, now))
 				.find((at): at is number => at !== undefined);
 			if (humanAt === undefined || humanAt + HUMAN_PAUSE_MS <= now) {
-				return;
+				return messages;
 			}
 			this.store.setMeta("paused_until", String(humanAt + HUMAN_PAUSE_MS));
 			this.store.setMeta("pause_kind", "human");
@@ -961,6 +966,7 @@ export class Conversation extends Agent<Env> {
 				human_at: new Date(humanAt).toISOString(),
 				thread: this.name ?? "",
 			});
+			return messages;
 		} catch (error) {
 			logError({
 				error: errorFields(error),
@@ -968,7 +974,31 @@ export class Conversation extends Agent<Env> {
 				thread: this.name ?? "",
 				where: "human_pause",
 			});
+			return [];
 		}
+	}
+
+	private async resolveQuotedItems(
+		items: Array<InboundItem>,
+		recentMessages: Array<ListedMessage>,
+	): Promise<Array<InboundItem>> {
+		const quotedIds = items.map(quotedMessageIdOf).filter((id): id is string => id !== undefined);
+		if (quotedIds.length === 0) {
+			return items;
+		}
+		let pool = recentMessages;
+		const known = new Set(pool.map((m) => m.id).filter((id): id is string => id !== undefined));
+		if (quotedIds.some((id) => !known.has(id))) {
+			const io = this.io();
+			pool = await listMessages(
+				this.env,
+				io.conversationId,
+				io.accountId,
+				60,
+				AbortSignal.timeout(3000),
+			).catch(() => recentMessages);
+		}
+		return attachQuotedContext(items, pool);
 	}
 
 	private syncHumanReplies(messages: Array<ListedMessage>, floorAt: number, now: number): void {
@@ -1000,14 +1030,14 @@ export class Conversation extends Agent<Env> {
 	// 1) seed up to 20 recent messages into empty DO history (no post-cutover amnesia)
 	// 2) prefill saved customer phone + address from the Store API.
 	private async prefillFromHistory(): Promise<void> {
-		if (this.store.getMeta("history_checked") !== undefined) {
+		if (this.store.getMeta("history_seeded_v2") !== undefined) {
 			return;
 		}
-		this.store.setMeta("history_checked", "1");
 		const io = this.io();
 		try {
 			const budget = AbortSignal.timeout(4000);
 			const messages = await listMessages(this.env, io.conversationId, io.accountId, 100, budget);
+			this.store.setMeta("history_seeded_v2", "1");
 			if (!this.store.hasMessages() && messages.length > 0) {
 				this.store.seedZernioHistory(toSeedModelMessages(messages));
 			}

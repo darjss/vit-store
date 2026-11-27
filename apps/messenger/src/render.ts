@@ -4,10 +4,16 @@ import { storeClient, withTimeout } from "./store";
 import type { ReplyResult } from "./tools";
 import { send } from "./zernio";
 
+const CDN_PREFIX = "https://cdn.amerikvitamin.mn/";
+
 // Most product photos are tall bottles and Messenger crops card images to
-// fill, so Cloudflare pads them onto a white square first.
-const squareImage = (url: string) =>
-	`https://cdn.amerikvitamin.mn/cdn-cgi/image/width=600,height=600,fit=pad,background=white,format=jpeg/${url}`;
+// fill, so Cloudflare pads CDN-hosted photos onto a white square first.
+// External URLs (e.g. m.media-amazon.com) return 403 from /cdn-cgi/image,
+// so pass them through directly.
+export const squareImage = (url: string) =>
+	url.startsWith(CDN_PREFIX)
+		? `${CDN_PREFIX}cdn-cgi/image/width=600,height=600,fit=pad,background=white,format=jpeg/${url}`
+		: url;
 
 // Renders a model turn into Zernio sends. Every part key is deterministic
 // (${turn}:text, ${turn}:cards) and recorded in `outbox` only after a

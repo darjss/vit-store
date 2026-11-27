@@ -2,6 +2,7 @@ import { isCountrysideAddress } from "./cart";
 import { mnt } from "./copy";
 import type { Env } from "./env";
 import { errorFields, log, logError } from "./log";
+import { squareImage } from "./render";
 import { botClient, withTimeout } from "./store";
 import { send, type ZernioSendBody } from "./zernio";
 
@@ -75,9 +76,6 @@ export const dueDigestSlot = (now = Date.now()): string | undefined => {
 	}
 	return undefined;
 };
-
-const squareImage = (url: string) =>
-	`https://cdn.amerikvitamin.mn/cdn-cgi/image/width=600,height=600,fit=pad,background=white,format=jpeg/${url}`;
 
 const clip = (text: string, max: number) =>
 	text.length <= max ? text : `${text.slice(0, max - 1)}…`;
