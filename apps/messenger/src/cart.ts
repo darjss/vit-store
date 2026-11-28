@@ -77,15 +77,16 @@ export const isCountrysideAddress = (address: string): boolean => COUNTRYSIDE_RE
 // Catches bare UB district/complex names ("hunnu 2222", "Олимп хотхон", "БЗД 8-р хороо")
 // that lack a building/apartment/street number so we ask for байр, тоот before auto-ordering.
 const STRIP_COMPLEX_NUMBERS_RE =
-	/(?:(?:хүннү|hunnu)\s*2222|\b\d{1,2}\s*-?\s*(?:р|r)?\s*(?:хороолол|хороо|horoolol|horoo)\b)/giu;
+	/(?:(?:хүннү|hunnu)\s*2222|(?<!\d)\d{1,2}\s*-?\s*(?:р|r)?\s*(?:хороолол|хороо|horoolol|horoo)(?![\p{L}\p{N}]))/giu;
 const ADDRESS_DETAIL_RE =
-	/(?:байр|тоот|орц|давхар|гудамж|хашаа|тоотын|bair|toot|orts|davhar|gudamj|hashaa|apt|door|block|блок|\d)/iu;
+	/(?:байр|тоот|орц|давхар|гудамж|хашаа|тоотын|bair|toot|orts|davhar|gudamj|hashaa|apt|door|block|блок|дэлгүүр|delguur|маркет|market|оффис|office|тауэр|tower|төв|tuv|буудал|buudal|эмнэлэг|emneleg|сургууль|surguuli|цэцэрлэг|tsetserleg|үлдээ|uldee|залга|zalga|байр\s*тоот\s*байхгүй|bair\s*toot\s*baihgui|\d)/iu;
 
-export const isIncompleteUbAddress = (address: string): boolean => {
+export const isIncompleteUbAddress = (address: string, note?: string): boolean => {
 	if (isCountrysideAddress(address)) {
 		return false;
 	}
-	const stripped = address.replaceAll(STRIP_COMPLEX_NUMBERS_RE, " ").trim();
+	const combined = note ? `${address} ${note}` : address;
+	const stripped = combined.replaceAll(STRIP_COMPLEX_NUMBERS_RE, " ").trim();
 	return !ADDRESS_DETAIL_RE.test(stripped);
 };
 

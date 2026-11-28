@@ -3,10 +3,17 @@ import { deliveryFee } from "@vit/shared/constants";
 import { tool } from "ai";
 import * as v from "valibot";
 
-import { isCountrysideAddress, listingKey, normalizePhone, PHONE_RE, type CartLine } from "./cart";
+import {
+	isCountrysideAddress,
+	listingKey,
+	normalizePhone,
+	PHONE_RE,
+	phonesInText,
+	type CartLine,
+} from "./cart";
 import type { Checkout, Payment } from "./conversation-store";
 import type { Env } from "./env";
-import { storeClient, withTimeout } from "./store";
+import { botClient, storeClient, withTimeout } from "./store";
 
 export type SearchHit = {
 	amount?: string;
@@ -31,23 +38,45 @@ export type DeliveryPatch = {
 
 export type DeliveryErrors = { address?: string; phone?: string };
 
+const paymentItemSchema = v.object({
+	name: v.string(),
+	price: v.number(),
+	qty: v.number(),
+});
+
 export const paymentActionSchema = v.variant("kind", [
 	v.object({ kind: v.literal("already_paid") }),
 	v.object({ kind: v.literal("ambiguous") }),
+	v.object({
+		items: v.array(paymentItemSchema),
+		kind: v.literal("catalog_details"),
+		phone: v.optional(v.string()),
+		total: v.number(),
+	}),
 	v.object({
 		kind: v.literal("claim"),
 		paymentNumber: v.string(),
 		receiptAmount: v.optional(v.number()),
 		replyText: v.optional(v.string()),
 	}),
+	v.object({
+		items: v.array(paymentItemSchema),
+		kind: v.literal("db_order_details"),
+		orderNumber: v.string(),
+		phone: v.string(),
+		total: v.number(),
+	}),
 	v.object({ kind: v.literal("details"), paymentNumber: v.string() }),
 	v.object({
 		kind: v.literal("external_claim"),
+		orderNumber: v.optional(v.string()),
+		phone: v.optional(v.string()),
 		receiptAmount: v.optional(v.number()),
 		replyText: v.optional(v.string()),
+		total: v.optional(v.number()),
 	}),
-	v.object({ kind: v.literal("external_details") }),
-	v.object({ kind: v.literal("total_unknown") }),
+	v.object({ kind: v.literal("external_details"), phone: v.optional(v.string()) }),
+	v.object({ kind: v.literal("total_unknown"), phone: v.optional(v.string()) }),
 ]);
 
 export type PaymentAction = v.InferOutput<typeof paymentActionSchema>;
@@ -91,6 +120,9 @@ export type HandoffResult = v.InferOutput<typeof handoffInputSchema>;
 export const paymentInputSchema = v.object({
 	kind: v.picklist(["claim", "details"]),
 	needsTotal: v.optional(v.boolean()),
+	quotedProductIds: v.optional(
+		v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(6)),
+	),
 	receiptAmount: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	replyText: v.optional(v.pipe(v.string(), v.maxLength(120))),
 });
@@ -180,6 +212,183 @@ const leadWithAdProducts = (hits: Array<SearchHit>, adProducts: Array<AdProduct>
 };
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60_000;
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60_000;
+
+const findCustomerPhone = (deps: ToolDeps): string | undefined => {
+	const saved = deps.checkout().phone;
+	if (saved && PHONE_RE.test(saved)) {
+		return saved;
+	}
+	for (const text of deps.recentCustomerTexts()) {
+		const found = phonesInText(text)[0];
+		if (found) {
+			return found;
+		}
+	}
+	return undefined;
+};
+
+type DbOrderLookup = {
+	items: Array<{ name: string; price: number; qty: number }>;
+	orderNumber: string;
+	paymentStatus: string;
+	phone: string;
+	total: number;
+};
+
+const lookupDbOrdersByPhone = async (env: Env, phone: string): Promise<Array<DbOrderLookup>> => {
+	const client = botClient(env);
+	if (client === undefined) {
+		return [];
+	}
+	try {
+		const res = await client.order.getPaginatedOrders.query(
+			{
+				createdAfter: new Date(Date.now() - FOURTEEN_DAYS_MS),
+				page: 1,
+				pageSize: 10,
+				searchTerm: phone,
+			},
+			{ signal: withTimeout() },
+		);
+		return res.orders
+			.filter(
+				(o) =>
+					String(o.customerPhone) === phone && o.status !== "cancelled" && o.status !== "refunded",
+			)
+			.map((o) => ({
+				items: o.products.map((p) => ({ name: p.name, price: p.price, qty: p.quantity })),
+				orderNumber: o.orderNumber,
+				paymentStatus: o.paymentStatus,
+				phone,
+				total: o.total,
+			}));
+	} catch {
+		return [];
+	}
+};
+
+const quoteCatalogProducts = async (
+	env: Env,
+	productIds: Array<number>,
+): Promise<
+	{ items: Array<{ name: string; price: number; qty: number }>; total: number } | undefined
+> => {
+	const counts = new Map<number, number>();
+	for (const id of productIds) {
+		counts.set(id, (counts.get(id) ?? 0) + 1);
+	}
+	const uniqueIds = [...counts.keys()];
+	if (uniqueIds.length === 0) {
+		return undefined;
+	}
+	try {
+		const products = await storeClient(env).product.getProductsByIdsForAssistant.query(
+			{ ids: uniqueIds },
+			{ signal: withTimeout() },
+		);
+		const byId = new Map(products.map((p) => [p.id, p]));
+		if (uniqueIds.some((id) => !byId.has(id))) {
+			return undefined;
+		}
+		const items = uniqueIds.map((id) => {
+			const p = byId.get(id)!;
+			return { name: p.name, price: p.price, qty: counts.get(id) ?? 1 };
+		});
+		const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+		return { items, total: subtotal + deliveryFee };
+	} catch {
+		return undefined;
+	}
+};
+
+const isRecentSameOrderPayment = (
+	latest: Payment | undefined,
+	kind: "claim" | "details",
+	receiptAmount?: number,
+): boolean => {
+	if (latest === undefined || latest.status !== "success") {
+		return false;
+	}
+	const age = Date.now() - latest.createdAt;
+	if (kind === "details") {
+		return age < SEVEN_DAYS_MS;
+	}
+	return age < 30 * 60_000 && (receiptAmount === undefined || receiptAmount === latest.total);
+};
+
+const resolveDetailsWithoutPending = async (
+	env: Env,
+	dbOrders: Array<DbOrderLookup>,
+	opts: { needsTotal?: boolean; phone?: string; quotedProductIds?: Array<number> },
+): Promise<PaymentAction> => {
+	const unpaidDb = dbOrders.filter((o) => o.paymentStatus !== "success");
+	if (unpaidDb.length === 1 && unpaidDb[0] !== undefined) {
+		const match = unpaidDb[0];
+		return {
+			items: match.items,
+			kind: "db_order_details",
+			orderNumber: match.orderNumber,
+			phone: match.phone,
+			total: match.total,
+		};
+	}
+	if (unpaidDb.length > 1) {
+		return { kind: "ambiguous" };
+	}
+	if (dbOrders.some((o) => o.paymentStatus === "success")) {
+		return { kind: "already_paid" };
+	}
+	if (opts.quotedProductIds && opts.quotedProductIds.length > 0) {
+		const quoted = await quoteCatalogProducts(env, opts.quotedProductIds);
+		if (quoted !== undefined) {
+			return {
+				items: quoted.items,
+				kind: "catalog_details",
+				phone: opts.phone,
+				total: quoted.total,
+			};
+		}
+	}
+	return opts.needsTotal === true
+		? { kind: "total_unknown", phone: opts.phone }
+		: { kind: "external_details", phone: opts.phone };
+};
+
+const resolveNoPendingPayment = async (
+	env: Env,
+	deps: ToolDeps,
+	input: {
+		cleanReply?: string;
+		kind: "claim" | "details";
+		needsTotal?: boolean;
+		quotedProductIds?: Array<number>;
+		receiptAmount?: number;
+	},
+): Promise<PaymentAction> => {
+	if (isRecentSameOrderPayment(deps.latestPayment(), input.kind, input.receiptAmount)) {
+		return { kind: "already_paid" };
+	}
+	const phone = findCustomerPhone(deps);
+	const dbOrders = phone ? await lookupDbOrdersByPhone(env, phone) : [];
+	if (input.kind === "claim") {
+		const unpaidDb = dbOrders.filter((o) => o.paymentStatus !== "success");
+		const single = unpaidDb.length === 1 ? unpaidDb[0] : undefined;
+		return {
+			kind: "external_claim",
+			orderNumber: single?.orderNumber,
+			phone,
+			receiptAmount: input.receiptAmount,
+			replyText: input.cleanReply,
+			total: single?.total,
+		};
+	}
+	return resolveDetailsWithoutPending(env, dbOrders, {
+		needsTotal: input.needsTotal,
+		phone,
+		quotedProductIds: input.quotedProductIds,
+	});
+};
 
 export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduct>) => ({
 	cart_set: tool({
@@ -264,29 +473,19 @@ export const createTools = (env: Env, deps: ToolDeps, adProducts: Array<AdProduc
 
 	payment: tool({
 		description:
-			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Хэрэглэгч үнийн дүн/нийт хэд болохыг давхар асуусан бол needsTotal: true. Баримттай хамт асуулт бичсэн бол товч хариуг replyText-д бич.',
-		execute: async ({ kind, needsTotal, receiptAmount, replyText }) => {
+			'Төлбөр төлсөн тухай мэдэгдэл ("claim", баримтын зураг эсвэл "шилжүүлсэн") эсвэл дансны мэдээлэл илгээх ("details", "ирсэн, данс нь?"). Хэрэглэгч үнийн дүн/нийт хэд болохыг давхар асуусан бол needsTotal: true. Системд захиалгагүй ч хэрэглэгч яг авсан бараагаа тодорхой нэрлэсэн бөгөөд хямдрал тохироогүй бол search_products-аас олдсон id-г quotedProductIds-д дамжуул. Баримттай хамт асуулт бичсэн бол товч хариуг replyText-д бич.',
+		execute: async ({ kind, needsTotal, quotedProductIds, receiptAmount, replyText }) => {
 			const cleanReply = replyText?.trim() || undefined;
 			const pendings = deps.pendingPayments();
 			if (pendings.length === 0) {
-				const latest = deps.latestPayment();
-				const isRecentSameOrderClaim =
-					latest !== undefined &&
-					latest.status === "success" &&
-					(kind === "details"
-						? Date.now() - latest.createdAt < SEVEN_DAYS_MS
-						: Date.now() - latest.createdAt < 30 * 60_000 &&
-							(receiptAmount === undefined || receiptAmount === latest.total));
-				if (isRecentSameOrderClaim) {
-					return { action: { kind: "already_paid" } satisfies PaymentAction, handled: true };
-				}
-				const fallback: PaymentAction =
-					kind === "claim"
-						? { kind: "external_claim", receiptAmount, replyText: cleanReply }
-						: needsTotal === true
-							? { kind: "total_unknown" }
-							: { kind: "external_details" };
-				return { action: fallback, handled: true };
+				const action = await resolveNoPendingPayment(env, deps, {
+					cleanReply,
+					kind,
+					needsTotal,
+					quotedProductIds,
+					receiptAmount,
+				});
+				return { action, handled: true };
 			}
 			const pending = pendings[0];
 			if (pendings.length > 1 || pending === undefined) {

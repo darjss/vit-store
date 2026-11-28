@@ -494,6 +494,7 @@ export const sendBankDetails = async (
 			accountName: MESSENGER_BANK_TRANSFER.accountName,
 			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
 			delivered,
+			items: row.items,
 			phone: row.phone,
 			total: row.total,
 		}),
@@ -510,38 +511,121 @@ export const sendBankDetails = async (
 	});
 };
 
+const sendExternalPaymentAlert = async (
+	io: ConversationIO,
+	alertKey: string,
+	reason: string,
+	extraLines: Array<string>,
+): Promise<void> => {
+	if (io.store.outboxHas(alertKey)) {
+		return;
+	}
+	const res = await sendTelegramAlert(io.env, {
+		customerName: io.customerName(),
+		extraLines,
+		reason,
+		recentTexts: io.store.recentCustomerTexts(6),
+		tag: "payment",
+		threadId: io.thread,
+	}).catch(() => undefined);
+	if (res?.ok) {
+		io.store.markOutbox(alertKey);
+	}
+};
+
 const handleExternalClaim = async (
 	io: ConversationIO,
 	turnId: string,
-	receiptAmount?: number,
-	receiptUrl?: string,
-	replyText?: string,
+	opts: {
+		orderNumber?: string;
+		phone?: string;
+		receiptAmount?: number;
+		receiptUrl?: string;
+		replyText?: string;
+		total?: number;
+	},
 ): Promise<string> => {
 	await io.sendPart(`${turnId}:ext_claim`, { message: CLAIM_ACK });
-	if (replyText) {
-		await io.sendPart(`${turnId}:claim_reply`, { message: replyText });
+	if (opts.replyText) {
+		await io.sendPart(`${turnId}:claim_reply`, { message: opts.replyText });
 	}
-	const alertKey = `${turnId}:ext_claim_alert`;
-	if (!io.store.outboxHas(alertKey)) {
-		const phone = io.store.checkout().phone;
-		const extraLines = [
-			...(phone ? [`Утас: ${phone}`] : []),
-			...(receiptAmount ? [`Баримтын дүн: ${receiptAmount.toLocaleString("en-US")}₮`] : []),
-			...(receiptUrl ? [`Баримт: ${receiptUrl}`] : []),
-		];
-		const res = await sendTelegramAlert(io.env, {
-			customerName: io.customerName(),
-			extraLines,
-			reason: "external_transfer_claim",
-			recentTexts: io.store.recentCustomerTexts(6),
-			tag: "payment",
-			threadId: io.thread,
-		}).catch(() => undefined);
-		if (res?.ok) {
-			io.store.markOutbox(alertKey);
-		}
-	}
+	const phone = opts.phone ?? io.store.checkout().phone;
+	const extraLines = [
+		...(opts.orderNumber && opts.total
+			? [`Захиалга: №${opts.orderNumber} · ${mnt(opts.total)}`]
+			: []),
+		...(phone ? [`Утас: ${phone}`] : []),
+		...(opts.receiptAmount ? [`Баримтын дүн: ${mnt(opts.receiptAmount)}`] : []),
+		...(opts.receiptUrl ? [`Баримт: ${opts.receiptUrl}`] : []),
+	];
+	await sendExternalPaymentAlert(
+		io,
+		`${turnId}:ext_claim_alert`,
+		"external_transfer_claim",
+		extraLines,
+	);
 	return "payment_external_claimed";
+};
+
+const handleDbOrderDetails = async (
+	io: ConversationIO,
+	turnId: string,
+	action: Extract<PaymentAction, { kind: "db_order_details" }>,
+): Promise<string> => {
+	await io.sendPart(`${turnId}:db_bank`, {
+		message: formatBankDue({
+			accountName: MESSENGER_BANK_TRANSFER.accountName,
+			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
+			delivered: false,
+			items: action.items,
+			phone: action.phone,
+			total: action.total,
+		}),
+	});
+	return "payment_db_order_details";
+};
+
+const handleCatalogDetails = async (
+	io: ConversationIO,
+	turnId: string,
+	action: Extract<PaymentAction, { kind: "catalog_details" }>,
+): Promise<string> => {
+	const phone = action.phone ?? io.store.checkout().phone;
+	await io.sendPart(`${turnId}:cat_bank`, {
+		message: formatBankDue({
+			accountName: MESSENGER_BANK_TRANSFER.accountName,
+			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
+			delivered: false,
+			items: action.items,
+			phone,
+			total: action.total,
+		}),
+	});
+	const summary = action.items.map((i) => `${i.name} ×${i.qty}`).join(", ");
+	await sendExternalPaymentAlert(io, `${turnId}:cat_bank_alert`, "catalog_payment_quoted", [
+		`Бараа: ${summary}`,
+		`Нийт (каталогиор): ${mnt(action.total)}`,
+		...(phone ? [`Утас: ${phone}`] : []),
+	]);
+	return "payment_catalog_details";
+};
+
+const handleExternalDetails = async (
+	io: ConversationIO,
+	turnId: string,
+	phone?: string,
+): Promise<string> => {
+	const resolvedPhone = phone ?? io.store.checkout().phone;
+	await io.sendPart(`${turnId}:ext_bank`, {
+		message: formatExternalBankDetails(resolvedPhone),
+	});
+	await sendExternalPaymentAlert(
+		io,
+		`${turnId}:ext_bank_alert`,
+		"external_payment_details",
+		resolvedPhone ? [`Утас: ${resolvedPhone}`] : [],
+	);
+	return "payment_external_details";
 };
 
 export const dispatchPaymentAction = async (
@@ -559,17 +643,32 @@ export const dispatchPaymentAction = async (
 		return "handoff";
 	}
 	if (action.kind === "total_unknown") {
-		await io.handoffToAdmin("payment_total_unknown", `${turnId}:total_unknown`);
+		const phone = action.phone ?? io.store.checkout().phone;
+		await io.handoffToAdmin(
+			"payment_total_unknown",
+			`${turnId}:total_unknown`,
+			phone ? [`Утас: ${phone}`] : undefined,
+		);
 		return "handoff";
 	}
+	if (action.kind === "db_order_details") {
+		return handleDbOrderDetails(io, turnId, action);
+	}
+	if (action.kind === "catalog_details") {
+		return handleCatalogDetails(io, turnId, action);
+	}
 	if (action.kind === "external_details") {
-		await io.sendPart(`${turnId}:ext_bank`, {
-			message: formatExternalBankDetails(io.store.checkout().phone),
-		});
-		return "payment_external_details";
+		return handleExternalDetails(io, turnId, action.phone);
 	}
 	if (action.kind === "external_claim") {
-		return handleExternalClaim(io, turnId, action.receiptAmount, receiptUrl, action.replyText);
+		return handleExternalClaim(io, turnId, {
+			orderNumber: action.orderNumber,
+			phone: action.phone,
+			receiptAmount: action.receiptAmount,
+			receiptUrl,
+			replyText: action.replyText,
+			total: action.total,
+		});
 	}
 	if (action.kind === "claim") {
 		await claimTransfer(io, turnId, action.paymentNumber, {

@@ -216,6 +216,8 @@ export const formatMomDispatchNotice = (order: DispatchableOrder, seq: number): 
 
 const REASON_LABELS = new Map<string, string>([
 	["bot_failed", "Бот алдаа заасан"],
+	["catalog_payment_quoted", "Каталогийн үнээр дүн + данс явууллаа"],
+	["external_payment_details", "Гадны захиалгад данс асуулаа"],
 	["external_transfer_claim", "Төлбөрийн баримт / мэдэгдэл ирлээ"],
 	["handoff_followup", "Хэрэглэгч дахин бичлээ"],
 	["handoff_followup_photo", "Хэрэглэгч зураг/баримт явууллаа"],

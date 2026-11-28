@@ -41,6 +41,16 @@ export type Checkout = {
 	revision: number;
 };
 
+export type PaymentItem = { name: string; price: number; qty: number };
+
+const paymentItemsSchema = v.array(
+	v.object({
+		name: v.string(),
+		price: v.number(),
+		qty: v.number(),
+	}),
+);
+
 export type Payment = {
 	accountName: string;
 	accountNumber: string;
@@ -50,6 +60,7 @@ export type Payment = {
 	createdAt: number;
 	deadline: number;
 	deliveredAt?: number;
+	items?: Array<PaymentItem>;
 	orderNumber: string;
 	paymentNumber: string;
 	phone: string;
@@ -78,6 +89,7 @@ type PaymentDbRow = {
 	created_at: number;
 	deadline: number;
 	delivered_at: number | null;
+	items_json: string | null;
 	order_number: string;
 	payment_number: string;
 	phone: string;
@@ -103,6 +115,18 @@ const toCheckout = (r: CheckoutDbRow): Checkout => ({
 	revision: r.revision,
 });
 
+const parsePaymentItems = (raw: string | null | undefined): Array<PaymentItem> | undefined => {
+	if (!raw) {
+		return undefined;
+	}
+	try {
+		const parsed = v.safeParse(paymentItemsSchema, JSON.parse(raw));
+		return parsed.success && parsed.output.length > 0 ? parsed.output : undefined;
+	} catch {
+		return undefined;
+	}
+};
+
 const toPayment = (r: PaymentDbRow): Payment => ({
 	accountName: r.account_name ?? "",
 	accountNumber: r.account_number ?? "",
@@ -112,6 +136,7 @@ const toPayment = (r: PaymentDbRow): Payment => ({
 	createdAt: r.created_at,
 	deadline: r.deadline,
 	deliveredAt: r.delivered_at ?? undefined,
+	items: parsePaymentItems(r.items_json),
 	orderNumber: r.order_number,
 	paymentNumber: r.payment_number,
 	phone: r.phone,
@@ -195,7 +220,8 @@ export class ConversationStore {
 				countryside INTEGER NOT NULL DEFAULT 0,
 				delivered_at INTEGER,
 				receipt_url TEXT,
-				receipt_amount INTEGER
+				receipt_amount INTEGER,
+				items_json TEXT
 			)`;
 
 		this.migrateExistingTables();
@@ -229,6 +255,9 @@ export class ConversationStore {
 		}
 		if (!hasCol("payments", "receipt_amount")) {
 			void this.agent.sql`ALTER TABLE payments ADD COLUMN receipt_amount INTEGER`;
+		}
+		if (!hasCol("payments", "items_json")) {
+			void this.agent.sql`ALTER TABLE payments ADD COLUMN items_json TEXT`;
 		}
 	}
 
@@ -521,19 +550,21 @@ export class ConversationStore {
 		countryside: boolean;
 		createdAt: number;
 		deadline: number;
+		items?: Array<PaymentItem>;
 		orderNumber: string;
 		paymentNumber: string;
 		phone: string;
 		revision: number;
 		total: number;
 	}): Payment {
+		const itemsJson = input.items && input.items.length > 0 ? JSON.stringify(input.items) : null;
 		void this.agent.sql`
 			INSERT INTO payments
 				(payment_number, order_number, revision, checkout_token, account_name, account_number,
-				 total, phone, created_at, status, claimed, deadline, countryside)
+				 total, phone, created_at, status, claimed, deadline, countryside, items_json)
 			VALUES (${input.paymentNumber}, ${input.orderNumber}, ${input.revision}, ${input.checkoutToken},
 				${input.accountName}, ${input.accountNumber}, ${input.total}, ${input.phone}, ${input.createdAt},
-				'pending', 0, ${input.deadline}, ${input.countryside ? 1 : 0})
+				'pending', 0, ${input.deadline}, ${input.countryside ? 1 : 0}, ${itemsJson})
 			ON CONFLICT(payment_number) DO UPDATE SET
 				order_number = excluded.order_number,
 				revision = excluded.revision,
@@ -542,7 +573,8 @@ export class ConversationStore {
 				account_number = excluded.account_number,
 				total = excluded.total,
 				phone = excluded.phone,
-				countryside = excluded.countryside`;
+				countryside = excluded.countryside,
+				items_json = COALESCE(excluded.items_json, payments.items_json)`;
 		const row = this.paymentByNumber(input.paymentNumber);
 		if (row === undefined) {
 			throw new Error("payment_row_missing");
