@@ -67,6 +67,8 @@ const FALLBACK_TEXT = "Шалгаад хэлье.";
 const HANDOFF_PAUSE_MS = 12 * 60 * 60_000;
 const PAUSE_FOLLOWUP_ALERT_MS = 15 * 60_000;
 const HUMAN_PAUSE_MS = 2 * 60 * 60_000;
+const PAYMENT_URGENT_RE =
+	/(?:данс|мөнгө|шилжүүл|төлбөр|төлсөн|тооцоо|баримт|dans|mungu|mongo|mongoo|shiljuul|tulbur|tolbor|tootsoo|barimt)/iu;
 const HUMAN_SETTLE_MS = 15_000;
 const DUP_REPLY_WINDOW_MS = 15_000;
 const lastReplySigSchema = v.object({ at: v.number(), sig: v.string() });
@@ -854,26 +856,34 @@ export class Conversation extends Agent<Env> {
 		await this.handoffToAdmin(reason, `${turnId}:handoff`, extraLines);
 	}
 
+	private shouldThrottleFollowup(
+		payload: { photoUrl?: string; text?: string },
+		now: number,
+	): boolean {
+		if (payload.photoUrl || PAYMENT_URGENT_RE.test(payload.text ?? "")) {
+			return false;
+		}
+		const lastAlertAt = Number(this.store.getMeta("pause_alert_at") ?? "0");
+		return now - lastAlertAt < PAUSE_FOLLOWUP_ALERT_MS;
+	}
+
 	private async notifyPausedFollowup(row: InboxRow): Promise<void> {
 		if (this.store.getMeta("pause_kind") !== "handoff") {
 			return;
 		}
 		const payload = followupPayload(this.itemFromRow(row));
-		if (payload === undefined) {
-			return;
-		}
 		const now = Date.now();
-		const lastAlertAt = Number(this.store.getMeta("pause_alert_at") ?? "0");
 		const alertKey = `followup:${row.event_id}`;
 		if (
-			(!payload.photoUrl && now - lastAlertAt < PAUSE_FOLLOWUP_ALERT_MS) ||
+			payload === undefined ||
+			this.shouldThrottleFollowup(payload, now) ||
 			this.store.outboxHas(alertKey)
 		) {
 			return;
 		}
-		if (await this.hasHumanRepliedSincePause(now)) {
-			this.store.setMeta("pause_kind", "human");
-			this.clearHandoffInIngress();
+		const humanReply = await this.latestHumanReplySincePause(now);
+		if (humanReply !== undefined) {
+			this.applyHumanPauseAfterHandoff(humanReply.humanAt, humanReply.messages, now);
 			return;
 		}
 		const extraLines = [
@@ -919,10 +929,25 @@ export class Conversation extends Agent<Env> {
 		);
 	}
 
-	private async hasHumanRepliedSincePause(now: number): Promise<boolean> {
+	private applyHumanPauseAfterHandoff(
+		humanAt: number,
+		messages: Array<ListedMessage>,
+		now: number,
+	): void {
+		const pausedAt = Number(this.store.getMeta("paused_at") ?? "0");
+		this.syncHumanReplies(messages, Number.isFinite(pausedAt) ? pausedAt : 0, now);
+		this.store.setMeta("pause_kind", "human");
+		this.store.setMeta("paused_at", String(humanAt));
+		this.store.setMeta("paused_until", String(humanAt + HUMAN_PAUSE_MS));
+		this.clearHandoffInIngress();
+	}
+
+	private async latestHumanReplySincePause(
+		now: number,
+	): Promise<{ humanAt: number; messages: Array<ListedMessage> } | undefined> {
 		const pausedAt = Number(this.store.getMeta("paused_at") ?? "0");
 		if (!Number.isFinite(pausedAt) || pausedAt <= 0) {
-			return false;
+			return undefined;
 		}
 		const io = this.io();
 		try {
@@ -930,22 +955,35 @@ export class Conversation extends Agent<Env> {
 				this.env,
 				io.conversationId,
 				io.accountId,
-				15,
+				20,
 				AbortSignal.timeout(3000),
 			);
-			return messages.some((m) => isHumanOutgoing(m, pausedAt, now) !== undefined);
+			const humanAt = messages
+				.map((m) => isHumanOutgoing(m, pausedAt, now))
+				.find((at): at is number => at !== undefined);
+			return humanAt === undefined ? undefined : { humanAt, messages };
 		} catch {
-			return false;
+			return undefined;
 		}
 	}
 
 	// Pause for 2h when a human admin replies live after cutover, and sync older
 	// post-pause human replies into DO history so the bot never contradicts admin.
+	// If currently paused by a 12h handoff and a human already replied, clamp the
+	// pause down to humanAt + 2h so the bot wakes up cleanly afterward.
 	private async pauseIfHumanReplied(): Promise<Array<ListedMessage>> {
-		if (this.store.isPaused()) {
-			return [];
-		}
 		const now = Date.now();
+		if (this.store.isPaused()) {
+			if (this.store.getMeta("pause_kind") !== "handoff") {
+				return [];
+			}
+			const humanReply = await this.latestHumanReplySincePause(now);
+			if (humanReply === undefined) {
+				return [];
+			}
+			this.applyHumanPauseAfterHandoff(humanReply.humanAt, humanReply.messages, now);
+			return humanReply.messages;
+		}
 		const io = this.io();
 		try {
 			const messages = await listMessages(

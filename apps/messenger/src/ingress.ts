@@ -7,7 +7,7 @@ import type { Conversation } from "./conversation";
 import { type InboundItem, normalizeInboundItem } from "./conversation";
 import type { Env } from "./env";
 import { zernioBaseUrl } from "./env";
-import { log } from "./log";
+import { errorFields, log, logError } from "./log";
 import {
 	type ActiveHandoffRow,
 	type DispatchableOrder,
@@ -293,7 +293,11 @@ export class Ingress extends Agent<Env> {
 	}
 
 	async opsTick(): Promise<void> {
-		await this.dispatchPendingOrders().catch(() => {});
+		try {
+			await this.dispatchPendingOrders();
+		} catch (error) {
+			logError({ error: errorFields(error), event: "error", where: "ops_dispatch" });
+		}
 		const slot = dueDigestSlot();
 		if (slot === undefined || this.getOpsMeta("last_digest_slot") === slot) {
 			return;

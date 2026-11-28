@@ -122,6 +122,11 @@ export const formatConfirmSummary = (input: {
 	].join("\n");
 };
 
+const formatItemsInline = (items?: Array<{ name: string; qty: number }>): string =>
+	items && items.length > 0
+		? `${items.map((i) => (i.qty > 1 ? `${cardTitle(i.name)} ×${i.qty}` : cardTitle(i.name))).join(", ")} · `
+		: "";
+
 export const formatOrderCreated = (input: {
 	accountName: string;
 	accountNumber: string;
@@ -133,14 +138,10 @@ export const formatOrderCreated = (input: {
 }): string => {
 	const priceText = formatPriceEquation(input.total, input.items);
 	if (!input.countryside) {
-		const itemText =
-			input.items && input.items.length > 0
-				? `${input.items.map((i) => (i.qty > 1 ? `${cardTitle(i.name)} ×${i.qty}` : cardTitle(i.name))).join(", ")} · `
-				: "";
-		return `За авлаа. ${itemText}${priceText}, ${DELIVERY_UB.toLowerCase()} (бараагаа аваад шилжүүлнэ). Өөрчлөх бол бичээрэй`;
+		return `За авлаа. ${formatItemsInline(input.items)}${priceText}, ${DELIVERY_UB.toLowerCase()} (бараагаа аваад шилжүүлнэ). Өөрчлөх бол бичээрэй`;
 	}
 	return [
-		`За авлаа. ${priceText}, ${DISPATCH_COUNTRYSIDE.toLowerCase()}.`,
+		`За авлаа. ${formatItemsInline(input.items)}${priceText}, ${DISPATCH_COUNTRYSIDE.toLowerCase()}.`,
 		`Хаан банк ${input.accountNumber} (${input.accountName})`,
 		`Утга: ${input.phone} · шилжүүлээд баримтаа явуулаарай`,
 	].join("\n");
@@ -150,14 +151,21 @@ export const formatBankDue = (input: {
 	accountName: string;
 	accountNumber: string;
 	delivered: boolean;
-	phone: string;
+	items?: Array<{ name: string; price: number; qty: number }>;
+	phone?: string;
 	total: number;
-}): string =>
-	[
-		input.delivered ? `Бараа очлоо. ${mnt(input.total)}` : `${mnt(input.total)} шилжүүлээрэй`,
+}): string => {
+	const itemPrefix = formatItemsInline(input.items);
+	const priceText = formatPriceEquation(input.total, input.items);
+	const header = input.delivered
+		? `Бараа очлоо. ${itemPrefix}${priceText}`
+		: `${itemPrefix}${priceText} шилжүүлээрэй`;
+	return [
+		header,
 		`Хаан банк ${input.accountNumber} (${input.accountName})`,
-		`Утга: ${input.phone} · баримтаа явуулаарай`,
+		`Утга: ${input.phone ?? "утасны дугаар"} · баримтаа явуулаарай`,
 	].join("\n");
+};
 
 export const formatReminder = (input: {
 	accountNumber: string;

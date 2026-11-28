@@ -117,7 +117,7 @@ export const sendConfirmOrNeed = async (io: ConversationIO, key: string): Promis
 		await io.sendPart(key, { message: needsDeliveryText(missing ?? "both") });
 		return;
 	}
-	if (!checkout.countryside && isIncompleteUbAddress(checkout.address)) {
+	if (!checkout.countryside && isIncompleteUbAddress(checkout.address, checkout.note)) {
 		await io.sendPart(key, { message: NEEDS_APT });
 		return;
 	}
@@ -152,7 +152,7 @@ const sendOrderCreated = async (
 			accountName: MESSENGER_BANK_TRANSFER.accountName,
 			accountNumber: MESSENGER_BANK_TRANSFER.accountNumber,
 			countryside: row.countryside,
-			items: items?.map((l) => ({ name: l.name, price: l.price, qty: l.qty })),
+			items: items?.map((l) => ({ name: l.name, price: l.price, qty: l.qty })) ?? row.items,
 			orderNumber: row.orderNumber,
 			phone: row.phone,
 			total: row.total,
@@ -189,6 +189,7 @@ const createOrder = async (
 			countryside: checkout.countryside,
 			createdAt: now,
 			deadline: now + PAYMENT_DEADLINE_MS,
+			items: lines.map((l) => ({ name: l.name, price: l.price, qty: l.qty })),
 			orderNumber: res.orderNumber,
 			paymentNumber: res.paymentNumber,
 			phone: checkout.phone,
